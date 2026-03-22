@@ -1,6 +1,6 @@
 {
   "name": "@neo-reckoning/core",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,5 +17,13 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sdougbrown/neo-reckoning.git",
+    "directory": "packages/core"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

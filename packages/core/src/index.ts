@@ -4,6 +4,7 @@ export type {
   Occurrence,
   TimeSlot,
   DayRangeInfo,
+  SpanInfo,
   Day,
   Week,
   Month,
@@ -13,12 +14,21 @@ export type {
   CalendarGridConfig,
   TimelineGridConfig,
   CacheAdapter,
+  ViewFidelity,
+  DisplayType,
+  YearGridConfig,
+  YearMonth,
+  YearDay,
 } from './types.js';
 
 // Core classes
 export { RangeEvaluator } from './evaluator.js';
 export { CalendarGrid } from './grid.js';
 export { TimelineGrid, computeEventPositions } from './timeline.js';
+export { YearGrid } from './yearGrid.js';
+
+// Display type resolution
+export { resolveDisplayType } from './displayType.js';
 
 // Event normalization
 export { fromDateRange, expandToEvents } from './events.js';

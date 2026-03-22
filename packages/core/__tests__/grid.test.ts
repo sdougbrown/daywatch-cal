@@ -155,7 +155,7 @@ describe('CalendarGrid', () => {
     });
   });
 
-  it('generates time slots for timed ranges', () => {
+  it('generates time slots for timed ranges at week/day fidelity', () => {
     const range: DateRange = {
       id: 'standup',
       label: 'Standup',
@@ -168,6 +168,7 @@ describe('CalendarGrid', () => {
       focusDate: '2026-03-15',
       numberOfMonths: 1,
       ranges: [range],
+      fidelity: 'week',
     });
 
     const allDays = grid.months[0].weeks.flatMap(w => w.days);

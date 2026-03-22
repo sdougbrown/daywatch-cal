@@ -5,6 +5,7 @@ import type {
   Day,
   DayRangeInfo,
   DateRange,
+  ViewFidelity,
 } from './types.js';
 import { RangeEvaluator } from './evaluator.js';
 import {
@@ -28,6 +29,7 @@ export class CalendarGrid {
   private weekStartsOn: number;
   private locale: string | undefined;
   private evaluator: RangeEvaluator;
+  private fidelity: ViewFidelity;
 
   constructor(config: CalendarGridConfig) {
     this.focusDate = config.focusDate;
@@ -35,6 +37,7 @@ export class CalendarGrid {
     this.ranges = config.ranges;
     this.weekStartsOn = config.weekStartsOn ?? 0;
     this.locale = config.locale;
+    this.fidelity = config.fidelity ?? 'month';
     this.evaluator = new RangeEvaluator(config.userTimezone);
     this.months = this.generate();
   }
@@ -139,8 +142,29 @@ export class CalendarGrid {
   }
 
   private createDay(dateStr: string, dayOfMonth: number, isCurrentMonth: boolean, today: string): Day {
+    const fidelity = this.fidelity;
+
+    if (fidelity === 'year') {
+      // Year fidelity: only compute hasActivity, skip ranges[] and timeSlots[]
+      const hasActivity = this.ranges.some(r => this.evaluator.isDateInRange(dateStr, r));
+      return {
+        date: dateStr,
+        dayOfMonth,
+        isCurrentMonth,
+        isToday: dateStr === today,
+        ranges: [],
+        timeSlots: [],
+        hasActivity,
+      };
+    }
+
+    // Month, week, and day fidelity: compute ranges[]
     const ranges = this.evaluateRangesForDay(dateStr);
-    const timeSlots = this.ranges.flatMap(r => this.evaluator.expandDay(r, dateStr));
+
+    // Week and day fidelity: also compute timeSlots[]
+    const timeSlots = (fidelity === 'week' || fidelity === 'day')
+      ? this.ranges.flatMap(r => this.evaluator.expandDay(r, dateStr))
+      : [];
 
     return {
       date: dateStr,
@@ -170,6 +194,7 @@ export class CalendarGrid {
         isStart: !prevInRange,
         isEnd: !nextInRange,
         isContinuation: prevInRange && nextInRange,
+        ...(range.displayType !== undefined ? { displayType: range.displayType } : {}),
       });
     }
 

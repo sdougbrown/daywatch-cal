@@ -1,4 +1,4 @@
-import type { DateRange, Occurrence, TimeSlot } from './types.js';
+import type { DateRange, Occurrence, TimeSlot, SpanInfo } from './types.js';
 import {
   parseDate,
   getDayOfWeek,
@@ -217,6 +217,7 @@ export class RangeEvaluator {
             rangeId: range.id,
             label: range.label,
             allDay: false,
+            ...(range.displayType !== undefined ? { displayType: range.displayType } : {}),
           });
         }
       } else {
@@ -227,6 +228,7 @@ export class RangeEvaluator {
           rangeId: range.id,
           label: range.label,
           allDay: true,
+          ...(range.displayType !== undefined ? { displayType: range.displayType } : {}),
         });
       }
     }
@@ -244,7 +246,206 @@ export class RangeEvaluator {
     return this.getTimeSlots(dateStr, range);
   }
 
+  /**
+   * Compute contiguous spans for multiple ranges within a date window.
+   * Groups consecutive matching days into SpanInfo objects, assigns lanes
+   * using greedy interval scheduling, and computes overlap metrics.
+   */
+  computeSpans(ranges: DateRange[], from: Date, to: Date): SpanInfo[] {
+    const fromStr = formatDate(from);
+    const toStr = formatDate(to);
+
+    // Step 1: For each range, find matching days and group into contiguous spans
+    interface RawSpan {
+      rangeId: string;
+      label: string;
+      displayType?: string;
+      startDate: string;
+      endDate: string;
+      days: string[];
+    }
+
+    const allSpans: RawSpan[] = [];
+
+    for (const range of ranges) {
+      const candidateDays = this.getCandidateDays(range, fromStr, toStr);
+      if (candidateDays.length === 0) continue;
+
+      // Group consecutive days into contiguous spans
+      let spanStart = candidateDays[0];
+      let prevDate = candidateDays[0];
+      let spanDays = [candidateDays[0]];
+
+      for (let i = 1; i < candidateDays.length; i++) {
+        const day = candidateDays[i];
+        if (this.isNextDay(prevDate, day)) {
+          spanDays.push(day);
+          prevDate = day;
+        } else {
+          // End previous span, start new one
+          allSpans.push({
+            rangeId: range.id,
+            label: range.label,
+            displayType: range.displayType,
+            startDate: spanStart,
+            endDate: prevDate,
+            days: spanDays,
+          });
+          spanStart = day;
+          prevDate = day;
+          spanDays = [day];
+        }
+      }
+      // Push final span
+      allSpans.push({
+        rangeId: range.id,
+        label: range.label,
+        displayType: range.displayType,
+        startDate: spanStart,
+        endDate: prevDate,
+        days: spanDays,
+      });
+    }
+
+    if (allSpans.length === 0) return [];
+
+    // Step 2: Build day-indexed overlap map (day -> list of span indices)
+    const dayToSpans = new Map<string, number[]>();
+    for (let i = 0; i < allSpans.length; i++) {
+      for (const day of allSpans[i].days) {
+        const list = dayToSpans.get(day);
+        if (list) {
+          list.push(i);
+        } else {
+          dayToSpans.set(day, [i]);
+        }
+      }
+    }
+
+    // Step 3: Assign lanes using greedy interval scheduling
+    const sortedIndices = allSpans
+      .map((_, i) => i)
+      .sort((a, b) => {
+        const cmp = compareDates(allSpans[a].startDate, allSpans[b].startDate);
+        if (cmp !== 0) return cmp;
+        return compareDates(allSpans[a].endDate, allSpans[b].endDate);
+      });
+
+    const lanes = new Array<number>(allSpans.length).fill(-1);
+    const laneEndDates: string[] = [];
+
+    for (const idx of sortedIndices) {
+      const span = allSpans[idx];
+      let assigned = -1;
+      for (let lane = 0; lane < laneEndDates.length; lane++) {
+        if (compareDates(laneEndDates[lane], span.startDate) < 0) {
+          assigned = lane;
+          break;
+        }
+      }
+      if (assigned === -1) {
+        assigned = laneEndDates.length;
+        laneEndDates.push(span.endDate);
+      } else {
+        laneEndDates[assigned] = span.endDate;
+      }
+      lanes[idx] = assigned;
+    }
+
+    // Step 4: Compute maxOverlap per span and totalLanes for overlap groups
+    const maxOverlaps = new Array<number>(allSpans.length).fill(1);
+    for (let i = 0; i < allSpans.length; i++) {
+      for (const day of allSpans[i].days) {
+        const overlapping = dayToSpans.get(day)!;
+        if (overlapping.length > maxOverlaps[i]) {
+          maxOverlaps[i] = overlapping.length;
+        }
+      }
+    }
+
+    // Build overlap groups via BFS on shared-day adjacency
+    const spanNeighbors = new Map<number, Set<number>>();
+    for (const spanIndices of dayToSpans.values()) {
+      if (spanIndices.length > 1) {
+        for (const a of spanIndices) {
+          if (!spanNeighbors.has(a)) spanNeighbors.set(a, new Set());
+          for (const b of spanIndices) {
+            if (a !== b) spanNeighbors.get(a)!.add(b);
+          }
+        }
+      }
+    }
+
+    const visited = new Set<number>();
+    const componentOf = new Array<number>(allSpans.length).fill(-1);
+    const components: number[][] = [];
+
+    for (let i = 0; i < allSpans.length; i++) {
+      if (visited.has(i)) continue;
+      const component: number[] = [];
+      const queue = [i];
+      visited.add(i);
+      while (queue.length > 0) {
+        const node = queue.shift()!;
+        component.push(node);
+        const neighbors = spanNeighbors.get(node);
+        if (neighbors) {
+          for (const n of neighbors) {
+            if (!visited.has(n)) {
+              visited.add(n);
+              queue.push(n);
+            }
+          }
+        }
+      }
+      const compIdx = components.length;
+      components.push(component);
+      for (const idx of component) {
+        componentOf[idx] = compIdx;
+      }
+    }
+
+    const componentTotalLanes = components.map(comp => {
+      const usedLanes = new Set(comp.map(idx => lanes[idx]));
+      return usedLanes.size;
+    });
+
+    // Step 5: Build SpanInfo results, sorted by startDate then lane
+    const results: SpanInfo[] = [];
+    for (let i = 0; i < allSpans.length; i++) {
+      const span = allSpans[i];
+      results.push({
+        rangeId: span.rangeId,
+        label: span.label,
+        ...(span.displayType !== undefined ? { displayType: span.displayType } : {}),
+        startDate: span.startDate,
+        endDate: span.endDate,
+        length: span.days.length,
+        maxOverlap: maxOverlaps[i],
+        lane: lanes[i],
+        totalLanes: componentTotalLanes[componentOf[i]],
+      });
+    }
+
+    results.sort((a, b) => {
+      const cmp = compareDates(a.startDate, b.startDate);
+      if (cmp !== 0) return cmp;
+      return a.lane - b.lane;
+    });
+
+    return results;
+  }
+
   // === Private helpers ===
+
+  /**
+   * Check if dateB is exactly the day after dateA.
+   */
+  private isNextDay(dateA: string, dateB: string): boolean {
+    const { year, month, day } = parseDate(dateA);
+    const d = new Date(year, month, day + 1);
+    return formatDate(d) === dateB;
+  }
 
   private isDateInBounds(dateStr: string, range: DateRange): boolean {
     if (range.fixedBetween) {

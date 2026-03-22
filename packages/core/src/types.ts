@@ -1,4 +1,17 @@
 /**
+ * View fidelity level — controls how much detail CalendarGrid computes per day.
+ * - 'year': only hasActivity boolean (skip ranges[], timeSlots[])
+ * - 'month': ranges[] populated (skip timeSlots[])
+ * - 'week' / 'day': both ranges[] and timeSlots[] populated
+ */
+export type ViewFidelity = 'year' | 'month' | 'week' | 'day';
+
+/**
+ * Display type hint — passed through from the API for the SPA to interpret.
+ */
+export type DisplayType = 'auto' | 'span' | 'dot' | 'fill' | 'chip' | 'block';
+
+/**
  * A DateRange defines a set of dates and/or times using either explicit values
  * or recurrence patterns. This is the core data model of neo-reckoning,
  * carried forward from the original Reckoning library and extended with
@@ -51,6 +64,9 @@ export interface DateRange {
    * - null/undefined: floating time — no conversion, times are as-is
    */
   timezone?: string | null;
+
+  /** Display hint from the API. Neo-reckoning passes this through, SPA interprets it. */
+  displayType?: DisplayType;
 }
 
 /**
@@ -70,6 +86,8 @@ export interface Occurrence {
   label: string;
   /** Whether this is an all-day occurrence (no time fields) */
   allDay: boolean;
+  /** Display type hint passed through from the source DateRange */
+  displayType?: string;
 }
 
 /**
@@ -103,6 +121,33 @@ export interface DayRangeInfo {
   isEnd: boolean;
   /** True if this day is in the middle of a contiguous span */
   isContinuation: boolean;
+  /** Display type hint passed through from the source DateRange */
+  displayType?: string;
+}
+
+/**
+ * Information about a contiguous span of days for a DateRange within a window.
+ * Used for overlap detection and lane-based rendering in month/timeline views.
+ */
+export interface SpanInfo {
+  /** ID of the source DateRange */
+  rangeId: string;
+  /** Label from the source DateRange */
+  label: string;
+  /** Display type hint passed through from the DateRange */
+  displayType?: string;
+  /** First day of this contiguous span (YYYY-MM-DD) */
+  startDate: string;
+  /** Last day of this contiguous span (YYYY-MM-DD) */
+  endDate: string;
+  /** Total days in this span */
+  length: number;
+  /** Maximum number of overlapping ranges at any point in this span */
+  maxOverlap: number;
+  /** Consistent lane assignment for rendering (0-based) */
+  lane: number;
+  /** Total number of lanes needed across all spans sharing any overlap day with this span */
+  totalLanes: number;
 }
 
 /**
@@ -121,6 +166,8 @@ export interface Day {
   ranges: DayRangeInfo[];
   /** Sub-day occurrences, populated for day/week views */
   timeSlots: TimeSlot[];
+  /** True if any range matches this day. Only computed for 'year' fidelity to save work. */
+  hasActivity?: boolean;
 }
 
 /**
@@ -203,6 +250,8 @@ export interface CalendarGridConfig {
   locale?: string;
   /** IANA timezone for the user viewing the calendar */
   userTimezone?: string;
+  /** View fidelity level — controls how much detail is computed per day. Default: 'month' */
+  fidelity?: ViewFidelity;
 }
 
 /**
@@ -229,4 +278,48 @@ export interface CacheAdapter {
   get(key: string): Promise<string | null> | string | null;
   set(key: string, value: string): Promise<void> | void;
   remove(key: string): Promise<void> | void;
+}
+
+// === Year Grid types ===
+
+/**
+ * Configuration for YearGrid.
+ */
+export interface YearGridConfig {
+  /** The year to generate (e.g. 2026) */
+  year: number;
+  /** DateRanges to evaluate against the grid */
+  ranges: DateRange[];
+  /** IANA timezone for the user viewing the calendar */
+  userTimezone?: string;
+}
+
+/**
+ * A month within a year grid — lightweight, no weeks/time slots.
+ */
+export interface YearMonth {
+  /** Month number (0-11) */
+  month: number;
+  /** Month label, e.g. "January" */
+  label: string;
+  /** Count of days that have at least one range match */
+  activeDays: number;
+  /** Total days in the month */
+  totalDays: number;
+  /** Per-day activity data for heatmap-style rendering */
+  days: YearDay[];
+}
+
+/**
+ * A single day in a year grid.
+ */
+export interface YearDay {
+  /** Date in YYYY-MM-DD format */
+  date: string;
+  /** Day of month (1-31) */
+  dayOfMonth: number;
+  /** How many ranges match this day */
+  rangeCount: number;
+  /** IDs of matching ranges (SPA maps these to colors) */
+  rangeIds: string[];
 }

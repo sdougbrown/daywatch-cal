@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { CalendarGrid } from '@neo-reckoning/core';
-import type { DateRange, CalendarGridConfig, Month } from '@neo-reckoning/core';
+import type { DateRange, CalendarGridConfig, Month, ViewFidelity } from '@neo-reckoning/core';
 
 export interface UseCalendarConfig {
   /** Initial focus date (YYYY-MM-DD) */
@@ -15,6 +15,8 @@ export interface UseCalendarConfig {
   locale?: string;
   /** User's timezone for range evaluation */
   userTimezone?: string;
+  /** View fidelity level — controls detail computed per day. Default: 'month' */
+  fidelity?: ViewFidelity;
 }
 
 export interface UseCalendarResult {
@@ -47,6 +49,7 @@ export function useCalendar(config: UseCalendarConfig): UseCalendarResult {
       weekStartsOn: config.weekStartsOn,
       locale: config.locale,
       userTimezone: config.userTimezone,
+      fidelity: config.fidelity,
     });
   }, [
     focusDate,
@@ -55,6 +58,7 @@ export function useCalendar(config: UseCalendarConfig): UseCalendarResult {
     config.weekStartsOn,
     config.locale,
     config.userTimezone,
+    config.fidelity,
   ]);
 
   const next = useCallback(() => {

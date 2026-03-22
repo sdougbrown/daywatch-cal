@@ -3,6 +3,9 @@
   "name": "neo-reckoning",
   "type": "module",
   "packageManager": "yarn@4.13.0",
+  "engines": {
+    "node": ">=20"
+  },
   "workspaces": [
     "packages/*"
   ],

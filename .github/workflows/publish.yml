@@ -58,12 +58,24 @@ jobs:
 
       - name: Publish @neo-reckoning/core
         working-directory: packages/core
-        run: npm publish --provenance --access public
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="latest"
+          if echo "$VERSION" | grep -q "-"; then TAG="alpha"; fi
+          npm publish --provenance --access public --tag "$TAG"
 
       - name: Publish @neo-reckoning/react
         working-directory: packages/react
-        run: npm publish --provenance --access public
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="latest"
+          if echo "$VERSION" | grep -q "-"; then TAG="alpha"; fi
+          npm publish --provenance --access public --tag "$TAG"
 
       - name: Publish @neo-reckoning/ical
         working-directory: packages/ical
-        run: npm publish --provenance --access public
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="latest"
+          if echo "$VERSION" | grep -q "-"; then TAG="alpha"; fi
+          npm publish --provenance --access public --tag "$TAG"

@@ -691,7 +691,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@neo-reckoning/core@workspace:*, @neo-reckoning/core@workspace:packages/core":
+"@neo-reckoning/core@workspace:^, @neo-reckoning/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@neo-reckoning/core@workspace:packages/core"
   languageName: unknown
@@ -701,7 +701,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@neo-reckoning/ical@workspace:packages/ical"
   dependencies:
-    "@neo-reckoning/core": "workspace:*"
+    "@neo-reckoning/core": "workspace:^"
   languageName: unknown
   linkType: soft
 
@@ -709,7 +709,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@neo-reckoning/react@workspace:packages/react"
   dependencies:
-    "@neo-reckoning/core": "workspace:*"
+    "@neo-reckoning/core": "workspace:^"
     "@types/react": "npm:^19.2.14"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0

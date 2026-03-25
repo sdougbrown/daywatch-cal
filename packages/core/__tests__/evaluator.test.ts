@@ -324,6 +324,59 @@ describe('RangeEvaluator', () => {
       const occurrences = utcEvaluator.expand(range, from, to);
       expect(occurrences).toHaveLength(0);
     });
+
+    it('expands month-only recurrence without scanning non-matching months', () => {
+      const range = makeRange({
+        everyMonth: [2],
+      });
+
+      const from = new Date(2026, 0, 28);
+      const to = new Date(2026, 2, 3);
+      const occurrences = utcEvaluator.expand(range, from, to);
+
+      expect(occurrences).toHaveLength(28);
+      expect(occurrences[0].date).toBe('2026-02-01');
+      expect(occurrences.at(-1)?.date).toBe('2026-02-28');
+      expect(occurrences.every(o => o.date.startsWith('2026-02-'))).toBe(true);
+    });
+
+    it('expands weekday + month recurrence over a broad window', () => {
+      const range = makeRange({
+        everyWeekday: [1], // Mondays
+        everyMonth: [2, 3],
+      });
+
+      const from = new Date(2026, 0, 1);
+      const to = new Date(2026, 2, 31);
+      const occurrences = utcEvaluator.expand(range, from, to);
+
+      expect(occurrences.map(o => o.date)).toEqual([
+        '2026-02-02',
+        '2026-02-09',
+        '2026-02-16',
+        '2026-02-23',
+        '2026-03-02',
+        '2026-03-09',
+        '2026-03-16',
+        '2026-03-23',
+        '2026-03-30',
+      ]);
+    });
+
+    it('expands everyDate + weekday recurrence and keeps leap-year semantics', () => {
+      const range = makeRange({
+        everyDate: [29],
+        everyWeekday: [4], // Thursday
+      });
+
+      const from = new Date(2024, 0, 1);
+      const to = new Date(2024, 2, 31);
+      const occurrences = utcEvaluator.expand(range, from, to);
+
+      expect(occurrences.map(o => o.date)).toEqual([
+        '2024-02-29',
+      ]);
+    });
   });
 
   describe('expandDay', () => {

@@ -5,7 +5,6 @@ import {
   daysInMonth,
   compareDates,
   dateRange,
-  parseTime,
   formatTime,
   timeToMinutes,
   minutesToTime,
@@ -13,6 +12,28 @@ import {
   convertTime,
   formatDate,
 } from './time.js';
+
+interface CompiledRange {
+  dates?: readonly string[];
+  datesSet?: Set<string>;
+  weekdayLookup?: Uint8Array;
+  dateLookup?: Uint8Array;
+  monthLookup?: Uint8Array;
+  hasRecurrence: boolean;
+  hasTimeFields: boolean;
+}
+
+function buildLookup(size: number, values: readonly number[]): Uint8Array {
+  const lookup = new Uint8Array(size);
+
+  for (const value of values) {
+    if (value >= 0 && value < size) {
+      lookup[value] = 1;
+    }
+  }
+
+  return lookup;
+}
 
 /**
  * RangeEvaluator — the core computation engine of neo-reckoning.
@@ -22,6 +43,7 @@ import {
  */
 export class RangeEvaluator {
   private userTimezone: string;
+  private compiledRanges = new WeakMap<DateRange, CompiledRange>();
 
   constructor(userTimezone?: string) {
     this.userTimezone = userTimezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -31,36 +53,41 @@ export class RangeEvaluator {
    * Check if a date (YYYY-MM-DD) falls within a range's day-level criteria.
    */
   isDateInRange(dateStr: string, range: DateRange): boolean {
+    const compiled = this.getCompiledRange(range);
+
     // Check fixedBetween / fromDate / toDate bounds first
     if (!this.isDateInBounds(dateStr, range)) {
       return false;
     }
 
     // Explicit dates list
-    if (range.dates && range.dates.length > 0) {
-      return range.dates.includes(dateStr);
+    if (compiled.datesSet) {
+      return compiled.datesSet.has(dateStr);
     }
 
     // Recurrence patterns — if any are set, ALL set patterns must match (AND)
-    const hasRecurrence = range.everyWeekday || range.everyDate || range.everyMonth;
-    if (!hasRecurrence) {
+    if (!compiled.hasRecurrence) {
       // No day-level recurrence and no explicit dates — range applies to all days in bounds
       return true;
     }
 
-    const { year, month, day } = parseDate(dateStr);
-    const weekday = getDayOfWeek(dateStr);
-
-    if (range.everyWeekday && !range.everyWeekday.includes(weekday)) {
-      return false;
+    if (compiled.weekdayLookup) {
+      const weekday = getDayOfWeek(dateStr);
+      if (!compiled.weekdayLookup[weekday]) {
+        return false;
+      }
     }
 
-    if (range.everyDate && !range.everyDate.includes(day)) {
-      return false;
-    }
+    if (compiled.dateLookup || compiled.monthLookup) {
+      const { month, day } = parseDate(dateStr);
 
-    if (range.everyMonth && !range.everyMonth.includes(month + 1)) {
-      return false;
+      if (compiled.dateLookup && !compiled.dateLookup[day]) {
+        return false;
+      }
+
+      if (compiled.monthLookup && !compiled.monthLookup[month + 1]) {
+        return false;
+      }
     }
 
     return true;
@@ -158,6 +185,39 @@ export class RangeEvaluator {
   }
 
   /**
+   * Expand all timed slots for a specific day across multiple ranges and
+   * precompute minute offsets for downstream conflict/free-slot scoring.
+   */
+  getTimedEntriesForDay(
+    ranges: DateRange[],
+    date: string,
+  ): Array<{ slot: TimeSlot; startMinutes: number; endMinutes: number }> {
+    const entries: Array<{ slot: TimeSlot; startMinutes: number; endMinutes: number }> = [];
+
+    for (const range of ranges) {
+      if (!this.isDateInRange(date, range)) continue;
+      if (!this.hasTimeFields(range)) continue;
+
+      const timeSlots = this.getTimeSlots(date, range);
+      for (const slot of timeSlots) {
+        const startMinutes = timeToMinutes(slot.startTime);
+        const endMinutes = slot.endTime
+          ? timeToMinutes(slot.endTime)
+          : startMinutes + (slot.duration ?? 0);
+
+        entries.push({
+          slot,
+          startMinutes,
+          endMinutes,
+        });
+      }
+    }
+
+    entries.sort((a, b) => a.startMinutes - b.startMinutes || a.endMinutes - b.endMinutes);
+    return entries;
+  }
+
+  /**
    * Check if a specific datetime falls within a range (both day and time criteria).
    */
   isInRange(datetime: Date, range: DateRange): boolean {
@@ -197,12 +257,20 @@ export class RangeEvaluator {
    * Expand a DateRange into all concrete occurrences within a date window.
    * This is the core computation described in the plan's Addendum C.
    */
+  getMatchingDates(range: DateRange, fromStr: string, toStr: string): string[] {
+    return this.getCandidateDays(range, fromStr, toStr);
+  }
+
+  /**
+   * Expand a DateRange into all concrete occurrences within a date window.
+   * This is the core computation described in the plan's Addendum C.
+   */
   expand(range: DateRange, from: Date, to: Date): Occurrence[] {
     const fromStr = formatDate(from);
     const toStr = formatDate(to);
 
     // Step 1: Generate candidate days
-    const candidateDays = this.getCandidateDays(range, fromStr, toStr);
+    const candidateDays = this.getMatchingDates(range, fromStr, toStr);
 
     // Step 2: Generate occurrences for each day
     const occurrences: Occurrence[] = [];
@@ -443,34 +511,14 @@ export class RangeEvaluator {
    * Two all-day ranges, or an all-day + timed range, are NOT conflicts.
    */
   findConflicts(ranges: DateRange[], date: string): Conflict[] {
-    // Collect timed slots from all ranges that match this date
-    interface SlotWithRange {
-      rangeId: string;
-      label: string;
-      startMinutes: number;
-      endMinutes: number;
-    }
-
-    const slots: SlotWithRange[] = [];
-
-    for (const range of ranges) {
-      if (!this.isDateInRange(date, range)) continue;
-      if (!this.hasTimeFields(range)) continue; // all-day — skip
-
-      const timeSlots = this.getTimeSlots(date, range);
-      for (const slot of timeSlots) {
-        if (slot.endTime === null) continue; // point-in-time, no overlap possible
-        slots.push({
-          rangeId: range.id,
-          label: range.label,
-          startMinutes: timeToMinutes(slot.startTime),
-          endMinutes: timeToMinutes(slot.endTime),
-        });
-      }
-    }
-
-    // Sort by start time for sweep-line
-    slots.sort((a, b) => a.startMinutes - b.startMinutes || a.endMinutes - b.endMinutes);
+    const slots = this.getTimedEntriesForDay(ranges, date)
+      .filter(entry => entry.slot.endTime !== null && entry.endMinutes > entry.startMinutes)
+      .map(entry => ({
+        rangeId: entry.slot.rangeId,
+        label: entry.slot.label,
+        startMinutes: entry.startMinutes,
+        endMinutes: entry.endMinutes,
+      }));
 
     // Sweep-line: find overlapping pairs from different ranges
     const conflicts: Conflict[] = [];
@@ -551,18 +599,9 @@ export class RangeEvaluator {
 
     // Step 1-2: Collect all occupied intervals for this date
     const occupied: [number, number][] = [];
-    for (const range of ranges) {
-      if (!this.isDateInRange(date, range)) continue;
-      // All-day ranges have no time slots — they don't block time
-      const slots = this.getTimeSlots(date, range);
-      for (const slot of slots) {
-        const start = timeToMinutes(slot.startTime);
-        const end = slot.endTime
-          ? timeToMinutes(slot.endTime)
-          : start + (slot.duration ?? 0);
-        if (end > start) {
-          occupied.push([start, end]);
-        }
+    for (const entry of this.getTimedEntriesForDay(ranges, date)) {
+      if (entry.endMinutes > entry.startMinutes) {
+        occupied.push([entry.startMinutes, entry.endMinutes]);
       }
     }
 
@@ -674,6 +713,8 @@ export class RangeEvaluator {
   }
 
   private getCandidateDays(range: DateRange, fromStr: string, toStr: string): string[] {
+    const compiled = this.getCompiledRange(range);
+
     // Determine the effective window
     let effectiveFrom = fromStr;
     let effectiveTo = toStr;
@@ -690,19 +731,175 @@ export class RangeEvaluator {
     }
 
     // Explicit dates — just filter to the window
-    if (range.dates && range.dates.length > 0) {
-      return range.dates.filter(
+    if (compiled.dates) {
+      return compiled.dates.filter(
         d => compareDates(d, effectiveFrom) >= 0 && compareDates(d, effectiveTo) <= 0,
       );
     }
 
-    // Generate all days in the window and filter by recurrence
+    if (!compiled.hasRecurrence) {
+      return dateRange(effectiveFrom, effectiveTo);
+    }
+
+    if (compiled.dateLookup) {
+      return this.generateCandidateDaysByDayOfMonth(effectiveFrom, effectiveTo, compiled);
+    }
+
+    if (compiled.weekdayLookup) {
+      return this.generateCandidateDaysByWeekday(effectiveFrom, effectiveTo, compiled);
+    }
+
+    if (compiled.monthLookup) {
+      return this.generateCandidateDaysByMonth(effectiveFrom, effectiveTo, compiled);
+    }
+
+    // Fallback for any recurrence shape not handled above
     const allDays = dateRange(effectiveFrom, effectiveTo);
     return allDays.filter(day => this.isDateInRange(day, range));
   }
 
   private hasTimeFields(range: DateRange): boolean {
-    return !!(range.everyHour || range.startTime);
+    return this.getCompiledRange(range).hasTimeFields;
+  }
+
+  private generateCandidateDaysByDayOfMonth(
+    fromStr: string,
+    toStr: string,
+    compiled: CompiledRange,
+  ): string[] {
+    const results: string[] = [];
+
+    this.forEachMonthInRange(fromStr, toStr, (year, month, startDay, endDay) => {
+      if (compiled.monthLookup && !compiled.monthLookup[month + 1]) {
+        return;
+      }
+
+      const maxDay = daysInMonth(year, month);
+
+      for (let day = startDay; day <= endDay; day++) {
+        if (!compiled.dateLookup![day] || day > maxDay) {
+          continue;
+        }
+
+        if (compiled.weekdayLookup && !compiled.weekdayLookup[new Date(year, month, day).getDay()]) {
+          continue;
+        }
+
+        results.push(formatDate(new Date(year, month, day)));
+      }
+    });
+
+    return results;
+  }
+
+  private generateCandidateDaysByWeekday(
+    fromStr: string,
+    toStr: string,
+    compiled: CompiledRange,
+  ): string[] {
+    const results: string[] = [];
+
+    this.forEachMonthInRange(fromStr, toStr, (year, month, startDay, endDay) => {
+      if (compiled.monthLookup && !compiled.monthLookup[month + 1]) {
+        return;
+      }
+
+      const firstWeekday = new Date(year, month, 1).getDay();
+
+      for (let weekday = 0; weekday < 7; weekday++) {
+        if (!compiled.weekdayLookup![weekday]) continue;
+
+        let day = 1 + ((weekday - firstWeekday + 7) % 7);
+        if (day < startDay) {
+          day += Math.ceil((startDay - day) / 7) * 7;
+        }
+
+        for (; day <= endDay; day += 7) {
+          results.push(formatDate(new Date(year, month, day)));
+        }
+      }
+    });
+
+    results.sort(compareDates);
+    return results;
+  }
+
+  private generateCandidateDaysByMonth(
+    fromStr: string,
+    toStr: string,
+    compiled: CompiledRange,
+  ): string[] {
+    const results: string[] = [];
+
+    this.forEachMonthInRange(fromStr, toStr, (year, month, startDay, endDay) => {
+      if (!compiled.monthLookup![month + 1]) {
+        return;
+      }
+
+      const monthFrom = formatDate(new Date(year, month, startDay));
+      const monthTo = formatDate(new Date(year, month, endDay));
+      const days = dateRange(monthFrom, monthTo);
+
+      results.push(...days);
+    });
+
+    return results;
+  }
+
+  private forEachMonthInRange(
+    fromStr: string,
+    toStr: string,
+    visit: (year: number, month: number, startDay: number, endDay: number) => void,
+  ): void {
+    const from = parseDate(fromStr);
+    const to = parseDate(toStr);
+
+    let year = from.year;
+    let month = from.month;
+
+    while (year < to.year || (year === to.year && month <= to.month)) {
+      const startDay = year === from.year && month === from.month ? from.day : 1;
+      const endDay = year === to.year && month === to.month ? to.day : daysInMonth(year, month);
+
+      visit(year, month, startDay, endDay);
+
+      month++;
+      if (month === 12) {
+        month = 0;
+        year++;
+      }
+    }
+  }
+
+  private getCompiledRange(range: DateRange): CompiledRange {
+    const cached = this.compiledRanges.get(range);
+    if (cached) {
+      return cached;
+    }
+
+    const compiled: CompiledRange = {
+      ...(range.dates && range.dates.length > 0
+        ? {
+            dates: range.dates,
+            datesSet: new Set(range.dates,
+            ),
+          }
+        : {}),
+      ...(range.everyWeekday
+        ? { weekdayLookup: buildLookup(7, range.everyWeekday) }
+        : {}),
+      ...(range.everyDate
+        ? { dateLookup: buildLookup(32, range.everyDate) }
+        : {}),
+      ...(range.everyMonth
+        ? { monthLookup: buildLookup(13, range.everyMonth) }
+        : {}),
+      hasRecurrence: !!(range.everyWeekday || range.everyDate || range.everyMonth),
+      hasTimeFields: !!(range.everyHour || range.startTime),
+    };
+
+    this.compiledRanges.set(range, compiled);
+    return compiled;
   }
 
   /**

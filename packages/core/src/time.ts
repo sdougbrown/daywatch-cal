@@ -3,15 +3,96 @@
  * Uses Intl.DateTimeFormat for timezone conversion — no external dependencies.
  */
 
+const TWO_DIGITS = Array.from({ length: 100 }, (_, index) => String(index).padStart(2, '0'));
+const dateTimePartsFormatterCache = new Map<string, Intl.DateTimeFormat>();
+const zonedDateTimePartsCache = new Map<string, ZonedDateTimeParts>();
+const timezoneOffsetCache = new Map<string, number>();
+const timeConversionCache = new Map<string, string | null>();
+
+interface ZonedDateTimeParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+}
+
+function parseTwoDigits(value: string, start: number): number {
+  return ((value.charCodeAt(start) - 48) * 10) + (value.charCodeAt(start + 1) - 48);
+}
+
+function getDateTimePartsFormatter(timezone: string): Intl.DateTimeFormat {
+  let formatter = dateTimePartsFormatterCache.get(timezone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    });
+    dateTimePartsFormatterCache.set(timezone, formatter);
+  }
+  return formatter;
+}
+
+function getZonedDateTimeParts(date: Date, timezone: string): ZonedDateTimeParts {
+  const cacheKey = `${timezone}|${date.getTime()}`;
+  const cached = zonedDateTimePartsCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  let year = 0;
+  let month = 0;
+  let day = 0;
+  let hour = 0;
+  let minute = 0;
+  let second = 0;
+
+  for (const part of getDateTimePartsFormatter(timezone).formatToParts(date)) {
+    switch (part.type) {
+      case 'year':
+        year = Number(part.value);
+        break;
+      case 'month':
+        month = Number(part.value);
+        break;
+      case 'day':
+        day = Number(part.value);
+        break;
+      case 'hour':
+        hour = Number(part.value);
+        break;
+      case 'minute':
+        minute = Number(part.value);
+        break;
+      case 'second':
+        second = Number(part.value);
+        break;
+    }
+  }
+
+  const parts = { year, month, day, hour, minute, second };
+  zonedDateTimePartsCache.set(cacheKey, parts);
+  return parts;
+}
+
 /** Parse "HH:mm" into { hour, minute } */
 export function parseTime(time: string): { hour: number; minute: number } {
-  const [h, m] = time.split(':').map(Number);
-  return { hour: h, minute: m };
+  return {
+    hour: parseTwoDigits(time, 0),
+    minute: parseTwoDigits(time, 3),
+  };
 }
 
 /** Format { hour, minute } into "HH:mm" */
 export function formatTime(hour: number, minute: number): string {
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  return `${TWO_DIGITS[hour] ?? String(hour).padStart(2, '0')}:${TWO_DIGITS[minute] ?? String(minute).padStart(2, '0')}`;
 }
 
 /** Convert minutes since midnight to "HH:mm" */
@@ -23,8 +104,7 @@ export function minutesToTime(minutes: number): string {
 
 /** Convert "HH:mm" to minutes since midnight */
 export function timeToMinutes(time: string): number {
-  const { hour, minute } = parseTime(time);
-  return hour * 60 + minute;
+  return (parseTwoDigits(time, 0) * 60) + parseTwoDigits(time, 3);
 }
 
 /** Add minutes to a time string, clamping at 24:00. Returns null if result >= 24:00. */
@@ -36,15 +116,24 @@ export function addMinutes(time: string, minutes: number): string | null {
 
 /** Parse "YYYY-MM-DD" into { year, month, day } */
 export function parseDate(date: string): { year: number; month: number; day: number } {
-  const [y, m, d] = date.split('-').map(Number);
-  return { year: y, month: m - 1, day: d }; // month is 0-indexed like JS Date
+  const year = (
+    ((date.charCodeAt(0) - 48) * 1000) +
+    ((date.charCodeAt(1) - 48) * 100) +
+    ((date.charCodeAt(2) - 48) * 10) +
+    (date.charCodeAt(3) - 48)
+  );
+  return {
+    year,
+    month: parseTwoDigits(date, 5) - 1,
+    day: parseTwoDigits(date, 8),
+  };
 }
 
 /** Format a Date to "YYYY-MM-DD" */
 export function formatDate(date: Date): string {
   const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
+  const m = TWO_DIGITS[date.getMonth() + 1];
+  const d = TWO_DIGITS[date.getDate()];
   return `${y}-${m}-${d}`;
 }
 
@@ -95,30 +184,16 @@ export function getToday(timezone?: string): string {
  * Format a Date as "YYYY-MM-DD" in a specific timezone using Intl.DateTimeFormat.
  */
 export function formatDateInTimezone(date: Date, timezone: string): string {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  // en-CA gives YYYY-MM-DD format
-  return formatter.format(date);
+  const parts = getZonedDateTimeParts(date, timezone);
+  return `${parts.year}-${TWO_DIGITS[parts.month]}-${TWO_DIGITS[parts.day]}`;
 }
 
 /**
  * Get the hour and minute of a Date in a specific timezone.
  */
 export function getTimeInTimezone(date: Date, timezone: string): { hour: number; minute: number } {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false,
-  });
-  const parts = formatter.formatToParts(date);
-  const hour = Number(parts.find(p => p.type === 'hour')?.value ?? 0);
-  const minute = Number(parts.find(p => p.type === 'minute')?.value ?? 0);
-  return { hour, minute };
+  const parts = getZonedDateTimeParts(date, timezone);
+  return { hour: parts.hour, minute: parts.minute };
 }
 
 /**
@@ -133,6 +208,11 @@ export function convertTime(
   toTimezone: string,
 ): string | null {
   if (fromTimezone === toTimezone) return time;
+
+  const cacheKey = `${dateStr}|${time}|${fromTimezone}|${toTimezone}`;
+  if (timeConversionCache.has(cacheKey)) {
+    return timeConversionCache.get(cacheKey)!;
+  }
 
   const { year, month, day } = parseDate(dateStr);
   const { hour, minute } = parseTime(time);
@@ -152,10 +232,13 @@ export function convertTime(
   // Check if the source time actually exists (DST spring-forward gap)
   const verifyTime = getTimeInTimezone(actualUtc, fromTimezone);
   if (verifyTime.hour !== hour || verifyTime.minute !== minute) {
+    timeConversionCache.set(cacheKey, null);
     return null; // Time doesn't exist in source timezone (DST gap)
   }
 
-  return formatTime(targetTime.hour, targetTime.minute);
+  const converted = formatTime(targetTime.hour, targetTime.minute);
+  timeConversionCache.set(cacheKey, converted);
+  return converted;
 }
 
 /**
@@ -163,11 +246,24 @@ export function convertTime(
  * Positive means behind UTC (e.g., UTC-5 returns 300).
  */
 function getTimezoneOffset(date: Date, timezone: string): number {
-  const utcStr = date.toLocaleString('en-US', { timeZone: 'UTC' });
-  const tzStr = date.toLocaleString('en-US', { timeZone: timezone });
-  const utcDate = new Date(utcStr);
-  const tzDate = new Date(tzStr);
-  return (utcDate.getTime() - tzDate.getTime()) / 60000;
+  const cacheKey = `${timezone}|${date.getTime()}`;
+  const cached = timezoneOffsetCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const parts = getZonedDateTimeParts(date, timezone);
+  const asUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+  );
+  const offset = Math.round((date.getTime() - asUtc) / 60000);
+  timezoneOffsetCache.set(cacheKey, offset);
+  return offset;
 }
 
 /**

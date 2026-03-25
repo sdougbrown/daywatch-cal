@@ -34,34 +34,20 @@ export function scoreSchedule(
   let conflictDays = 0;
 
   for (const day of days) {
-    // Gather all time slots for this day across all ranges
-    const allSlots: TimeSlot[] = [];
-    for (const range of ranges) {
-      if (!evaluator.isDateInRange(day, range)) continue;
-      const slots = evaluator.getTimeSlots(day, range);
-      if (slots.length > 0) {
-        allSlots.push(...slots);
-      }
-    }
-
-    // Sort slots by start time
-    allSlots.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+    const timedEntries = evaluator.getTimedEntriesForDay(ranges, day);
+    const allSlots: TimeSlot[] = timedEntries.map(entry => entry.slot);
 
     // --- Conflicts ---
     // Count pairs of slots that overlap in time
     let dayHasConflict = false;
-    for (let i = 0; i < allSlots.length; i++) {
-      const slotAStart = timeToMinutes(allSlots[i].startTime);
-      const slotAEnd = allSlots[i].endTime
-        ? timeToMinutes(allSlots[i].endTime!)
-        : slotAStart + (allSlots[i].duration ?? 0);
+    for (let i = 0; i < timedEntries.length; i++) {
+      const slotAStart = timedEntries[i].startMinutes;
+      const slotAEnd = timedEntries[i].endMinutes;
       if (slotAEnd <= slotAStart) continue; // skip point-in-time
 
-      for (let j = i + 1; j < allSlots.length; j++) {
-        const slotBStart = timeToMinutes(allSlots[j].startTime);
-        const slotBEnd = allSlots[j].endTime
-          ? timeToMinutes(allSlots[j].endTime!)
-          : slotBStart + (allSlots[j].duration ?? 0);
+      for (let j = i + 1; j < timedEntries.length; j++) {
+        const slotBStart = timedEntries[j].startMinutes;
+        const slotBEnd = timedEntries[j].endMinutes;
         if (slotBEnd <= slotBStart) continue;
 
         // Since sorted by start, slotBStart >= slotAStart
@@ -74,7 +60,7 @@ export function scoreSchedule(
     if (dayHasConflict) conflictDays++;
 
     // --- Build merged occupied intervals within working hours ---
-    const occupied = mergeIntervals(allSlots, dayStartMin, dayEndMin);
+    const occupied = mergeIntervals(timedEntries, dayStartMin, dayEndMin);
 
     // --- Free time = working hours minus occupied ---
     const workingMinutes = dayEndMin - dayStartMin;
@@ -122,17 +108,15 @@ export function scoreSchedule(
  * Returns sorted array of [start, end] minute pairs.
  */
 function mergeIntervals(
-  slots: TimeSlot[],
+  timedEntries: Array<{ slot: TimeSlot; startMinutes: number; endMinutes: number }>,
   dayStartMin: number,
   dayEndMin: number,
 ): [number, number][] {
   // Convert to minute intervals, clipped to working hours
   const intervals: [number, number][] = [];
-  for (const slot of slots) {
-    const start = timeToMinutes(slot.startTime);
-    const end = slot.endTime
-      ? timeToMinutes(slot.endTime)
-      : start + (slot.duration ?? 0);
+  for (const entry of timedEntries) {
+    const start = entry.startMinutes;
+    const end = entry.endMinutes;
     if (end <= start) continue; // skip zero-length
 
     const clippedStart = Math.max(start, dayStartMin);

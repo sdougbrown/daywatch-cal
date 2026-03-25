@@ -27,15 +27,16 @@ export class YearGrid {
 
   private generate(): YearMonth[] {
     const months: YearMonth[] = [];
+    const activityByDate = this.buildActivityByDate();
 
     for (let month = 0; month < 12; month++) {
-      months.push(this.generateMonth(month));
+      months.push(this.generateMonth(month, activityByDate));
     }
 
     return months;
   }
 
-  private generateMonth(month: number): YearMonth {
+  private generateMonth(month: number, activityByDate: Map<string, string[]>): YearMonth {
     const label = this.formatMonthLabel(month);
     const totalDays = daysInMonth(this.year, month);
     const days: YearDay[] = [];
@@ -43,13 +44,7 @@ export class YearGrid {
 
     for (let day = 1; day <= totalDays; day++) {
       const dateStr = formatDate(new Date(this.year, month, day));
-      const matchingRangeIds: string[] = [];
-
-      for (const range of this.ranges) {
-        if (this.evaluator.isDateInRange(dateStr, range)) {
-          matchingRangeIds.push(range.id);
-        }
-      }
+      const matchingRangeIds = activityByDate.get(dateStr) ?? [];
 
       if (matchingRangeIds.length > 0) {
         activeDays++;
@@ -70,6 +65,27 @@ export class YearGrid {
       totalDays,
       days,
     };
+  }
+
+  private buildActivityByDate(): Map<string, string[]> {
+    const activityByDate = new Map<string, string[]>();
+    const from = `${this.year}-01-01`;
+    const to = `${this.year}-12-31`;
+
+    for (const range of this.ranges) {
+      const matchingDates = this.evaluator.getMatchingDates(range, from, to);
+
+      for (const dateStr of matchingDates) {
+        const ids = activityByDate.get(dateStr);
+        if (ids) {
+          ids.push(range.id);
+        } else {
+          activityByDate.set(dateStr, [range.id]);
+        }
+      }
+    }
+
+    return activityByDate;
   }
 
   private formatMonthLabel(month: number): string {

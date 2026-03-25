@@ -10,6 +10,10 @@ import {
   daysInMonth,
   compareDates,
   dateRange,
+  convertTime,
+  buildDate,
+  formatDateInTimezone,
+  getTimeInTimezone,
 } from '../src/time.js';
 
 describe('time utilities', () => {
@@ -112,6 +116,31 @@ describe('time utilities', () => {
 
     it('returns empty when from is after to', () => {
       expect(dateRange('2026-03-05', '2026-03-01')).toEqual([]);
+    });
+  });
+
+  describe('timezone helpers', () => {
+    it('converts UTC time to America/New_York', () => {
+      expect(convertTime('2026-03-21', '14:00', 'UTC', 'America/New_York')).toBe('10:00');
+    });
+
+    it('returns null for a spring-forward DST gap', () => {
+      expect(convertTime('2026-03-08', '02:30', 'America/New_York', 'UTC')).toBeNull();
+    });
+
+    it('builds UTC dates without shifting the instant', () => {
+      expect(buildDate('2026-03-21', '14:00', 'UTC').toISOString()).toBe('2026-03-21T14:00:00.000Z');
+    });
+
+    it('formats dates in a specific timezone', () => {
+      expect(formatDateInTimezone(new Date('2026-03-21T01:30:00.000Z'), 'America/New_York')).toBe('2026-03-20');
+    });
+
+    it('reads clock time in a specific timezone', () => {
+      expect(getTimeInTimezone(new Date('2026-03-21T14:45:00.000Z'), 'America/New_York')).toEqual({
+        hour: 10,
+        minute: 45,
+      });
     });
   });
 });

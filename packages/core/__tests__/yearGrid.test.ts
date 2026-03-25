@@ -82,6 +82,23 @@ describe('YearGrid', () => {
     expect(march3?.rangeIds).toHaveLength(0);
   });
 
+  it('counts a timed multi-slot range once per matching day', () => {
+    const range: DateRange = {
+      id: 'meds',
+      label: 'Medication',
+      everyWeekday: [1], // Mondays
+      everyHour: [6, 14, 22],
+      duration: 15,
+    };
+
+    const grid = new YearGrid({ year: 2026, ranges: [range] });
+    const march = grid.months[2];
+    const march2 = march.days.find(d => d.date === '2026-03-02');
+
+    expect(march2?.rangeIds).toEqual(['meds']);
+    expect(march2?.rangeCount).toBe(1);
+  });
+
   it('days have correct dayOfMonth values', () => {
     const grid = new YearGrid({ year: 2026, ranges: [] });
     const jan = grid.months[0];

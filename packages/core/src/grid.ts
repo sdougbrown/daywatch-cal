@@ -5,10 +5,12 @@ import type {
   Day,
   DayRangeInfo,
   DateRange,
+  TimeSlot,
   ViewFidelity,
 } from './types.js';
 import { RangeEvaluator } from './evaluator.js';
 import {
+  compareDates,
   parseDate,
   formatDate,
   daysInMonth,
@@ -30,6 +32,10 @@ export class CalendarGrid {
   private locale: string | undefined;
   private evaluator: RangeEvaluator;
   private fidelity: ViewFidelity;
+
+  private static readonly EMPTY_RANGES: DateRange[] = [];
+  private static readonly EMPTY_RANGE_SET = new Set<DateRange>();
+  private static readonly EMPTY_TIME_SLOTS: TimeSlot[] = [];
 
   constructor(config: CalendarGridConfig) {
     this.focusDate = config.focusDate;
@@ -74,29 +80,43 @@ export class CalendarGrid {
   // === Private ===
 
   private generate(): Month[] {
-    const months: Month[] = [];
     const { year, month } = parseDate(this.focusDate);
     const today = getToday();
+    const monthLayouts: Array<{
+      year: number;
+      month: number;
+      label: string;
+      dayCells: Array<{ date: string; dayOfMonth: number; isCurrentMonth: boolean }>;
+    }> = [];
+    const displayDates: string[] = [];
 
     for (let i = 0; i < this.numberOfMonths; i++) {
       const d = new Date(year, month + i, 1);
       const m = d.getMonth();
       const y = d.getFullYear();
-      months.push(this.generateMonth(y, m, today));
+      const layout = this.buildMonthLayout(y, m);
+      monthLayouts.push(layout);
+      displayDates.push(...layout.dayCells.map(day => day.date));
     }
 
-    return months;
+    const dayContext = this.buildDayContext(displayDates);
+
+    return monthLayouts.map(layout => ({
+      year: layout.year,
+      month: layout.month,
+      label: layout.label,
+      weeks: this.chunkWeeks(layout.dayCells.map(day =>
+        this.createDay(day.date, day.dayOfMonth, day.isCurrentMonth, today, dayContext),
+      )),
+    }));
   }
 
-  private generateMonth(year: number, month: number, today: string): Month {
-    const label = this.formatMonthLabel(year, month);
-    const weeks = this.generateWeeks(year, month, today);
-
-    return { year, month, label, weeks };
-  }
-
-  private generateWeeks(year: number, month: number, today: string): Week[] {
-    const weeks: Week[] = [];
+  private buildMonthLayout(year: number, month: number): {
+    year: number;
+    month: number;
+    label: string;
+    dayCells: Array<{ date: string; dayOfMonth: number; isCurrentMonth: boolean }>;
+  } {
     const totalDays = daysInMonth(year, month);
 
     // Find the weekday of the 1st (0=Sun, 6=Sat)
@@ -105,7 +125,7 @@ export class CalendarGrid {
     const leadingDays = (firstDayOfMonth - this.weekStartsOn + 7) % 7;
 
     // Build all day cells needed
-    const dayCells: Day[] = [];
+    const dayCells: Array<{ date: string; dayOfMonth: number; isCurrentMonth: boolean }> = [];
 
     // Previous month padding
     const prevMonth = month === 0 ? 11 : month - 1;
@@ -114,13 +134,13 @@ export class CalendarGrid {
     for (let i = leadingDays - 1; i >= 0; i--) {
       const day = prevMonthDays - i;
       const dateStr = formatDate(new Date(prevYear, prevMonth, day));
-      dayCells.push(this.createDay(dateStr, day, false, today));
+      dayCells.push({ date: dateStr, dayOfMonth: day, isCurrentMonth: false });
     }
 
     // Current month
     for (let day = 1; day <= totalDays; day++) {
       const dateStr = formatDate(new Date(year, month, day));
-      dayCells.push(this.createDay(dateStr, day, true, today));
+      dayCells.push({ date: dateStr, dayOfMonth: day, isCurrentMonth: true });
     }
 
     // Next month padding — fill to complete weeks
@@ -129,11 +149,21 @@ export class CalendarGrid {
     let nextDay = 1;
     while (dayCells.length % 7 !== 0) {
       const dateStr = formatDate(new Date(nextYear, nextMonth, nextDay));
-      dayCells.push(this.createDay(dateStr, nextDay, false, today));
+      dayCells.push({ date: dateStr, dayOfMonth: nextDay, isCurrentMonth: false });
       nextDay++;
     }
 
-    // Chunk into weeks
+    return {
+      year,
+      month,
+      label: this.formatMonthLabel(year, month),
+      dayCells,
+    };
+  }
+
+  private chunkWeeks(dayCells: Day[]): Week[] {
+    const weeks: Week[] = [];
+
     for (let i = 0; i < dayCells.length; i += 7) {
       weeks.push({ days: dayCells.slice(i, i + 7) });
     }
@@ -141,12 +171,22 @@ export class CalendarGrid {
     return weeks;
   }
 
-  private createDay(dateStr: string, dayOfMonth: number, isCurrentMonth: boolean, today: string): Day {
+  private createDay(
+    dateStr: string,
+    dayOfMonth: number,
+    isCurrentMonth: boolean,
+    today: string,
+    dayContext: {
+      rangesByDate: Map<string, DateRange[]>;
+      rangeSetByDate: Map<string, Set<DateRange>>;
+    },
+  ): Day {
     const fidelity = this.fidelity;
+    const matchingRanges = dayContext.rangesByDate.get(dateStr) ?? CalendarGrid.EMPTY_RANGES;
 
     if (fidelity === 'year') {
       // Year fidelity: only compute hasActivity, skip ranges[] and timeSlots[]
-      const hasActivity = this.ranges.some(r => this.evaluator.isDateInRange(dateStr, r));
+      const hasActivity = matchingRanges.length > 0;
       return {
         date: dateStr,
         dayOfMonth,
@@ -159,12 +199,12 @@ export class CalendarGrid {
     }
 
     // Month, week, and day fidelity: compute ranges[]
-    const ranges = this.evaluateRangesForDay(dateStr);
+    const ranges = this.evaluateRangesForDay(dateStr, matchingRanges, dayContext.rangeSetByDate);
 
     // Week and day fidelity: also compute timeSlots[]
     const timeSlots = (fidelity === 'week' || fidelity === 'day')
-      ? this.ranges.flatMap(r => this.evaluator.expandDay(r, dateStr))
-      : [];
+      ? matchingRanges.flatMap(r => this.evaluator.getTimeSlots(dateStr, r))
+      : CalendarGrid.EMPTY_TIME_SLOTS;
 
     return {
       date: dateStr,
@@ -176,17 +216,18 @@ export class CalendarGrid {
     };
   }
 
-  private evaluateRangesForDay(dateStr: string): DayRangeInfo[] {
+  private evaluateRangesForDay(
+    dateStr: string,
+    matchingRanges: readonly DateRange[],
+    rangeSetByDate: Map<string, Set<DateRange>>,
+  ): DayRangeInfo[] {
     const infos: DayRangeInfo[] = [];
+    const prevRangeSet = rangeSetByDate.get(this.shiftDay(dateStr, -1)) ?? CalendarGrid.EMPTY_RANGE_SET;
+    const nextRangeSet = rangeSetByDate.get(this.shiftDay(dateStr, 1)) ?? CalendarGrid.EMPTY_RANGE_SET;
 
-    for (const range of this.ranges) {
-      if (!this.evaluator.isDateInRange(dateStr, range)) continue;
-
-      // Check contiguous span boundaries
-      const prevDate = this.shiftDay(dateStr, -1);
-      const nextDate = this.shiftDay(dateStr, 1);
-      const prevInRange = this.evaluator.isDateInRange(prevDate, range);
-      const nextInRange = this.evaluator.isDateInRange(nextDate, range);
+    for (const range of matchingRanges) {
+      const prevInRange = prevRangeSet.has(range);
+      const nextInRange = nextRangeSet.has(range);
 
       infos.push({
         rangeId: range.id,
@@ -199,6 +240,50 @@ export class CalendarGrid {
     }
 
     return infos;
+  }
+
+  private buildDayContext(displayDates: string[]): {
+    rangesByDate: Map<string, DateRange[]>;
+    rangeSetByDate: Map<string, Set<DateRange>>;
+  } {
+    const rangesByDate = new Map<string, DateRange[]>();
+    const rangeSetByDate = new Map<string, Set<DateRange>>();
+
+    if (displayDates.length === 0 || this.ranges.length === 0) {
+      return { rangesByDate, rangeSetByDate };
+    }
+
+    let minDate = displayDates[0];
+    let maxDate = displayDates[0];
+    for (const dateStr of displayDates) {
+      if (compareDates(dateStr, minDate) < 0) minDate = dateStr;
+      if (compareDates(dateStr, maxDate) > 0) maxDate = dateStr;
+    }
+
+    const contextFrom = this.shiftDay(minDate, -1);
+    const contextTo = this.shiftDay(maxDate, 1);
+
+    for (const range of this.ranges) {
+      const matchingDates = this.evaluator.getMatchingDates(range, contextFrom, contextTo);
+
+      for (const dateStr of matchingDates) {
+        const dateRanges = rangesByDate.get(dateStr);
+        if (dateRanges) {
+          dateRanges.push(range);
+        } else {
+          rangesByDate.set(dateStr, [range]);
+        }
+
+        const rangeSet = rangeSetByDate.get(dateStr);
+        if (rangeSet) {
+          rangeSet.add(range);
+        } else {
+          rangeSetByDate.set(dateStr, new Set([range]));
+        }
+      }
+    }
+
+    return { rangesByDate, rangeSetByDate };
   }
 
   private formatMonthLabel(year: number, month: number): string {

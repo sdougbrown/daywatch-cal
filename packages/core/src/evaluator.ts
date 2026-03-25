@@ -16,6 +16,8 @@ import {
 interface CompiledRange {
   dates?: readonly string[];
   datesSet?: Set<string>;
+  exceptDatesSet?: Set<string>;
+  exceptBetween?: readonly [string, string][];
   weekdayLookup?: Uint8Array;
   dateLookup?: Uint8Array;
   monthLookup?: Uint8Array;
@@ -57,6 +59,10 @@ export class RangeEvaluator {
 
     // Check fixedBetween / fromDate / toDate bounds first
     if (!this.isDateInBounds(dateStr, range)) {
+      return false;
+    }
+
+    if (this.isDateExcluded(dateStr, compiled)) {
       return false;
     }
 
@@ -701,6 +707,22 @@ export class RangeEvaluator {
     return formatDate(d) === dateB;
   }
 
+  private isDateExcluded(dateStr: string, compiled: CompiledRange): boolean {
+    if (compiled.exceptDatesSet?.has(dateStr)) {
+      return true;
+    }
+
+    if (compiled.exceptBetween) {
+      for (const [from, to] of compiled.exceptBetween) {
+        if (compareDates(dateStr, from) >= 0 && compareDates(dateStr, to) <= 0) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   private isDateInBounds(dateStr: string, range: DateRange): boolean {
     if (range.fixedBetween) {
       if (range.fromDate && compareDates(dateStr, range.fromDate) < 0) return false;
@@ -738,7 +760,11 @@ export class RangeEvaluator {
     }
 
     if (!compiled.hasRecurrence) {
-      return dateRange(effectiveFrom, effectiveTo);
+      const allDays = dateRange(effectiveFrom, effectiveTo);
+      if (!compiled.exceptDatesSet && !compiled.exceptBetween) {
+        return allDays;
+      }
+      return allDays.filter(day => !this.isDateExcluded(day, compiled));
     }
 
     if (compiled.dateLookup) {
@@ -785,7 +811,10 @@ export class RangeEvaluator {
           continue;
         }
 
-        results.push(formatDate(new Date(year, month, day)));
+        const dateStr = formatDate(new Date(year, month, day));
+        if (!this.isDateExcluded(dateStr, compiled)) {
+          results.push(dateStr);
+        }
       }
     });
 
@@ -815,7 +844,10 @@ export class RangeEvaluator {
         }
 
         for (; day <= endDay; day += 7) {
-          results.push(formatDate(new Date(year, month, day)));
+          const dateStr = formatDate(new Date(year, month, day));
+          if (!this.isDateExcluded(dateStr, compiled)) {
+            results.push(dateStr);
+          }
         }
       }
     });
@@ -840,7 +872,16 @@ export class RangeEvaluator {
       const monthTo = formatDate(new Date(year, month, endDay));
       const days = dateRange(monthFrom, monthTo);
 
-      results.push(...days);
+      if (!compiled.exceptDatesSet && !compiled.exceptBetween) {
+        results.push(...days);
+        return;
+      }
+
+      for (const day of days) {
+        if (!this.isDateExcluded(day, compiled)) {
+          results.push(day);
+        }
+      }
     });
 
     return results;
@@ -884,6 +925,12 @@ export class RangeEvaluator {
             datesSet: new Set(range.dates,
             ),
           }
+        : {}),
+      ...(range.exceptDates && range.exceptDates.length > 0
+        ? { exceptDatesSet: new Set(range.exceptDates) }
+        : {}),
+      ...(range.exceptBetween && range.exceptBetween.length > 0
+        ? { exceptBetween: range.exceptBetween }
         : {}),
       ...(range.everyWeekday
         ? { weekdayLookup: buildLookup(7, range.everyWeekday) }

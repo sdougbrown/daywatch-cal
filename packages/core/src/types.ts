@@ -32,6 +32,12 @@ export interface DateRange {
   /** If true, recurrence is constrained to the fromDate/toDate window */
   fixedBetween?: boolean;
 
+  // Day exclusions
+  /** Specific dates to exclude from matching, e.g. ["2026-12-25", "2026-01-01"] */
+  exceptDates?: string[];
+  /** Date windows to exclude from matching — array of [from, to] inclusive tuples */
+  exceptBetween?: [string, string][];
+
   // Day recurrence
   /** Days of month this range recurs on, e.g. [1, 15] */
   everyDate?: number[];

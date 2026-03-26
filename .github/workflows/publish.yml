@@ -31,9 +31,79 @@ jobs:
         env:
           NODE_OPTIONS: '--experimental-vm-modules'
 
-  publish:
-    needs: build-and-test
+  detect-version-changes:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      any_changed: ${{ steps.versions.outputs.any_changed }}
+      core_changed: ${{ steps.versions.outputs.core_changed }}
+      react_changed: ${{ steps.versions.outputs.react_changed }}
+      ical_changed: ${{ steps.versions.outputs.ical_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Detect package version changes
+        id: versions
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          node <<'NODE' >> "$GITHUB_OUTPUT"
+          const { execFileSync } = require('node:child_process');
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const before = process.env.BEFORE_SHA;
+          const isZeroSha = !before || /^0+$/.test(before);
+          const packages = ['core', 'react', 'ical'];
+
+          const readCurrentVersion = (pkg) => {
+            const packageJson = path.join('packages', pkg, 'package.json');
+            return JSON.parse(fs.readFileSync(packageJson, 'utf8')).version;
+          };
+
+          const readPreviousVersion = (pkg) => {
+            if (isZeroSha) {
+              return null;
+            }
+
+            try {
+              const packageJson = execFileSync(
+                'git',
+                ['show', `${before}:packages/${pkg}/package.json`],
+                { encoding: 'utf8' }
+              );
+              return JSON.parse(packageJson).version;
+            } catch {
+              return null;
+            }
+          };
+
+          let anyChanged = false;
+
+          for (const pkg of packages) {
+            const current = readCurrentVersion(pkg);
+            const previous = readPreviousVersion(pkg);
+            const changed = previous === null || current !== previous;
+
+            if (changed) {
+              anyChanged = true;
+            }
+
+            console.log(`${pkg}_changed=${changed}`);
+          }
+
+          console.log(`any_changed=${anyChanged}`);
+          NODE
+
+  publish:
+    needs: [build-and-test, detect-version-changes]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.detect-version-changes.outputs.any_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -57,6 +127,7 @@ jobs:
         run: yarn turbo run build
 
       - name: Publish @neo-reckoning/core
+        if: needs.detect-version-changes.outputs.core_changed == 'true'
         working-directory: packages/core
         run: |
           VERSION=$(node -p "require('./package.json').version")
@@ -66,6 +137,7 @@ jobs:
           npm publish package.tgz --provenance --access public --tag "$TAG"
 
       - name: Publish @neo-reckoning/react
+        if: needs.detect-version-changes.outputs.react_changed == 'true'
         working-directory: packages/react
         run: |
           VERSION=$(node -p "require('./package.json').version")
@@ -75,6 +147,7 @@ jobs:
           npm publish package.tgz --provenance --access public --tag "$TAG"
 
       - name: Publish @neo-reckoning/ical
+        if: needs.detect-version-changes.outputs.ical_changed == 'true'
         working-directory: packages/ical
         run: |
           VERSION=$(node -p "require('./package.json').version")

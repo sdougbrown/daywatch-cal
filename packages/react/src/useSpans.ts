@@ -1,17 +1,9 @@
 import { useMemo } from 'react';
-import { RangeEvaluator } from '@neo-reckoning/core';
-import type { DateRange, SpanInfo } from '@neo-reckoning/core';
+import { buildSpansModel } from '@neo-reckoning/models';
+import type { SpansModelConfig } from '@neo-reckoning/models';
+import type { SpanInfo } from '@neo-reckoning/core';
 
-export interface UseSpansConfig {
-  /** DateRanges to compute spans for */
-  ranges: DateRange[];
-  /** Start of the window */
-  from: Date;
-  /** End of the window */
-  to: Date;
-  /** User's timezone for range evaluation */
-  userTimezone?: string;
-}
+export interface UseSpansConfig extends SpansModelConfig {}
 
 /**
  * Span computation hook — returns SpanInfo[] for overlap-aware rendering.
@@ -20,15 +12,8 @@ export interface UseSpansConfig {
 export function useSpans(config: UseSpansConfig): SpanInfo[] {
   const { ranges, from, to, userTimezone } = config;
 
-  const evaluator = useMemo(
-    () => new RangeEvaluator(userTimezone),
-    [userTimezone],
+  return useMemo(
+    () => buildSpansModel({ ranges, from, to, userTimezone }),
+    [ranges, from, to, userTimezone],
   );
-
-  const spans = useMemo(
-    () => evaluator.computeSpans(ranges, from, to),
-    [evaluator, ranges, from, to],
-  );
-
-  return spans;
 }

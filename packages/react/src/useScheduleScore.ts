@@ -1,16 +1,9 @@
 import { useMemo } from 'react';
-import { RangeEvaluator, scoreSchedule } from '@neo-reckoning/core';
-import type { DateRange, ScheduleScore } from '@neo-reckoning/core';
+import { buildScheduleScoreModel } from '@neo-reckoning/models';
+import type { ScheduleScoreModelConfig } from '@neo-reckoning/models';
+import type { ScheduleScore } from '@neo-reckoning/core';
 
-export interface UseScheduleScoreConfig {
-  ranges: DateRange[];
-  from: Date;
-  to: Date;
-  focusBlockMinutes?: number;
-  dayStart?: string;
-  dayEnd?: string;
-  userTimezone?: string;
-}
+export interface UseScheduleScoreConfig extends ScheduleScoreModelConfig {}
 
 /**
  * Compute a ScheduleScore for a set of ranges across a date window.
@@ -27,20 +20,17 @@ export function useScheduleScore(config: UseScheduleScoreConfig): ScheduleScore 
     userTimezone,
   } = config;
 
-  const evaluator = useMemo(
-    () => new RangeEvaluator(userTimezone),
-    [userTimezone],
-  );
-
-  const score = useMemo(
+  return useMemo(
     () =>
-      scoreSchedule(evaluator, ranges, from, to, {
+      buildScheduleScoreModel({
+        ranges,
+        from,
+        to,
         focusBlockMinutes,
         dayStart,
         dayEnd,
+        userTimezone,
       }),
-    [evaluator, ranges, from, to, focusBlockMinutes, dayStart, dayEnd],
+    [ranges, from, to, focusBlockMinutes, dayStart, dayEnd, userTimezone],
   );
-
-  return score;
 }

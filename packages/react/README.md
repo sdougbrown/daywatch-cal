@@ -1,6 +1,6 @@
 # @neo-reckoning/react
 
-Headless React hooks for calendar state management. Built on [@neo-reckoning/core](https://www.npmjs.com/package/@neo-reckoning/core).
+Headless React hooks for calendar state management. Built on [@neo-reckoning/core](https://www.npmjs.com/package/@neo-reckoning/core) and [@neo-reckoning/models](https://www.npmjs.com/package/@neo-reckoning/models).
 
 All hooks return data structures — no DOM, no components, no CSS. You bring the rendering.
 
@@ -11,6 +11,8 @@ npm install @neo-reckoning/react @neo-reckoning/core
 ```
 
 React 18+ is a peer dependency.
+
+If you want framework-neutral derived helpers without React hooks, use `@neo-reckoning/models` directly.
 
 ## Hooks
 
@@ -174,7 +176,7 @@ const score = useScheduleScore({
 - **Headless** — returns data, not DOM. Works with any component library or React Native.
 - **No styling** — range IDs, not colors. Your app maps IDs to palettes.
 - **Memoized** — all hooks use `useMemo` for efficient re-renders.
-- **Framework-agnostic core** — all computation lives in `@neo-reckoning/core`. These hooks are thin wrappers.
+- **Layered internals** — low-level computation lives in `@neo-reckoning/core`, while all derived helper logic now lives in `@neo-reckoning/models`. These hooks stay thin.
 
 ## License
 

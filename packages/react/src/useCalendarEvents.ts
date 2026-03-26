@@ -1,19 +1,9 @@
 import { useMemo } from 'react';
-import { RangeEvaluator, expandToEvents } from '@neo-reckoning/core';
-import type { DateRange, CalendarEvent } from '@neo-reckoning/core';
+import { buildCalendarEvents } from '@neo-reckoning/models';
+import type { CalendarEventsModelConfig } from '@neo-reckoning/models';
+import type { CalendarEvent } from '@neo-reckoning/core';
 
-export interface UseCalendarEventsConfig {
-  /** Native DateRanges from the API */
-  ranges: DateRange[];
-  /** Imported events from @neo-reckoning/ical, already CalendarEvent[] */
-  importedEvents: CalendarEvent[];
-  /** View window start */
-  from: Date;
-  /** View window end */
-  to: Date;
-  /** User's timezone */
-  userTimezone?: string;
-}
+export interface UseCalendarEventsConfig extends CalendarEventsModelConfig {}
 
 /**
  * Event normalization hook — merges native ranges and imported events
@@ -23,20 +13,12 @@ export function useCalendarEvents(config: UseCalendarEventsConfig): CalendarEven
   const { ranges, importedEvents, from, to, userTimezone } = config;
 
   return useMemo(() => {
-    const evaluator = new RangeEvaluator(userTimezone);
-
-    // Expand native ranges into CalendarEvents
-    const nativeEvents = ranges.flatMap(range => {
-      const occurrences = evaluator.expand(range, from, to);
-      return expandToEvents(range, occurrences);
+    return buildCalendarEvents({
+      ranges,
+      importedEvents,
+      from,
+      to,
+      userTimezone,
     });
-
-    // Merge with imported events
-    const allEvents = [...nativeEvents, ...importedEvents];
-
-    // Sort by start time
-    allEvents.sort((a, b) => a.start.getTime() - b.start.getTime());
-
-    return allEvents;
   }, [ranges, importedEvents, from, to, userTimezone]);
 }

@@ -1,15 +1,9 @@
 import { useMemo } from 'react';
-import { YearGrid } from '@neo-reckoning/core';
-import type { DateRange, YearMonth } from '@neo-reckoning/core';
+import { buildYearGridModel } from '@neo-reckoning/models';
+import type { YearGridModelConfig } from '@neo-reckoning/models';
+import type { YearMonth } from '@neo-reckoning/core';
 
-export interface UseYearGridConfig {
-  /** The year to generate (e.g. 2026) */
-  year: number;
-  /** DateRanges to evaluate against the grid */
-  ranges: DateRange[];
-  /** IANA timezone for the user viewing the calendar */
-  userTimezone?: string;
-}
+export interface UseYearGridConfig extends YearGridModelConfig {}
 
 export interface UseYearGridResult {
   /** Per-month activity data for heatmap-style rendering */
@@ -24,12 +18,7 @@ export function useYearGrid(config: UseYearGridConfig): UseYearGridResult {
   const { year, ranges, userTimezone } = config;
 
   const months = useMemo(
-    () =>
-      new YearGrid({
-        year,
-        ranges,
-        userTimezone,
-      }).months,
+    () => buildYearGridModel({ year, ranges, userTimezone }).months,
     [year, ranges, userTimezone],
   );
 

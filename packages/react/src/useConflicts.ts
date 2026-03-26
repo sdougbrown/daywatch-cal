@@ -1,17 +1,9 @@
 import { useMemo } from 'react';
-import { RangeEvaluator } from '@neo-reckoning/core';
-import type { DateRange, Conflict } from '@neo-reckoning/core';
+import { buildConflictsModel } from '@neo-reckoning/models';
+import type { ConflictsModelConfig } from '@neo-reckoning/models';
+import type { Conflict } from '@neo-reckoning/core';
 
-export interface UseConflictsConfig {
-  /** DateRanges to check for conflicts */
-  ranges: DateRange[];
-  /** Start of the window */
-  from: Date;
-  /** End of the window */
-  to: Date;
-  /** User's timezone for range evaluation */
-  userTimezone?: string;
-}
+export interface UseConflictsConfig extends ConflictsModelConfig {}
 
 /**
  * Conflict detection hook — returns Conflict[] for all time-level conflicts
@@ -20,15 +12,8 @@ export interface UseConflictsConfig {
 export function useConflicts(config: UseConflictsConfig): Conflict[] {
   const { ranges, from, to, userTimezone } = config;
 
-  const evaluator = useMemo(
-    () => new RangeEvaluator(userTimezone),
-    [userTimezone],
+  return useMemo(
+    () => buildConflictsModel({ ranges, from, to, userTimezone }),
+    [ranges, from, to, userTimezone],
   );
-
-  const conflicts = useMemo(
-    () => evaluator.findConflictsInWindow(ranges, from, to),
-    [evaluator, ranges, from, to],
-  );
-
-  return conflicts;
 }

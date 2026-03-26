@@ -1,24 +1,14 @@
 import { useMemo, useCallback } from 'react';
-import { CalendarGrid } from '@neo-reckoning/core';
-import type { DateRange, Month, ViewFidelity } from '@neo-reckoning/core';
+import {
+  buildCalendarModel,
+  createCalendarController,
+} from '@neo-reckoning/models';
+import type { CalendarModelConfig } from '@neo-reckoning/models';
+import type { Month } from '@neo-reckoning/core';
 
-export interface UseCalendarConfig {
-  /** Current focus date (YYYY-MM-DD) */
-  focusDate: string;
+export interface UseCalendarConfig extends CalendarModelConfig {
   /** Called when navigation changes the focus date */
   onFocusDateChange: (date: string) => void;
-  /** Number of months to display */
-  numberOfMonths: number;
-  /** DateRanges to evaluate */
-  ranges: DateRange[];
-  /** Week start day: 0=Sunday, 1=Monday */
-  weekStartsOn?: number;
-  /** BCP 47 locale for formatting */
-  locale?: string;
-  /** User's timezone for range evaluation */
-  userTimezone?: string;
-  /** View fidelity level — controls detail computed per day. Default: 'month' */
-  fidelity?: ViewFidelity;
 }
 
 export interface UseCalendarResult {
@@ -41,8 +31,8 @@ export interface UseCalendarResult {
  * Returns data structures only — no DOM rendering.
  */
 export function useCalendar(config: UseCalendarConfig): UseCalendarResult {
-  const grid = useMemo(() => {
-    return new CalendarGrid({
+  const model = useMemo(() => {
+    return buildCalendarModel({
       focusDate: config.focusDate,
       numberOfMonths: config.numberOfMonths,
       ranges: config.ranges,
@@ -61,36 +51,30 @@ export function useCalendar(config: UseCalendarConfig): UseCalendarResult {
     config.fidelity,
   ]);
 
+  const controller = useMemo(() => {
+    return createCalendarController({
+      focusDate: config.focusDate,
+    });
+  }, [config.focusDate]);
+
   const next = useCallback(() => {
-    config.onFocusDateChange(shiftMonth(config.focusDate, 1));
-  }, [config.focusDate, config.onFocusDateChange]);
+    config.onFocusDateChange(controller.next());
+  }, [config.onFocusDateChange, controller]);
 
   const prev = useCallback(() => {
-    config.onFocusDateChange(shiftMonth(config.focusDate, -1));
-  }, [config.focusDate, config.onFocusDateChange]);
+    config.onFocusDateChange(controller.prev());
+  }, [config.onFocusDateChange, controller]);
 
   const goTo = useCallback((date: string) => {
-    config.onFocusDateChange(date);
-  }, [config.onFocusDateChange]);
+    config.onFocusDateChange(controller.goTo(date));
+  }, [config.onFocusDateChange, controller]);
 
   return {
-    months: grid.months,
-    focusDate: config.focusDate,
-    numberOfMonths: config.numberOfMonths,
+    months: model.months,
+    focusDate: model.focusDate,
+    numberOfMonths: model.numberOfMonths,
     next,
     prev,
     goTo,
   };
-}
-
-function shiftMonth(dateStr: string, delta: number): string {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const date = new Date(year, month - 1 + delta, 1);
-  const maxDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  date.setDate(Math.min(day, maxDay));
-
-  const nextYear = date.getFullYear();
-  const nextMonth = String(date.getMonth() + 1).padStart(2, '0');
-  const nextDay = String(date.getDate()).padStart(2, '0');
-  return `${nextYear}-${nextMonth}-${nextDay}`;
 }

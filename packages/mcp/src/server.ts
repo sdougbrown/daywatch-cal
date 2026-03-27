@@ -265,6 +265,11 @@ function optionalStringArray(args: Record<string, unknown>, key: string): string
   return value;
 }
 
+function parseDateArgument(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function shiftDay(dateStr: string, delta: number): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const next = new Date(year, month - 1, day + delta);
@@ -386,9 +391,7 @@ export async function handleToolCall(
         const to = requireString(args, 'to');
         const ranges = getRanges(session, args);
 
-        return jsonResult(
-          session.evaluator.findConflictsInWindow(ranges, new Date(from), new Date(to)),
-        );
+        return jsonResult(session.evaluator.findConflictsInWindow(ranges, parseDateArgument(from), parseDateArgument(to)));
       }
 
       case 'find_free_slots': {
@@ -415,7 +418,7 @@ export async function handleToolCall(
         }
 
         return jsonResult(
-          session.evaluator.findNextFreeSlot(ranges, new Date(from), new Date(to), duration, {
+          session.evaluator.findNextFreeSlot(ranges, parseDateArgument(from), parseDateArgument(to), duration, {
             dayStart: optionalString(args, 'day_start'),
             dayEnd: optionalString(args, 'day_end'),
           }),
@@ -428,7 +431,7 @@ export async function handleToolCall(
         const ranges = getRanges(session, args);
 
         return jsonResult(
-          scoreSchedule(session.evaluator, ranges, new Date(from), new Date(to), {
+          scoreSchedule(session.evaluator, ranges, parseDateArgument(from), parseDateArgument(to), {
             focusBlockMinutes: optionalNumber(args, 'focus_block_minutes', 60),
             dayStart: optionalString(args, 'day_start'),
             dayEnd: optionalString(args, 'day_end'),
@@ -453,7 +456,7 @@ export async function handleToolCall(
           throw new Error(`Range "${rangeId}" was not found in the current session.`);
         }
 
-        return jsonResult(session.evaluator.expand(range, new Date(from), new Date(to)));
+        return jsonResult(session.evaluator.expand(range, parseDateArgument(from), parseDateArgument(to)));
       }
 
       case 'list_calendars': {

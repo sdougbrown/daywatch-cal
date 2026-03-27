@@ -21,42 +21,62 @@ import { msftEventsToDateRanges } from './adapters/msft.js';
 import type { GCalEvent, MsftGraphEvent } from './adapters/types.js';
 import { CalendarSession } from './state.js';
 
-const SERVER_INSTRUCTIONS = `Calendar computation tools powered by neo-reckoning. Accurate RRULE expansion, timezone math, conflict detection, and schedule optimization.
+const SERVER_INSTRUCTIONS = `Calendar computation engine powered by neo-reckoning. Handles RRULE expansion, timezone math, conflict detection, schedule scoring, and cross-calendar analysis.
 
-WHEN TO USE THESE TOOLS:
-Use these tools whenever the user asks about calendars, schedules, .ics files, events, conflicts, free time, availability, or schedule optimization. These tools handle RRULE recurrence, timezone conversion, and multi-calendar conflict detection correctly — do not attempt to parse .ics files, expand recurrence rules, or detect scheduling conflicts in-context.
+WHEN TO USE NEO-RECKONING vs. A CALENDAR MCP (Google Calendar, Outlook, etc.):
+
+If another calendar MCP is available (e.g., Google Calendar, Microsoft Graph), use it directly for simple queries and writes — listing events, creating/updating/deleting events, RSVPing, or finding free time within a single provider. Those MCPs have live API access and handle the basics well.
+
+Use neo-reckoning when the task goes beyond what a single calendar MCP can do:
+- CROSS-PROVIDER: Finding availability across people on different calendar systems (Alice on Google + Bob on Outlook + Chris from an .ics export). Load each into neo-reckoning with a distinct ID, then use find_common_availability.
+- SCHEDULE QUALITY: score_schedule gives quantified metrics — conflict count, total free time, focus blocks (consecutive free hours), context switches. No calendar MCP offers this.
+- WHAT-IF ANALYSIS: "What happens if I move standup to 2pm?" Load the calendar, use suggest_changes to preview the move with before/after scores — without touching the real calendar. Then use the source MCP to apply the winning option.
+- CONFLICT DETAIL: find_conflicts returns the specific overlapping events with overlap duration. Calendar FreeBusy APIs only return opaque busy/free blocks.
+- .ICS FILES: School calendars, conference schedules, Outlook exports, Apple Calendar exports — load_calendar_file or load_calendar with source "ics" handles RRULE expansion, timezone conversion, and all the edge cases. Never parse .ics in-context.
+- RECURRENCE REASONING: Understanding recurrence patterns themselves (not just expanded instances). expand_range shows concrete occurrences; the pattern metadata is preserved for reasoning about schedule structure.
+- OFFLINE / NO-AUTH: The user shares calendar data without granting API access. Neo-reckoning works on snapshots — no authentication needed.
+
+TYPICAL AGENT WORKFLOW (when both neo-reckoning and a calendar MCP are available):
+1. Fetch data from the source MCP (gcal_list_events, Microsoft Graph, etc.)
+2. Load into neo-reckoning: load_calendar(source="gcal", data=<raw JSON>) or source="msft"
+3. Analyze with neo-reckoning: find_conflicts, find_common_availability, score_schedule, suggest_changes
+4. Act via the source MCP: gcal_create_event, gcal_update_event, etc.
+
+Neo-reckoning is the thinking step between reading and writing. The source MCP is the hands.
 
 LOADING DATA:
-- File on disk → use load_calendar_file (pass the path, server reads the file directly — never read .ics files into the conversation yourself)
-- Data from another MCP tool or pasted text → use load_calendar with source "ics" or "ranges"
-- Google Calendar data → use load_calendar with source "gcal" and pass the raw JSON array from gcal_list_events. The server auto-filters (transparent, declined, working-location events excluded) and converts to DateRange format.
-- Microsoft Outlook / Office 365 data → use load_calendar with source "msft" and pass the raw JSON array from Microsoft Graph Calendar API. The server auto-filters (free, workingElsewhere, declined, cancelled events excluded), maps Windows timezones to IANA, and converts to DateRange format.
-- Load multiple calendars to analyze them together. Data persists for the session — load once, query many times.
-- load_calendar returns effective_window showing what dates were loaded and sample_labels showing what events were found. Use effective_window to know what date range to query.
-- The server auto-detects the right time window for historical calendars (e.g. a past school year). You do not need to guess the window.
+- File on disk → load_calendar_file (pass the path — never read .ics files into conversation yourself)
+- Google Calendar → load_calendar with source "gcal" and the raw JSON array from gcal_list_events. Auto-filters transparent, declined, working-location events.
+- Microsoft Outlook / Office 365 → load_calendar with source "msft" and the raw JSON array from Microsoft Graph. Auto-filters free, workingElsewhere, declined, cancelled events. Maps Windows timezones to IANA.
+- Raw .ics text or pasted data → load_calendar with source "ics"
+- Pre-built DateRange JSON → load_calendar with source "ranges"
+- Data persists for the session — load once, query many times.
+- load_calendar returns effective_window and sample_labels so you know what dates and events were loaded.
+- The server auto-detects the right time window for historical calendars (e.g. a past school year).
 
 ANALYZING:
-- find_conflicts — overlapping events in a date range
+- find_conflicts — overlapping events in a date range, with overlap details
 - find_free_slots — open time on a specific day (defaults to 09:00–17:00)
 - find_next_free_slot — first available slot of a given duration
-- find_shared_events — meetings that appear in multiple loaded calendars via shared event UID
-- find_common_availability — free slots across specific calendars over a date range
+- find_shared_events — meetings appearing in multiple loaded calendars (matched by event UID)
+- find_common_availability — free slots across specified calendars over a date range
 - score_schedule — quality metrics: conflicts, free time, focus blocks, context switches
 - day_detail — full breakdown of a single day (timed slots + all-day events)
 - expand_range — concrete occurrences of one recurring event
 
 CROSS-CALENDAR ANALYSIS:
 - Load multiple calendars with distinct IDs: load_calendar(id="alice", ...), load_calendar(id="bob", ...)
-- find_shared_events shows meetings that appear in multiple calendars (matched by event UID)
-- find_common_availability finds free slots across specified calendars
-- Shared events include attendee metadata (email, role, response status) when available from the source
-- When loading Google Calendar data, use source "gcal" — it preserves event type, response status, and transparency in metadata
-- To reschedule a shared meeting: identify it with find_shared_events, find a new slot with find_common_availability, then suggest_changes to move it
+- Calendars can come from different providers — Google for one person, Outlook for another, .ics for a third
+- find_shared_events identifies the same meeting across calendars by event UID
+- find_common_availability finds free slots across all specified calendars
+- Metadata from the source (attendees, response status, event type) is preserved — check it to understand context
+- To reschedule a shared meeting: identify it with find_shared_events, find a new slot with find_common_availability, preview with suggest_changes, then use the source calendar MCP to make the actual change
 
 OPTIMIZING:
-- suggest_changes — preview moves/adds/removes with before/after scoring (read-only)
-- apply_changes — commit changes to session state after user approval
-- generate_ics — export current state as .ics for reimport into Google Calendar, Apple Calendar, etc.
+- suggest_changes — preview moves/adds/removes with before/after scoring (read-only, does not affect real calendars)
+- apply_changes — commit changes to neo-reckoning's session state after user approval
+- generate_ics — export current state as .ics for reimport into any calendar app
+- After optimizing in neo-reckoning, use the source calendar MCP (gcal_update_event, etc.) to apply changes to the real calendar
 
 FORMATTING:
 Dates: YYYY-MM-DD. Times: HH:mm (24-hour).

@@ -1,5 +1,7 @@
 import rrulePkg from 'rrule';
 
+import { compareDates, pad } from './utils.js';
+
 const { rrulestr } = rrulePkg;
 
 interface ParseWindow {
@@ -10,10 +12,6 @@ interface ParseWindow {
 interface ExpandOptions {
   dtstartIsDate?: boolean;
   dtstartIsUTC?: boolean;
-}
-
-function pad(value: number): string {
-  return String(value).padStart(2, '0');
 }
 
 function getDateParts(date: Date, useUTC: boolean): { year: number; month: number; day: number } {
@@ -80,18 +78,6 @@ function getSearchWindow(window: ParseWindow): ParseWindow {
   to.setDate(to.getDate() + 1);
 
   return { from, to };
-}
-
-function compareDates(a: string, b: string): number {
-  if (a < b) {
-    return -1;
-  }
-
-  if (a > b) {
-    return 1;
-  }
-
-  return 0;
 }
 
 export function expandRRuleToExplicitDates(

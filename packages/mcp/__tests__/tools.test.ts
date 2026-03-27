@@ -73,14 +73,71 @@ describe('handleToolCall', () => {
       source: 'ranges',
       data: JSON.stringify(testRanges),
       id: 'work',
+      window_from: '2026-03-01',
+      window_to: '2026-06-30',
     });
 
     expect(result.isError).toBeUndefined();
-    expect(parseJsonContent<{ calendars_loaded: number; ranges_loaded: number; calendar_id: string }>(result)).toEqual({
+    expect(
+      parseJsonContent<{
+        calendars_loaded: number;
+        ranges_loaded: number;
+        calendar_id: string;
+        effective_window: { from: string; to: string };
+        sample_labels: string[];
+        has_more_labels: boolean;
+      }>(result),
+    ).toEqual({
       calendars_loaded: 1,
       ranges_loaded: 4,
       calendar_id: 'work',
+      effective_window: {
+        from: '2026-03-01',
+        to: '2026-06-30',
+      },
+      sample_labels: ['Daily Standup', 'Code Review', 'Holiday', 'Sprint Planning'],
+      has_more_labels: false,
     });
+  });
+
+  it('auto-detects an alternate data window when the requested ICS window yields no ranges', async () => {
+    const session = new CalendarSession('UTC');
+
+    const result = await handleToolCall(session, 'load_calendar', {
+      source: 'ics',
+      data: [
+        'BEGIN:VCALENDAR',
+        'BEGIN:VEVENT',
+        'UID:school-day',
+        'SUMMARY:School Day',
+        'DTSTART;VALUE=DATE:20250615',
+        'DTEND;VALUE=DATE:20250616',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n'),
+      id: 'school',
+      window_from: '2026-02-01',
+      window_to: '2026-08-31',
+    });
+
+    expect(
+      parseJsonContent<{
+        ranges_loaded: number;
+        calendar_id: string;
+        effective_window: { from: string; to: string };
+        sample_labels: string[];
+      }>(result),
+    ).toEqual(
+      expect.objectContaining({
+        ranges_loaded: 1,
+        calendar_id: 'school',
+        effective_window: {
+          from: '2024-12-16',
+          to: '2025-07-16',
+        },
+        sample_labels: ['School Day'],
+      }),
+    );
   });
 
   it('lists loaded calendars with range counts and labels', async () => {
@@ -88,11 +145,14 @@ describe('handleToolCall', () => {
 
     const result = await handleToolCall(session, 'list_calendars');
 
-    expect(parseJsonContent<Array<{ id: string; rangeCount: number; labels: string[] }>>(result)).toEqual([
+    expect(
+      parseJsonContent<Array<{ id: string; rangeCount: number; labels: string[]; has_more_labels: boolean }>>(result),
+    ).toEqual([
       {
         id: 'work',
         rangeCount: 4,
         labels: ['Daily Standup', 'Code Review', 'Holiday', 'Sprint Planning'],
+        has_more_labels: false,
       },
     ]);
   });
@@ -104,17 +164,19 @@ describe('handleToolCall', () => {
       from: '2026-03-24',
       to: '2026-03-26',
     });
-    const conflicts = parseJsonContent<
-      Array<{
+    const conflicts = parseJsonContent<{
+      conflicts: Array<{
         date: string;
         overlapStart: string | null;
         overlapEnd: string | null;
         rangeA: { id: string; label: string };
         rangeB: { id: string; label: string };
-      }>
-    >(result);
+      }>;
+      total: number;
+    }>(result);
 
-    expect(conflicts).toEqual(
+    expect(conflicts.total).toBe(1);
+    expect(conflicts.conflicts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           date: '2026-03-25',
@@ -133,22 +195,52 @@ describe('handleToolCall', () => {
       day_start: '08:00',
       day_end: '18:00',
     });
-    const freeSlots = parseJsonContent<FreeSlot[]>(result);
+    const freeSlots = parseJsonContent<{ free_slots: FreeSlot[]; total: number }>(result);
 
-    expect(freeSlots).toEqual([
-      {
-        date: '2026-03-25',
-        startTime: '08:00',
-        endTime: '09:00',
-        duration: 60,
-      },
-      {
-        date: '2026-03-25',
-        startTime: '10:00',
-        endTime: '18:00',
-        duration: 480,
-      },
-    ]);
+    expect(freeSlots).toEqual({
+      free_slots: [
+        {
+          date: '2026-03-25',
+          startTime: '08:00',
+          endTime: '09:00',
+          duration: 60,
+        },
+        {
+          date: '2026-03-25',
+          startTime: '10:00',
+          endTime: '18:00',
+          duration: 480,
+        },
+      ],
+      total: 2,
+    });
+  });
+
+  it('truncates free-slot results when limit is smaller than the full result set', async () => {
+    const session = createLoadedSession();
+
+    const result = await handleToolCall(session, 'find_free_slots', {
+      date: '2026-03-25',
+      day_start: '08:00',
+      day_end: '18:00',
+      limit: 1,
+    });
+
+    expect(parseJsonContent<{ free_slots: FreeSlot[]; total: number; truncated: boolean; message: string }>(result)).toEqual(
+      expect.objectContaining({
+        free_slots: [
+          {
+            date: '2026-03-25',
+            startTime: '08:00',
+            endTime: '09:00',
+            duration: 60,
+          },
+        ],
+        total: 2,
+        truncated: true,
+        message: expect.stringContaining('Showing 1 of 2'),
+      }),
+    );
   });
 
   it('finds the next free slot matching a required duration', async () => {
@@ -196,10 +288,15 @@ describe('handleToolCall', () => {
     const holidayResult = await handleToolCall(session, 'day_detail', {
       date: '2026-03-21',
     });
-    const holidayDetail = parseJsonContent<{ timeSlots: TimeSlot[]; allDayRanges: DayRangeInfo[] }>(
-      holidayResult,
-    );
+    const holidayDetail = parseJsonContent<{
+      timeSlots: TimeSlot[];
+      allDayRanges: DayRangeInfo[];
+      total: number;
+      total_time_slots: number;
+    }>(holidayResult);
 
+    expect(holidayDetail.total).toBe(0);
+    expect(holidayDetail.total_time_slots).toBe(0);
     expect(holidayDetail.allDayRanges).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -212,10 +309,15 @@ describe('handleToolCall', () => {
     const workdayResult = await handleToolCall(session, 'day_detail', {
       date: '2026-03-25',
     });
-    const workdayDetail = parseJsonContent<{ timeSlots: TimeSlot[]; allDayRanges: DayRangeInfo[] }>(
-      workdayResult,
-    );
+    const workdayDetail = parseJsonContent<{
+      timeSlots: TimeSlot[];
+      allDayRanges: DayRangeInfo[];
+      total: number;
+      total_time_slots: number;
+    }>(workdayResult);
 
+    expect(workdayDetail.total).toBe(2);
+    expect(workdayDetail.total_time_slots).toBe(2);
     expect(workdayDetail.timeSlots).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -234,6 +336,35 @@ describe('handleToolCall', () => {
     );
   });
 
+  it('truncates timed slots in day_detail while preserving all-day ranges', async () => {
+    const session = createLoadedSession();
+
+    const result = await handleToolCall(session, 'day_detail', {
+      date: '2026-03-25',
+      limit: 1,
+    });
+
+    expect(
+      parseJsonContent<{
+        timeSlots: TimeSlot[];
+        allDayRanges: DayRangeInfo[];
+        total: number;
+        total_time_slots: number;
+        truncated: boolean;
+        message: string;
+      }>(result),
+    ).toEqual(
+      expect.objectContaining({
+        timeSlots: [expect.objectContaining({ rangeId: 'standup' })],
+        allDayRanges: [],
+        total: 2,
+        total_time_slots: 2,
+        truncated: true,
+        message: expect.stringContaining('Showing 1 of 2'),
+      }),
+    );
+  });
+
   it('expands a stored range into matching occurrences', async () => {
     const session = createLoadedSession();
 
@@ -242,15 +373,43 @@ describe('handleToolCall', () => {
       from: '2026-03-23',
       to: '2026-03-27',
     });
-    const occurrences = parseJsonContent<Occurrence[]>(result);
+    const occurrences = parseJsonContent<{ occurrences: Occurrence[]; total: number }>(result);
 
-    expect(occurrences.map(occurrence => occurrence.date)).toEqual([
-      '2026-03-23',
-      '2026-03-24',
-      '2026-03-25',
-      '2026-03-26',
-      '2026-03-27',
-    ]);
+    expect(occurrences).toEqual({
+      occurrences: [
+        expect.objectContaining({ date: '2026-03-23' }),
+        expect.objectContaining({ date: '2026-03-24' }),
+        expect.objectContaining({ date: '2026-03-25' }),
+        expect.objectContaining({ date: '2026-03-26' }),
+        expect.objectContaining({ date: '2026-03-27' }),
+      ],
+      total: 5,
+    });
+  });
+
+  it('truncates expanded occurrences when limit is smaller than the expansion size', async () => {
+    const session = createLoadedSession();
+
+    const result = await handleToolCall(session, 'expand_range', {
+      range_id: 'standup',
+      from: '2026-03-23',
+      to: '2026-03-27',
+      limit: 2,
+    });
+
+    expect(
+      parseJsonContent<{ occurrences: Occurrence[]; total: number; truncated: boolean; message: string }>(result),
+    ).toEqual(
+      expect.objectContaining({
+        occurrences: [
+          expect.objectContaining({ date: '2026-03-23' }),
+          expect.objectContaining({ date: '2026-03-24' }),
+        ],
+        total: 5,
+        truncated: true,
+        message: expect.stringContaining('Showing 2 of 5'),
+      }),
+    );
   });
 
   it('lists no calendars for an empty session', async () => {
@@ -335,17 +494,10 @@ describe('handleToolCall', () => {
       to: '2026-03-26',
     });
 
-    expect(
-      parseJsonContent<
-        Array<{
-          date: string;
-          overlapStart: string | null;
-          overlapEnd: string | null;
-          rangeA: { id: string; label: string };
-          rangeB: { id: string; label: string };
-        }>
-      >(conflictsResult),
-    ).toEqual([]);
+    expect(parseJsonContent<{ conflicts: unknown[]; total: number }>(conflictsResult)).toEqual({
+      conflicts: [],
+      total: 0,
+    });
   });
 
   it('adds new ranges through apply_changes', async () => {
@@ -369,11 +521,16 @@ describe('handleToolCall', () => {
     });
 
     const calendarsResult = await handleToolCall(session, 'list_calendars');
-    expect(parseJsonContent<Array<{ id: string; rangeCount: number; labels: string[] }>>(calendarsResult)).toEqual([
+    expect(
+      parseJsonContent<Array<{ id: string; rangeCount: number; labels: string[]; has_more_labels: boolean }>>(
+        calendarsResult,
+      ),
+    ).toEqual([
       expect.objectContaining({
         id: 'work',
         rangeCount: 5,
         labels: expect.arrayContaining(['Focus Time']),
+        has_more_labels: false,
       }),
     ]);
   });
@@ -395,9 +552,11 @@ describe('handleToolCall', () => {
       date: '2026-03-21',
     });
 
-    expect(parseJsonContent<{ timeSlots: TimeSlot[]; allDayRanges: DayRangeInfo[] }>(result)).toEqual({
+    expect(parseJsonContent<{ timeSlots: TimeSlot[]; allDayRanges: DayRangeInfo[]; total: number; total_time_slots: number }>(result)).toEqual({
       timeSlots: [],
       allDayRanges: [],
+      total: 0,
+      total_time_slots: 0,
     });
   });
 

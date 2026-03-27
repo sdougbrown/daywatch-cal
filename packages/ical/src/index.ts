@@ -1,2 +1,2 @@
-export { parseICS } from './parse.js';
+export { detectDataWindow, parseICS } from './parse.js';
 export { generateICS } from './generate.js';

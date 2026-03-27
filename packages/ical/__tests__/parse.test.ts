@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { jest } from '@jest/globals';
 import type { DateRange } from '@neo-reckoning/core';
 
-import { parseICS } from '../src/parse.js';
+import { detectDataWindow, parseICS } from '../src/parse.js';
 
 function loadFixture(name: string): string {
   return readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8');
@@ -16,6 +16,14 @@ function makeWindow(from: string, to: string): { from: Date; to: Date } {
   };
 }
 
+function formatDateValue(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
 function byId(ranges: DateRange[], id: string): DateRange {
   const range = ranges.find(item => item.id === id);
   if (!range) {
@@ -25,6 +33,44 @@ function byId(ranges: DateRange[], id: string): DateRange {
 }
 
 describe('parseICS', () => {
+  it('detects a data window from raw DTSTART, DTEND, and UNTIL values', () => {
+    const dataWindow = detectDataWindow(
+      [
+        'BEGIN:VCALENDAR',
+        'BEGIN:VEVENT',
+        'UID:semester',
+        'DTSTART;VALUE=DATE:20240903',
+        'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;',
+        ' UNTIL=20250620T235959Z',
+        'END:VEVENT',
+        'BEGIN:VEVENT',
+        'UID:wrap-up',
+        'DTEND;VALUE=DATE:20250701',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n'),
+    );
+
+    expect(dataWindow).not.toBeNull();
+    expect(formatDateValue(dataWindow!.from)).toBe('2025-01-01');
+    expect(formatDateValue(dataWindow!.to)).toBe('2025-08-01');
+  });
+
+  it('returns null when raw ICS text has no DTSTART, DTEND, or UNTIL values', () => {
+    expect(
+      detectDataWindow(
+        [
+          'BEGIN:VCALENDAR',
+          'BEGIN:VEVENT',
+          'UID:no-dates',
+          'SUMMARY:No dates here',
+          'END:VEVENT',
+          'END:VCALENDAR',
+        ].join('\r\n'),
+      ),
+    ).toBeNull();
+  });
+
   it('parses single and multi-day events from VEVENT components', () => {
     const ranges = parseICS(loadFixture('simple-events.ics'), makeWindow('2026-03-01', '2026-03-31'));
 
@@ -112,6 +158,13 @@ describe('parseICS', () => {
         fixedBetween: true,
         everyWeekday: [0, 1, 2, 3, 4, 5, 6],
       },
+      {
+        id: 'yearly-months',
+        label: 'Summer and Winter Window',
+        title: 'Seasonal schedule',
+        fromDate: '2026-01-01',
+        everyMonth: [6, 12],
+      },
     ]);
 
     expect(juneRanges).toEqual([
@@ -123,7 +176,6 @@ describe('parseICS', () => {
         everyMonth: [6, 12],
       },
     ]);
-
   });
 
   it('expands Tier 2 RRULEs into explicit dates within the requested window', () => {

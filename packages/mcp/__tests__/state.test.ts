@@ -32,7 +32,7 @@ describe('CalendarSession', () => {
     expect(session.getAllRanges(['missing'])).toEqual([]);
   });
 
-  it('getCalendarSummary returns the expected shape', () => {
+  it('getCalendarSummary returns capped unique labels with a has_more_labels flag', () => {
     const session = new CalendarSession('UTC');
 
     session.loadCalendar(
@@ -41,6 +41,7 @@ describe('CalendarSession', () => {
         makeRange('planning', 'Planning'),
         makeRange('retro', 'Planning', { dates: ['2026-03-27'] }),
         makeRange('focus', 'Focus'),
+        ...Array.from({ length: 31 }, (_, index) => makeRange(`label-${index}`, `Label ${index}`)),
       ],
       'ranges',
     );
@@ -48,8 +49,9 @@ describe('CalendarSession', () => {
     expect(session.getCalendarSummary()).toEqual([
       {
         id: 'work',
-        rangeCount: 3,
-        labels: ['Planning', 'Focus'],
+        rangeCount: 34,
+        labels: ['Planning', 'Focus', ...Array.from({ length: 28 }, (_, index) => `Label ${index}`)],
+        has_more_labels: true,
       },
     ]);
   });

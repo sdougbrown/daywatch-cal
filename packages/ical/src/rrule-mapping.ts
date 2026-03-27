@@ -2,6 +2,7 @@ import type { DateRange } from '@neo-reckoning/core';
 import ICAL from 'ical.js';
 
 import { ALL_WEEKDAYS, ICAL_TO_RANGE_WEEKDAY, RANGE_TO_ICAL_WEEKDAY } from './constants.js';
+import { pad } from './utils.js';
 
 type Recur = InstanceType<typeof ICAL.Recur>;
 type Time = InstanceType<typeof ICAL.Time>;
@@ -22,10 +23,6 @@ export interface MapRRuleFailure {
 }
 
 export type MapRRuleResult = MapRRuleSuccess | MapRRuleFailure;
-
-function pad(value: number): string {
-  return String(value).padStart(2, '0');
-}
 
 function formatDateParts(year: number, month: number, day: number): string {
   return `${year}-${pad(month)}-${pad(day)}`;

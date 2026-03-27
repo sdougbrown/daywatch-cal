@@ -3,10 +3,9 @@ import {
   scoreSchedule,
   type DateRange,
   type DayRangeInfo,
-  type FreeSlot,
   type TimeSlot,
 } from '@neo-reckoning/core';
-import { generateICS, parseICS } from '@neo-reckoning/ical';
+import { detectDataWindow, generateICS, parseICS } from '@neo-reckoning/ical';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   CallToolRequestSchema,
@@ -25,7 +24,14 @@ WORKFLOW:
 
 Data persists for the session - load once, query many times.
 Dates: YYYY-MM-DD. Times: HH:mm (24-hour).
-find_free_slots defaults to 09:00-17:00 working hours.`;
+find_free_slots defaults to 09:00-17:00 working hours.
+
+LARGE CALENDARS:
+- Use window_from/window_to in load_calendar to limit the parse range.
+- load_calendar returns effective_window so you can see what dates were actually loaded.
+- Query narrow date ranges (1-2 weeks) instead of broad multi-month windows.
+- Use day_detail for single-day deep dives.
+- find_conflicts, find_free_slots, day_detail, and expand_range accept a limit parameter.`;
 
 const PROPOSED_CHANGE_SCHEMA = {
   type: 'object',
@@ -65,7 +71,8 @@ const PROPOSED_CHANGE_SCHEMA = {
 export const TOOLS: Tool[] = [
   {
     name: 'load_calendar',
-    description: 'Load calendar data from .ics text or DateRange[] JSON into the current session.',
+    description:
+      'Load calendar data from .ics text or DateRange[] JSON into the current session. Tip: set window_from/window_to to limit the parse range for large calendars.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -86,6 +93,14 @@ export const TOOLS: Tool[] = [
           type: 'string',
           description: 'Optional IANA timezone to use for the session evaluator.',
         },
+        window_from: {
+          type: 'string',
+          description: 'Optional parse window start date (YYYY-MM-DD). Must be paired with window_to.',
+        },
+        window_to: {
+          type: 'string',
+          description: 'Optional parse window end date (YYYY-MM-DD). Must be paired with window_from.',
+        },
       },
       required: ['source', 'data'],
     },
@@ -102,6 +117,10 @@ export const TOOLS: Tool[] = [
           type: 'array',
           items: { type: 'string' },
           description: 'Optional list of calendar ids to limit the search.',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum conflicts to return. Defaults to 50.',
         },
       },
       required: ['from', 'to'],
@@ -130,6 +149,10 @@ export const TOOLS: Tool[] = [
           type: 'array',
           items: { type: 'string' },
           description: 'Optional list of calendar ids to limit the search.',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum free slots to return. Defaults to 50.',
         },
       },
       required: ['date'],
@@ -202,6 +225,10 @@ export const TOOLS: Tool[] = [
           items: { type: 'string' },
           description: 'Optional list of calendar ids to limit the analysis.',
         },
+        limit: {
+          type: 'number',
+          description: 'Maximum timed slots to return. Defaults to 50.',
+        },
       },
       required: ['date'],
     },
@@ -215,6 +242,10 @@ export const TOOLS: Tool[] = [
         range_id: { type: 'string', description: 'The DateRange id to expand.' },
         from: { type: 'string', description: 'Window start as an ISO date.' },
         to: { type: 'string', description: 'Window end as an ISO date.' },
+        limit: {
+          type: 'number',
+          description: 'Maximum occurrences to return. Defaults to 50.',
+        },
       },
       required: ['range_id', 'from', 'to'],
     },
@@ -302,11 +333,14 @@ interface ProposedChange {
 }
 
 function jsonResult(value: unknown): CallToolResult {
+  const compact = JSON.stringify(value);
+  const text = compact.length > 4000 ? compact : JSON.stringify(value, null, 2);
+
   return {
     content: [
       {
         type: 'text',
-        text: JSON.stringify(value, null, 2),
+        text,
       },
     ],
   };
@@ -365,6 +399,15 @@ function optionalNumber(args: Record<string, unknown>, key: string, fallback: nu
 
   if (typeof value !== 'number' || Number.isNaN(value)) {
     throw new Error(`"${key}" must be a number when provided.`);
+  }
+
+  return value;
+}
+
+function optionalLimit(args: Record<string, unknown>, fallback = 50): number {
+  const value = optionalNumber(args, 'limit', fallback);
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error('"limit" must be a non-negative integer when provided.');
   }
 
   return value;
@@ -454,6 +497,44 @@ function parseProposedChanges(args: Record<string, unknown>): ProposedChange[] {
 function parseDateArgument(value: string): Date {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, month - 1, day);
+}
+
+function formatDateValue(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+function formatWindow(window: { from: Date; to: Date }): { from: string; to: string } {
+  return {
+    from: formatDateValue(window.from),
+    to: formatDateValue(window.to),
+  };
+}
+
+function truncateArray<T>(items: T[], key: string, limit: number): Record<string, unknown> {
+  const truncated = items.length > limit;
+
+  return {
+    [key]: items.slice(0, limit),
+    total: items.length,
+    ...(truncated
+      ? {
+          truncated: true,
+          message: `Showing ${limit} of ${items.length}. Use a narrower window or increase limit.`,
+        }
+      : {}),
+  };
+}
+
+function collectUniqueLabels(ranges: DateRange[], limit: number): { labels: string[]; hasMore: boolean } {
+  const labels = [...new Set(ranges.map(range => range.label))];
+  return {
+    labels: labels.slice(0, limit),
+    hasMore: labels.length > limit,
+  };
 }
 
 function shiftDay(dateStr: string, delta: number): string {
@@ -789,16 +870,35 @@ export async function handleToolCall(
         const data = requireString(args, 'data');
         const id = optionalString(args, 'id');
         const timezone = optionalString(args, 'timezone');
+        const windowFrom = optionalString(args, 'window_from');
+        const windowTo = optionalString(args, 'window_to');
 
         if (source !== 'ics' && source !== 'ranges') {
           throw new Error('"source" must be either "ics" or "ranges".');
         }
 
+        if ((windowFrom && !windowTo) || (!windowFrom && windowTo)) {
+          throw new Error('"window_from" and "window_to" must be provided together.');
+        }
+
         applyTimezone(session, timezone);
 
+        const requestedWindow =
+          windowFrom && windowTo
+            ? { from: parseDateArgument(windowFrom), to: parseDateArgument(windowTo) }
+            : getParseWindow();
+
         let ranges: DateRange[];
+        let effectiveWindow = requestedWindow;
         if (source === 'ics') {
-          ranges = parseICS(data, getParseWindow());
+          ranges = parseICS(data, requestedWindow);
+          if (ranges.length === 0) {
+            const detectedWindow = detectDataWindow(data);
+            if (detectedWindow) {
+              ranges = parseICS(data, detectedWindow);
+              effectiveWindow = detectedWindow;
+            }
+          }
         } else {
           const parsed = JSON.parse(data) as unknown;
           if (!Array.isArray(parsed)) {
@@ -810,11 +910,15 @@ export async function handleToolCall(
 
         const calendarId = session.createCalendarId(id);
         session.loadCalendar(calendarId, ranges, source);
+        const labelSummary = collectUniqueLabels(ranges, 20);
 
         return jsonResult({
           calendars_loaded: session.calendars.size,
           ranges_loaded: ranges.length,
           calendar_id: calendarId,
+          effective_window: formatWindow(effectiveWindow),
+          sample_labels: labelSummary.labels,
+          has_more_labels: labelSummary.hasMore,
         });
       }
 
@@ -822,20 +926,24 @@ export async function handleToolCall(
         const from = requireString(args, 'from');
         const to = requireString(args, 'to');
         const ranges = getRanges(session, args);
+        const limit = optionalLimit(args);
+        const conflicts = session.evaluator.findConflictsInWindow(ranges, parseDateArgument(from), parseDateArgument(to));
 
-        return jsonResult(session.evaluator.findConflictsInWindow(ranges, parseDateArgument(from), parseDateArgument(to)));
+        return jsonResult(truncateArray(conflicts, 'conflicts', limit));
       }
 
       case 'find_free_slots': {
         const date = requireString(args, 'date');
         const ranges = getRanges(session, args);
+        const limit = optionalLimit(args);
+        const freeSlots = session.evaluator.findFreeSlots(ranges, date, {
+          minDuration: optionalNumber(args, 'min_duration', 30),
+          dayStart: optionalString(args, 'day_start') ?? '09:00',
+          dayEnd: optionalString(args, 'day_end') ?? '17:00',
+        });
 
         return jsonResult(
-          session.evaluator.findFreeSlots(ranges, date, {
-            minDuration: optionalNumber(args, 'min_duration', 30),
-            dayStart: optionalString(args, 'day_start') ?? '09:00',
-            dayEnd: optionalString(args, 'day_end') ?? '17:00',
-          }),
+          truncateArray(freeSlots, 'free_slots', limit),
         );
       }
 
@@ -874,21 +982,30 @@ export async function handleToolCall(
       case 'day_detail': {
         const date = requireString(args, 'date');
         const ranges = getRanges(session, args);
+        const limit = optionalLimit(args);
+        const detail = buildDayDetail(session.evaluator, ranges, date);
+        const truncatedTimeSlots = truncateArray(detail.timeSlots, 'timeSlots', limit);
 
-        return jsonResult(buildDayDetail(session.evaluator, ranges, date));
+        return jsonResult({
+          ...truncatedTimeSlots,
+          allDayRanges: detail.allDayRanges,
+          total_time_slots: detail.timeSlots.length,
+        });
       }
 
       case 'expand_range': {
         const rangeId = requireString(args, 'range_id');
         const from = requireString(args, 'from');
         const to = requireString(args, 'to');
+        const limit = optionalLimit(args);
         const range = session.getAllRanges().find(candidate => candidate.id === rangeId);
 
         if (!range) {
           throw new Error(`Range "${rangeId}" was not found in the current session.`);
         }
 
-        return jsonResult(session.evaluator.expand(range, parseDateArgument(from), parseDateArgument(to)));
+        const occurrences = session.evaluator.expand(range, parseDateArgument(from), parseDateArgument(to));
+        return jsonResult(truncateArray(occurrences, 'occurrences', limit));
       }
 
       case 'list_calendars': {

@@ -112,11 +112,16 @@ export class CalendarSession {
     });
   }
 
-  getCalendarSummary(): Array<{ id: string; rangeCount: number; labels: string[] }> {
-    return [...this.calendars.entries()].map(([id, calendar]) => ({
-      id,
-      rangeCount: calendar.ranges.length,
-      labels: [...new Set(calendar.ranges.map(range => range.label))],
-    }));
+  getCalendarSummary(): Array<{ id: string; rangeCount: number; labels: string[]; has_more_labels: boolean }> {
+    return [...this.calendars.entries()].map(([id, calendar]) => {
+      const labels = [...new Set(calendar.ranges.map(range => range.label))];
+
+      return {
+        id,
+        rangeCount: calendar.ranges.length,
+        labels: labels.slice(0, 30),
+        has_more_labels: labels.length > 30,
+      };
+    });
   }
 }

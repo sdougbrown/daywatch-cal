@@ -3,6 +3,7 @@ import ICAL from 'ical.js';
 
 import { expandRRuleToExplicitDates } from './rrule-expand.js';
 import { mapRRuleToDateRangeFields } from './rrule-mapping.js';
+import { addDays, compareDates, formatDate, pad } from './utils.js';
 
 type Component = InstanceType<typeof ICAL.Component>;
 type Event = InstanceType<typeof ICAL.Event>;
@@ -14,13 +15,8 @@ interface ParseWindow {
   to: Date;
 }
 
-function pad(value: number): string {
-  return String(value).padStart(2, '0');
-}
-
-function formatDate(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
+const ICS_DATE_PATTERN =
+  /(?:^|\n)(?:DTSTART|DTEND)(?:;[^:\n]*)?:(\d{8})(?:T\d{6}Z?)?|(?:^|\n)RRULE(?:;[^:\n]*)?:[^\n]*\bUNTIL=(\d{8})(?:T\d{6}Z?)?/g;
 
 function formatTime(value: Time): string {
   return `${pad(value.hour)}:${pad(value.minute)}`;
@@ -30,26 +26,11 @@ function formatDateFromTime(value: Time): string {
   return `${value.year}-${pad(value.month)}-${pad(value.day)}`;
 }
 
-function parseDate(date: string): Date {
-  const [year, month, day] = date.split('-').map(Number);
+function parseIcsDateValue(dateValue: string): Date {
+  const year = Number(dateValue.slice(0, 4));
+  const month = Number(dateValue.slice(4, 6));
+  const day = Number(dateValue.slice(6, 8));
   return new Date(year, month - 1, day);
-}
-
-function addDays(date: string, offset: number): string {
-  const next = parseDate(date);
-  next.setDate(next.getDate() + offset);
-  return formatDate(next);
-}
-
-function getDateParts(date: string): { year: number; month: number; day: number } {
-  const [year, month, day] = date.split('-').map(Number);
-  return { year, month, day };
-}
-
-function compareDates(a: string, b: string): number {
-  if (a < b) return -1;
-  if (a > b) return 1;
-  return 0;
 }
 
 function hashString(input: string): string {
@@ -155,103 +136,57 @@ function getExceptDates(component: Component): string[] | undefined {
   return exceptDates.size > 0 ? [...exceptDates].sort() : undefined;
 }
 
-function getDayOfWeek(date: string): number {
-  return parseDate(date).getDay();
-}
+export function detectDataWindow(icsText: string): ParseWindow | null {
+  const unfoldedText = icsText.replace(/\r\n/g, '\n').replace(/\n[ \t]/g, '');
+  let latestDate: Date | null = null;
 
-function rangeMatchesDate(range: DateRange, date: string): boolean {
-  if (range.fromDate && compareDates(date, range.fromDate) < 0) {
-    return false;
-  }
-
-  if (range.toDate && compareDates(date, range.toDate) > 0) {
-    return false;
-  }
-
-  if (range.exceptDates?.includes(date)) {
-    return false;
-  }
-
-  if (range.dates) {
-    return range.dates.includes(date);
-  }
-
-  const hasRecurrence = Boolean(range.everyWeekday?.length || range.everyDate?.length || range.everyMonth?.length);
-  if (!hasRecurrence) {
-    return true;
-  }
-
-  if (range.everyWeekday?.length && !range.everyWeekday.includes(getDayOfWeek(date))) {
-    return false;
-  }
-
-  const parts = getDateParts(date);
-
-  if (range.everyDate?.length && !range.everyDate.includes(parts.day)) {
-    return false;
-  }
-
-  if (range.everyMonth?.length && !range.everyMonth.includes(parts.month)) {
-    return false;
-  }
-
-  return true;
-}
-
-function getEffectiveBounds(range: DateRange, window: ParseWindow): { from: string; to: string } | null {
-  const windowFrom = formatDate(window.from);
-  const windowTo = formatDate(window.to);
-
-  let effectiveFrom = windowFrom;
-  let effectiveTo = windowTo;
-
-  if (range.fromDate && compareDates(range.fromDate, effectiveFrom) > 0) {
-    effectiveFrom = range.fromDate;
-  }
-
-  if (range.toDate && compareDates(range.toDate, effectiveTo) < 0) {
-    effectiveTo = range.toDate;
-  }
-
-  if (range.dates?.length) {
-    const sortedDates = [...range.dates].sort();
-    if (compareDates(sortedDates[0], effectiveFrom) > 0) {
-      effectiveFrom = sortedDates[0];
+  for (const match of unfoldedText.matchAll(ICS_DATE_PATTERN)) {
+    const dateValue = match[1] ?? match[2];
+    if (!dateValue) {
+      continue;
     }
-    if (compareDates(sortedDates[sortedDates.length - 1], effectiveTo) < 0) {
-      effectiveTo = sortedDates[sortedDates.length - 1];
+
+    const parsedDate = parseIcsDateValue(dateValue);
+    if (!latestDate || parsedDate > latestDate) {
+      latestDate = parsedDate;
     }
   }
 
-  if (compareDates(effectiveFrom, effectiveTo) > 0) {
+  if (!latestDate) {
     return null;
   }
 
-  return {
-    from: effectiveFrom,
-    to: effectiveTo,
-  };
+  const from = new Date(latestDate);
+  from.setMonth(from.getMonth() - 6);
+
+  const to = new Date(latestDate);
+  to.setMonth(to.getMonth() + 1);
+
+  return { from, to };
 }
 
 function overlapsWindow(range: DateRange, window: ParseWindow): boolean {
-  const bounds = getEffectiveBounds(range, window);
-  if (!bounds) {
+  const windowFrom = formatDate(window.from);
+  const windowTo = formatDate(window.to);
+
+  if (range.dates?.length) {
+    return range.dates.some(date => compareDates(date, windowFrom) >= 0 && compareDates(date, windowTo) <= 0);
+  }
+
+  if (range.toDate && compareDates(range.toDate, windowFrom) < 0) {
     return false;
   }
 
-  const current = parseDate(bounds.from);
-  const end = parseDate(bounds.to);
-
-  while (current <= end) {
-    const currentDate = formatDate(current);
-    if (rangeMatchesDate(range, currentDate)) {
-      return true;
-    }
-
-    current.setDate(current.getDate() + 1);
+  if (range.fromDate && compareDates(range.fromDate, windowTo) > 0) {
+    return false;
   }
 
-  return false;
+  const hasRecurrence = Boolean(range.everyWeekday?.length || range.everyDate?.length || range.everyMonth?.length);
+  if (hasRecurrence) {
+    return true;
+  }
+
+  return true;
 }
 
 function buildDateRange(component: Component, window: ParseWindow): DateRange | null {

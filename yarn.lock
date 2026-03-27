@@ -849,6 +849,7 @@ __metadata:
   resolution: "@neo-reckoning/ical@workspace:packages/ical"
   dependencies:
     "@neo-reckoning/core": "workspace:^"
+    ical.js: "npm:^2.2.1"
   languageName: unknown
   linkType: soft
 
@@ -2077,6 +2078,13 @@ __metadata:
   version: 2.1.0
   resolution: "human-signals@npm:2.1.0"
   checksum: 10c0/695edb3edfcfe9c8b52a76926cd31b36978782062c0ed9b1192b36bebc75c4c87c82e178dfcb0ed0fc27ca59d434198aac0bd0be18f5781ded775604db22304a
+  languageName: node
+  linkType: hard
+
+"ical.js@npm:^2.2.1":
+  version: 2.2.1
+  resolution: "ical.js@npm:2.2.1"
+  checksum: 10c0/f08e896d613fe7dc737ca2cc5254b5413586c6f2d4c90568cdf077eff757051f8443d3b8705548e3dd7c3771e26aa3fdf7a2534b763242a9cf90a4150efefd85
   languageName: node
   linkType: hard
 

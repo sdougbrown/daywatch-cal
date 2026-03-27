@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@neo-reckoning/core": "workspace:^"
+    "@neo-reckoning/core": "workspace:^",
+    "ical.js": "^2.2.1"
   },
   "files": [
     "dist"

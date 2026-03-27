@@ -99,7 +99,6 @@ describe('parseICS', () => {
   });
 
   it('maps daily and yearly Tier 1 RRULEs and filters by the requested window', () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const marchRanges = parseICS(loadFixture('multi-event.ics'), makeWindow('2026-03-01', '2026-03-31'));
     const juneRanges = parseICS(loadFixture('multi-event.ics'), makeWindow('2026-06-01', '2026-06-30'));
 
@@ -125,17 +124,34 @@ describe('parseICS', () => {
       },
     ]);
 
-    warn.mockRestore();
   });
 
-  it('skips complex RRULEs with a warning', () => {
+  it('expands Tier 2 RRULEs into explicit dates within the requested window', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const ranges = parseICS(loadFixture('multi-event.ics'), makeWindow('2026-03-01', '2026-03-31'));
+    const ranges = parseICS(loadFixture('complex-rrules.ics'), makeWindow('2026-03-01', '2026-04-30'));
 
-    expect(ranges).toHaveLength(1);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('complex-monthly'));
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('ordinal BYDAY'));
+    expect(ranges).toEqual([
+      {
+        id: 'complex-monthly',
+        label: 'Second Tuesday',
+        title: 'Expanded monthly recurrence',
+        fromDate: '2026-03-01',
+        dates: ['2026-03-10', '2026-04-14'],
+      },
+      {
+        id: 'biweekly-monday',
+        label: 'Alternating Monday',
+        title: 'Expanded weekly recurrence',
+        fromDate: '2026-03-02',
+        dates: ['2026-03-02', '2026-03-16', '2026-03-30', '2026-04-13', '2026-04-27'],
+        startTime: '09:00',
+        endTime: '10:00',
+        duration: 60,
+        timezone: 'America/Toronto',
+      },
+    ]);
+    expect(warn).not.toHaveBeenCalled();
 
     warn.mockRestore();
   });

@@ -1,6 +1,7 @@
 import type { DateRange } from '@neo-reckoning/core';
 import ICAL from 'ical.js';
 
+import { expandRRuleToExplicitDates } from './rrule-expand.js';
 import { mapRRuleToDateRangeFields } from './rrule-mapping.js';
 
 type Component = InstanceType<typeof ICAL.Component>;
@@ -253,7 +254,7 @@ function overlapsWindow(range: DateRange, window: ParseWindow): boolean {
   return false;
 }
 
-function buildDateRange(component: Component): DateRange | null {
+function buildDateRange(component: Component, window: ParseWindow): DateRange | null {
   if (component.hasProperty('recurrence-id')) {
     return null;
   }
@@ -291,11 +292,26 @@ function buildDateRange(component: Component): DateRange | null {
 
     const mapped = mapRRuleToDateRangeFields(rule, event.startDate);
     if (!mapped.supported) {
-      console.warn(`Skipping VEVENT ${baseRange.id}: ${mapped.reason}`);
-      return null;
-    }
+      const expandedDates = expandRRuleToExplicitDates(
+        rule.toString(),
+        event.startDate.toJSDate(),
+        window,
+        {
+          dtstartIsDate: event.startDate.isDate,
+          dtstartIsUTC: event.startDate.zone?.tzid === 'UTC',
+        },
+      );
 
-    Object.assign(baseRange, mapped.fields);
+      if (expandedDates.length === 0) {
+        console.warn(`Skipping VEVENT ${baseRange.id}: no occurrences in window (${mapped.reason})`);
+        return null;
+      }
+
+      baseRange.fromDate = formatDateFromTime(event.startDate);
+      baseRange.dates = expandedDates;
+    } else {
+      Object.assign(baseRange, mapped.fields);
+    }
   } else {
     Object.assign(baseRange, getEventDateFields(component, event));
   }
@@ -303,6 +319,13 @@ function buildDateRange(component: Component): DateRange | null {
   const exceptDates = getExceptDates(component);
   if (exceptDates) {
     baseRange.exceptDates = exceptDates;
+    if (baseRange.dates?.length) {
+      const exceptDateSet = new Set(exceptDates);
+      baseRange.dates = baseRange.dates.filter(date => !exceptDateSet.has(date));
+      if (baseRange.dates.length === 0) {
+        return null;
+      }
+    }
   }
 
   return baseRange;
@@ -314,7 +337,7 @@ export function parseICS(icsText: string, window: ParseWindow): DateRange[] {
 
   const ranges: DateRange[] = [];
   for (const vevent of vevents) {
-    const range = buildDateRange(vevent);
+    const range = buildDateRange(vevent, window);
     if (!range) {
       continue;
     }

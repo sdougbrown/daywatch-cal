@@ -95,6 +95,7 @@ describe('handleToolCall', () => {
         from: '2026-03-01',
         to: '2026-06-30',
       },
+      detected_data_window: null,
       sample_labels: ['Daily Standup', 'Code Review', 'Holiday', 'Sprint Planning'],
       has_more_labels: false,
     });
@@ -132,7 +133,7 @@ describe('handleToolCall', () => {
         ranges_loaded: 1,
         calendar_id: 'school',
         effective_window: {
-          from: '2024-12-16',
+          from: '2025-05-15',
           to: '2025-07-16',
         },
         sample_labels: ['School Day'],

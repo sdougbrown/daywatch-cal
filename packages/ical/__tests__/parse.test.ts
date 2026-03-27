@@ -52,7 +52,7 @@ describe('parseICS', () => {
     );
 
     expect(dataWindow).not.toBeNull();
-    expect(formatDateValue(dataWindow!.from)).toBe('2025-01-01');
+    expect(formatDateValue(dataWindow!.from)).toBe('2024-08-03');
     expect(formatDateValue(dataWindow!.to)).toBe('2025-08-01');
   });
 

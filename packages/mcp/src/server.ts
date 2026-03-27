@@ -890,12 +890,19 @@ export async function handleToolCall(
 
         let ranges: DateRange[];
         let effectiveWindow = requestedWindow;
+        let detectedWindow: { from: Date; to: Date } | null = null;
+
         if (source === 'ics') {
+          detectedWindow = detectDataWindow(data);
           ranges = parseICS(data, requestedWindow);
-          if (ranges.length === 0) {
-            const detectedWindow = detectDataWindow(data);
-            if (detectedWindow) {
-              ranges = parseICS(data, detectedWindow);
+
+          // If we got very few results but the data lives elsewhere, re-parse
+          // with the detected window. Unbounded recurrences (no UNTIL) match
+          // any window, so a small result count doesn't mean the window is right.
+          if (detectedWindow && ranges.length < 10) {
+            const detectedRanges = parseICS(data, detectedWindow);
+            if (detectedRanges.length > ranges.length) {
+              ranges = detectedRanges;
               effectiveWindow = detectedWindow;
             }
           }
@@ -917,6 +924,7 @@ export async function handleToolCall(
           ranges_loaded: ranges.length,
           calendar_id: calendarId,
           effective_window: formatWindow(effectiveWindow),
+          detected_data_window: detectedWindow ? formatWindow(detectedWindow) : null,
           sample_labels: labelSummary.labels,
           has_more_labels: labelSummary.hasMore,
         });

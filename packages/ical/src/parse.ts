@@ -136,28 +136,39 @@ function getExceptDates(component: Component): string[] | undefined {
   return exceptDates.size > 0 ? [...exceptDates].sort() : undefined;
 }
 
+const VEVENT_BLOCK_PATTERN = /BEGIN:VEVENT\n([\s\S]*?)END:VEVENT/g;
+
 export function detectDataWindow(icsText: string): ParseWindow | null {
   const unfoldedText = icsText.replace(/\r\n/g, '\n').replace(/\n[ \t]/g, '');
+  let earliestDate: Date | null = null;
   let latestDate: Date | null = null;
 
-  for (const match of unfoldedText.matchAll(ICS_DATE_PATTERN)) {
-    const dateValue = match[1] ?? match[2];
-    if (!dateValue) {
-      continue;
-    }
+  // Only scan within VEVENT blocks to avoid VTIMEZONE DTSTART dates
+  for (const blockMatch of unfoldedText.matchAll(VEVENT_BLOCK_PATTERN)) {
+    const block = blockMatch[1];
+    for (const match of block.matchAll(ICS_DATE_PATTERN)) {
+      const dateValue = match[1] ?? match[2];
+      if (!dateValue) {
+        continue;
+      }
 
-    const parsedDate = parseIcsDateValue(dateValue);
-    if (!latestDate || parsedDate > latestDate) {
-      latestDate = parsedDate;
+      const parsedDate = parseIcsDateValue(dateValue);
+      if (!earliestDate || parsedDate < earliestDate) {
+        earliestDate = parsedDate;
+      }
+      if (!latestDate || parsedDate > latestDate) {
+        latestDate = parsedDate;
+      }
     }
   }
 
-  if (!latestDate) {
+  if (!earliestDate || !latestDate) {
     return null;
   }
 
-  const from = new Date(latestDate);
-  from.setMonth(from.getMonth() - 6);
+  // Pad by 1 month on each side to catch edge-of-window events
+  const from = new Date(earliestDate);
+  from.setMonth(from.getMonth() - 1);
 
   const to = new Date(latestDate);
   to.setMonth(to.getMonth() + 1);

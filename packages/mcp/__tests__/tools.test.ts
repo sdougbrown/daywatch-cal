@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import type {
   DateRange,
   DayRangeInfo,
@@ -63,6 +65,10 @@ function createLoadedSession(): CalendarSession {
   const session = new CalendarSession('UTC');
   session.loadCalendar('work', testRanges, 'ranges');
   return session;
+}
+
+function loadIcsFixture(name: string): string {
+  return readFileSync(new URL(`../../ical/__tests__/fixtures/${name}`, import.meta.url), 'utf8');
 }
 
 describe('handleToolCall', () => {
@@ -242,6 +248,432 @@ describe('handleToolCall', () => {
         message: expect.stringContaining('Showing 1 of 2'),
       }),
     );
+  });
+
+  it('finds shared events across multiple calendars by UID', async () => {
+    const session = new CalendarSession('UTC');
+
+    await handleToolCall(session, 'load_calendar', {
+      source: 'ics',
+      data: loadIcsFixture('shared-meetings-alice.ics'),
+      id: 'alice',
+      window_from: '2026-04-01',
+      window_to: '2026-04-30',
+    });
+    await handleToolCall(session, 'load_calendar', {
+      source: 'ics',
+      data: loadIcsFixture('shared-meetings-bob.ics'),
+      id: 'bob',
+      window_from: '2026-04-01',
+      window_to: '2026-04-30',
+    });
+
+    const result = await handleToolCall(session, 'find_shared_events', {
+      calendars: ['alice', 'bob'],
+      from: '2026-04-01',
+      to: '2026-04-30',
+    });
+
+    expect(
+      parseJsonContent<{
+        shared_events: Array<{
+          id: string;
+          label: string;
+          startTime?: string;
+          endTime?: string;
+          recurrence_summary?: string;
+          found_in_calendars: string[];
+          attendees?: Array<{ email: string; role?: string; status?: string }>;
+          organizer?: { email: string; name?: string };
+        }>;
+        total: number;
+        calendars_compared: string[];
+      }>(result),
+    ).toEqual({
+      shared_events: [
+        {
+          id: 'shared-sync',
+          label: 'Shared Sync',
+          startTime: '15:00',
+          endTime: '16:00',
+          found_in_calendars: ['alice', 'bob'],
+          attendees: [
+            {
+              email: 'alice@example.com',
+              name: 'Alice Example',
+              role: 'required',
+              status: 'accepted',
+            },
+            {
+              email: 'bob@example.com',
+              name: 'Bob Example',
+              role: 'optional',
+              status: 'tentative',
+            },
+          ],
+          organizer: {
+            email: 'alice@example.com',
+            name: 'Alice Example',
+          },
+        },
+        {
+          id: 'shared-weekly',
+          label: 'Shared Weekly',
+          startTime: '14:00',
+          endTime: '14:30',
+          recurrence_summary: 'weekly on Mon',
+          found_in_calendars: ['alice', 'bob'],
+          attendees: [
+            {
+              email: 'alice@example.com',
+              name: 'Alice Example',
+              role: 'required',
+              status: 'accepted',
+            },
+            {
+              email: 'bob@example.com',
+              name: 'Bob Example',
+              role: 'required',
+              status: 'needs-action',
+            },
+          ],
+          organizer: {
+            email: 'alice@example.com',
+            name: 'Alice Example',
+          },
+        },
+      ],
+      total: 2,
+      calendars_compared: ['alice', 'bob'],
+    });
+  });
+
+  it('returns no shared events when calendars do not overlap by UID', async () => {
+    const session = createLoadedSession();
+
+    session.loadCalendar(
+      'personal',
+      [
+        {
+          id: 'gym',
+          label: 'Gym',
+          dates: ['2026-03-25'],
+          startTime: '18:00',
+          endTime: '19:00',
+          duration: 60,
+        },
+      ],
+      'ranges',
+    );
+
+    const result = await handleToolCall(session, 'find_shared_events', {
+      calendars: ['work', 'personal'],
+    });
+
+    expect(
+      parseJsonContent<{
+        shared_events: unknown[];
+        total: number;
+        calendars_compared: string[];
+      }>(result),
+    ).toEqual({
+      shared_events: [],
+      total: 0,
+      calendars_compared: ['work', 'personal'],
+    });
+  });
+
+  it('filters shared events by the requested date window', async () => {
+    const session = new CalendarSession('UTC');
+
+    await handleToolCall(session, 'load_calendar', {
+      source: 'ics',
+      data: loadIcsFixture('shared-meetings-alice.ics'),
+      id: 'alice',
+      window_from: '2026-04-01',
+      window_to: '2026-04-30',
+    });
+    await handleToolCall(session, 'load_calendar', {
+      source: 'ics',
+      data: loadIcsFixture('shared-meetings-bob.ics'),
+      id: 'bob',
+      window_from: '2026-04-01',
+      window_to: '2026-04-30',
+    });
+
+    const result = await handleToolCall(session, 'find_shared_events', {
+      calendars: ['alice', 'bob'],
+      from: '2026-04-02',
+      to: '2026-04-02',
+    });
+
+    expect(
+      parseJsonContent<{
+        shared_events: Array<{
+          id: string;
+          label: string;
+          startTime: string;
+          endTime: string;
+          found_in_calendars: string[];
+          attendees: Array<{ email: string; name?: string; role?: string; status?: string }>;
+          organizer: { email: string; name?: string };
+        }>;
+        total: number;
+        calendars_compared: string[];
+      }>(result),
+    ).toEqual({
+      shared_events: [
+        {
+          id: 'shared-sync',
+          label: 'Shared Sync',
+          startTime: '15:00',
+          endTime: '16:00',
+          found_in_calendars: ['alice', 'bob'],
+          attendees: [
+            {
+              email: 'alice@example.com',
+              name: 'Alice Example',
+              role: 'required',
+              status: 'accepted',
+            },
+            {
+              email: 'bob@example.com',
+              name: 'Bob Example',
+              role: 'optional',
+              status: 'tentative',
+            },
+          ],
+          organizer: {
+            email: 'alice@example.com',
+            name: 'Alice Example',
+          },
+        },
+      ],
+      total: 1,
+      calendars_compared: ['alice', 'bob'],
+    });
+  });
+
+  it('finds common availability across calendars over a date range', async () => {
+    const session = new CalendarSession('UTC');
+
+    session.loadCalendar(
+      'alice',
+      [
+        {
+          id: 'alice-sync',
+          label: 'Alice Sync',
+          dates: ['2026-04-02'],
+          startTime: '09:00',
+          endTime: '10:00',
+          duration: 60,
+        },
+        {
+          id: 'alice-focus',
+          label: 'Alice Focus',
+          dates: ['2026-04-02'],
+          startTime: '13:00',
+          endTime: '14:00',
+          duration: 60,
+        },
+      ],
+      'ranges',
+    );
+    session.loadCalendar(
+      'bob',
+      [
+        {
+          id: 'bob-standup',
+          label: 'Bob Standup',
+          dates: ['2026-04-02'],
+          startTime: '10:30',
+          endTime: '11:30',
+          duration: 60,
+        },
+        {
+          id: 'bob-review',
+          label: 'Bob Review',
+          dates: ['2026-04-03'],
+          startTime: '09:00',
+          endTime: '17:00',
+          duration: 480,
+        },
+      ],
+      'ranges',
+    );
+
+    const result = await handleToolCall(session, 'find_common_availability', {
+      calendars: ['alice', 'bob'],
+      from: '2026-04-02',
+      to: '2026-04-03',
+      min_duration: 30,
+      day_start: '09:00',
+      day_end: '17:00',
+    });
+
+    expect(
+      parseJsonContent<{
+        common_slots: Array<{ date: string; start: string; end: string; duration_minutes: number }>;
+        total: number;
+        calendars_checked: string[];
+        search_window: { from: string; to: string };
+      }>(result),
+    ).toEqual({
+      common_slots: [
+        {
+          date: '2026-04-02',
+          start: '10:00',
+          end: '10:30',
+          duration_minutes: 30,
+        },
+        {
+          date: '2026-04-02',
+          start: '11:30',
+          end: '13:00',
+          duration_minutes: 90,
+        },
+        {
+          date: '2026-04-02',
+          start: '14:00',
+          end: '17:00',
+          duration_minutes: 180,
+        },
+      ],
+      total: 3,
+      calendars_checked: ['alice', 'bob'],
+      search_window: {
+        from: '2026-04-02',
+        to: '2026-04-03',
+      },
+    });
+  });
+
+  it('respects min_duration and day bounds for common availability', async () => {
+    const session = new CalendarSession('UTC');
+
+    session.loadCalendar(
+      'alice',
+      [
+        {
+          id: 'alice-morning',
+          label: 'Alice Morning',
+          dates: ['2026-04-02'],
+          startTime: '09:00',
+          endTime: '09:45',
+          duration: 45,
+        },
+      ],
+      'ranges',
+    );
+    session.loadCalendar(
+      'bob',
+      [
+        {
+          id: 'bob-afternoon',
+          label: 'Bob Afternoon',
+          dates: ['2026-04-02'],
+          startTime: '12:15',
+          endTime: '13:00',
+          duration: 45,
+        },
+      ],
+      'ranges',
+    );
+
+    const result = await handleToolCall(session, 'find_common_availability', {
+      calendars: ['alice', 'bob'],
+      from: '2026-04-02',
+      to: '2026-04-02',
+      min_duration: 60,
+      day_start: '10:00',
+      day_end: '14:00',
+    });
+
+    expect(
+      parseJsonContent<{
+        common_slots: Array<{ date: string; start: string; end: string; duration_minutes: number }>;
+        total: number;
+      }>(result),
+    ).toEqual({
+      common_slots: [
+        {
+          date: '2026-04-02',
+          start: '10:00',
+          end: '12:15',
+          duration_minutes: 135,
+        },
+        {
+          date: '2026-04-02',
+          start: '13:00',
+          end: '14:00',
+          duration_minutes: 60,
+        },
+      ],
+      total: 2,
+      calendars_checked: ['alice', 'bob'],
+      search_window: {
+        from: '2026-04-02',
+        to: '2026-04-02',
+      },
+    });
+  });
+
+  it('returns no common availability when calendars fully cover the search window', async () => {
+    const session = new CalendarSession('UTC');
+
+    session.loadCalendar(
+      'alice',
+      [
+        {
+          id: 'alice-day',
+          label: 'Alice Day',
+          dates: ['2026-04-02'],
+          startTime: '09:00',
+          endTime: '17:00',
+          duration: 480,
+        },
+      ],
+      'ranges',
+    );
+    session.loadCalendar(
+      'bob',
+      [
+        {
+          id: 'bob-day',
+          label: 'Bob Day',
+          dates: ['2026-04-02'],
+          startTime: '09:00',
+          endTime: '17:00',
+          duration: 480,
+        },
+      ],
+      'ranges',
+    );
+
+    const result = await handleToolCall(session, 'find_common_availability', {
+      calendars: ['alice', 'bob'],
+      from: '2026-04-02',
+      to: '2026-04-02',
+      day_start: '09:00',
+      day_end: '17:00',
+    });
+
+    expect(
+      parseJsonContent<{
+        common_slots: Array<{ date: string; start: string; end: string; duration_minutes: number }>;
+        total: number;
+        calendars_checked: string[];
+        search_window: { from: string; to: string };
+      }>(result),
+    ).toEqual({
+      common_slots: [],
+      total: 0,
+      calendars_checked: ['alice', 'bob'],
+      search_window: {
+        from: '2026-04-02',
+        to: '2026-04-02',
+      },
+    });
   });
 
   it('finds the next free slot matching a required duration', async () => {

@@ -32,6 +32,30 @@ describe('CalendarSession', () => {
     expect(session.getAllRanges(['missing'])).toEqual([]);
   });
 
+  it('groups ranges with matching ids across calendars', () => {
+    const session = new CalendarSession('UTC');
+
+    session.loadCalendar('alice', [makeRange('shared', 'Shared Sync'), makeRange('solo-a', 'Alice Solo')], 'ranges');
+    session.loadCalendar('bob', [makeRange('shared', 'Shared Sync'), makeRange('solo-b', 'Bob Solo')], 'ranges');
+
+    expect(session.getRangeEntries(['alice'])).toEqual([
+      { calendarId: 'alice', range: makeRange('shared', 'Shared Sync') },
+      { calendarId: 'alice', range: makeRange('solo-a', 'Alice Solo') },
+    ]);
+
+    expect([...session.groupRangesByIdAcrossCalendars().entries()]).toEqual([
+      [
+        'shared',
+        [
+          { calendarId: 'alice', range: makeRange('shared', 'Shared Sync') },
+          { calendarId: 'bob', range: makeRange('shared', 'Shared Sync') },
+        ],
+      ],
+      ['solo-a', [{ calendarId: 'alice', range: makeRange('solo-a', 'Alice Solo') }]],
+      ['solo-b', [{ calendarId: 'bob', range: makeRange('solo-b', 'Bob Solo') }]],
+    ]);
+  });
+
   it('getCalendarSummary returns capped unique labels with a has_more_labels flag', () => {
     const session = new CalendarSession('UTC');
 

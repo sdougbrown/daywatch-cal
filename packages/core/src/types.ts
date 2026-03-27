@@ -79,6 +79,9 @@ export interface DateRange {
    * Neo-reckoning passes this through — agent-facing code interprets it.
    */
   flexibility?: number;
+
+  /** Opaque metadata — neo-reckoning passes through, agent-facing code interprets. */
+  metadata?: Record<string, unknown>;
 }
 
 /**

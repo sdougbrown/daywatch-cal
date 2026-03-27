@@ -251,6 +251,42 @@ describe('RangeEvaluator', () => {
   });
 
   describe('expand', () => {
+    it('treats metadata as opaque and leaves evaluation results unchanged', () => {
+      const plainRange = makeRange({
+        dates: ['2026-03-21'],
+        startTime: '09:00',
+        endTime: '10:00',
+        duration: 60,
+      });
+      const metadata = {
+        attendees: [{ email: 'alice@example.com', role: 'required', status: 'accepted' }],
+        organizer: { email: 'organizer@example.com', name: 'Organizer' },
+        location: 'Room 500',
+      };
+      const metadataRange = makeRange({
+        ...plainRange,
+        metadata,
+      });
+
+      expect(utcEvaluator.expand(metadataRange, new Date('2026-03-21T00:00:00Z'), new Date('2026-03-21T00:00:00Z'))).toEqual(
+        utcEvaluator.expand(plainRange, new Date('2026-03-21T00:00:00Z'), new Date('2026-03-21T00:00:00Z')),
+      );
+      expect(
+        utcEvaluator.findFreeSlots([metadataRange], '2026-03-21', {
+          minDuration: 30,
+          dayStart: '08:00',
+          dayEnd: '12:00',
+        }),
+      ).toEqual(
+        utcEvaluator.findFreeSlots([plainRange], '2026-03-21', {
+          minDuration: 30,
+          dayStart: '08:00',
+          dayEnd: '12:00',
+        }),
+      );
+      expect(metadataRange.metadata).toEqual(metadata);
+    });
+
     it('expands all-day range over a window', () => {
       const range = makeRange({
         everyWeekday: [1], // Mondays

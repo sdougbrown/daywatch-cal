@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import {
   RangeEvaluator,
+  dateRange,
   scoreSchedule,
   type DateRange,
   type DayRangeInfo,
@@ -33,9 +34,18 @@ ANALYZING:
 - find_conflicts — overlapping events in a date range
 - find_free_slots — open time on a specific day (defaults to 09:00–17:00)
 - find_next_free_slot — first available slot of a given duration
+- find_shared_events — meetings that appear in multiple loaded calendars via shared event UID
+- find_common_availability — free slots across specific calendars over a date range
 - score_schedule — quality metrics: conflicts, free time, focus blocks, context switches
 - day_detail — full breakdown of a single day (timed slots + all-day events)
 - expand_range — concrete occurrences of one recurring event
+
+CROSS-CALENDAR ANALYSIS:
+- Load multiple calendars with distinct IDs: load_calendar(id="alice", ...), load_calendar(id="bob", ...)
+- find_shared_events shows meetings that appear in multiple calendars (matched by event UID)
+- find_common_availability finds free slots across specified calendars
+- Shared events include attendee metadata (email, role, response status) when available from the .ics source
+- To reschedule a shared meeting: identify it with find_shared_events, find a new slot with find_common_availability, then suggest_changes to move it
 
 OPTIMIZING:
 - suggest_changes — preview moves/adds/removes with before/after scoring (read-only)
@@ -205,6 +215,65 @@ export const TOOLS: Tool[] = [
         },
       },
       required: ['date'],
+    },
+  },
+  {
+    name: 'find_shared_events',
+    description: 'Find events that appear in two or more loaded calendars, grouped by shared event UID.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        calendars: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional list of calendar ids to compare. Defaults to all loaded calendars.',
+        },
+        from: {
+          type: 'string',
+          description: 'Optional ISO date filter for the start of the search window.',
+        },
+        to: {
+          type: 'string',
+          description: 'Optional ISO date filter for the end of the search window.',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum shared events to return. Defaults to 50.',
+        },
+      },
+    },
+  },
+  {
+    name: 'find_common_availability',
+    description: 'Find free time slots across specific calendars over a date range.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        calendars: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Which calendar ids to check. Must include at least two calendars.',
+        },
+        from: { type: 'string', description: 'Start of the search window as an ISO date.' },
+        to: { type: 'string', description: 'End of the search window as an ISO date.' },
+        min_duration: {
+          type: 'number',
+          description: 'Minimum free-slot duration in minutes. Defaults to 30.',
+        },
+        day_start: {
+          type: 'string',
+          description: 'Start of the day window, in HH:mm format. Defaults to 09:00.',
+        },
+        day_end: {
+          type: 'string',
+          description: 'End of the day window, in HH:mm format. Defaults to 17:00.',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum slots to return. Defaults to 20.',
+        },
+      },
+      required: ['calendars', 'from', 'to'],
     },
   },
   {
@@ -381,6 +450,18 @@ interface ProposedChange {
   reason: string;
 }
 
+interface AttendeeInfo {
+  email: string;
+  name?: string;
+  role?: string;
+  status?: string;
+}
+
+interface OrganizerInfo {
+  email: string;
+  name?: string;
+}
+
 function jsonResult(value: unknown): CallToolResult {
   const compact = JSON.stringify(value);
   const text = compact.length > 4000 ? compact : JSON.stringify(value, null, 2);
@@ -470,6 +551,15 @@ function optionalStringArray(args: Record<string, unknown>, key: string): string
 
   if (!Array.isArray(value) || value.some(item => typeof item !== 'string')) {
     throw new Error(`"${key}" must be an array of strings when provided.`);
+  }
+
+  return value;
+}
+
+function requireStringArray(args: Record<string, unknown>, key: string): string[] {
+  const value = optionalStringArray(args, key);
+  if (!value || value.length === 0) {
+    throw new Error(`"${key}" must be a non-empty array of strings.`);
   }
 
   return value;
@@ -586,6 +676,148 @@ function collectUniqueLabels(ranges: DateRange[], limit: number): { labels: stri
   };
 }
 
+function requireLoadedCalendars(session: CalendarSession, calendarIds: string[]): string[] {
+  const uniqueIds = [...new Set(calendarIds)];
+
+  if (uniqueIds.length === 0) {
+    throw new Error('"calendars" must include at least one calendar id.');
+  }
+
+  const missing = uniqueIds.filter(calendarId => !session.calendars.has(calendarId));
+  if (missing.length > 0) {
+    throw new Error(`Unknown calendar id${missing.length === 1 ? '' : 's'}: ${missing.join(', ')}`);
+  }
+
+  return uniqueIds;
+}
+
+function getMetadataRecord(range: DateRange): Record<string, unknown> | undefined {
+  if (!range.metadata || typeof range.metadata !== 'object' || Array.isArray(range.metadata)) {
+    return undefined;
+  }
+
+  return range.metadata;
+}
+
+function readAttendees(value: unknown): AttendeeInfo[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const attendees = value.flatMap((item): AttendeeInfo[] => {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+      return [];
+    }
+
+    const record = item as Record<string, unknown>;
+    if (typeof record.email !== 'string' || record.email.trim() === '') {
+      return [];
+    }
+
+    return [
+      {
+        email: record.email,
+        ...(typeof record.name === 'string' && record.name.trim() !== '' ? { name: record.name } : {}),
+        ...(typeof record.role === 'string' && record.role.trim() !== '' ? { role: record.role } : {}),
+        ...(typeof record.status === 'string' && record.status.trim() !== '' ? { status: record.status } : {}),
+      },
+    ];
+  });
+
+  return attendees.length > 0 ? attendees : undefined;
+}
+
+function readOrganizer(value: unknown): OrganizerInfo | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (typeof record.email !== 'string' || record.email.trim() === '') {
+    return undefined;
+  }
+
+  return {
+    email: record.email,
+    ...(typeof record.name === 'string' && record.name.trim() !== '' ? { name: record.name } : {}),
+  };
+}
+
+function getRangeAttendees(range: DateRange): AttendeeInfo[] | undefined {
+  return readAttendees(getMetadataRecord(range)?.attendees);
+}
+
+function getRangeOrganizer(range: DateRange): OrganizerInfo | undefined {
+  return readOrganizer(getMetadataRecord(range)?.organizer);
+}
+
+function mergeAttendees(ranges: DateRange[]): AttendeeInfo[] | undefined {
+  const attendeesByEmail = new Map<string, AttendeeInfo>();
+
+  for (const range of ranges) {
+    for (const attendee of getRangeAttendees(range) ?? []) {
+      if (!attendeesByEmail.has(attendee.email)) {
+        attendeesByEmail.set(attendee.email, attendee);
+      }
+    }
+  }
+
+  const attendees = [...attendeesByEmail.values()];
+  return attendees.length > 0 ? attendees : undefined;
+}
+
+function getFirstOrganizer(ranges: DateRange[]): OrganizerInfo | undefined {
+  for (const range of ranges) {
+    const organizer = getRangeOrganizer(range);
+    if (organizer) {
+      return organizer;
+    }
+  }
+
+  return undefined;
+}
+
+function buildRecurrenceSummary(range: DateRange): string | undefined {
+  const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  if (range.everyWeekday?.length) {
+    return `weekly on ${range.everyWeekday.map(day => weekdayLabels[day] ?? String(day)).join(', ')}`;
+  }
+
+  if (range.everyDate?.length) {
+    return `monthly on ${range.everyDate.join(', ')}`;
+  }
+
+  if (range.everyMonth?.length) {
+    return `yearly in months ${range.everyMonth.join(', ')}`;
+  }
+
+  return undefined;
+}
+
+function rangeOverlapsDateFilter(range: DateRange, from?: string, to?: string): boolean {
+  if (!from && !to) {
+    return true;
+  }
+
+  const windowFrom = from ?? to!;
+  const windowTo = to ?? from!;
+
+  if (range.dates?.length) {
+    return range.dates.some(date => date >= windowFrom && date <= windowTo);
+  }
+
+  if (range.toDate && range.toDate < windowFrom) {
+    return false;
+  }
+
+  if (range.fromDate && range.fromDate > windowTo) {
+    return false;
+  }
+
+  return true;
+}
+
 function shiftDay(dateStr: string, delta: number): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const next = new Date(year, month - 1, day + delta);
@@ -634,6 +866,91 @@ function buildDayDetail(
   timeSlots.sort((left, right) => left.startTime.localeCompare(right.startTime));
 
   return { timeSlots, allDayRanges };
+}
+
+function buildSharedEvents(
+  session: CalendarSession,
+  calendarIds: string[],
+  from?: string,
+  to?: string,
+): Array<{
+  id: string;
+  label: string;
+  startTime?: string;
+  endTime?: string;
+  recurrence_summary?: string;
+  found_in_calendars: string[];
+  attendees?: AttendeeInfo[];
+  organizer?: OrganizerInfo;
+}> {
+  const sharedEvents: Array<{
+    id: string;
+    label: string;
+    startTime?: string;
+    endTime?: string;
+    recurrence_summary?: string;
+    found_in_calendars: string[];
+    attendees?: AttendeeInfo[];
+    organizer?: OrganizerInfo;
+  }> = [];
+
+  for (const [id, entries] of session.groupRangesByIdAcrossCalendars(calendarIds)) {
+    const filteredEntries = entries.filter(entry => rangeOverlapsDateFilter(entry.range, from, to));
+    const distinctCalendars = [...new Set(filteredEntries.map(entry => entry.calendarId))].sort();
+
+    if (distinctCalendars.length < 2) {
+      continue;
+    }
+
+    const representative = filteredEntries[0].range;
+    const ranges = filteredEntries.map(entry => entry.range);
+    const attendees = mergeAttendees(ranges);
+    const organizer = getFirstOrganizer(ranges);
+    const recurrenceSummary = buildRecurrenceSummary(representative);
+
+    sharedEvents.push({
+      id,
+      label: representative.label,
+      ...(representative.startTime ? { startTime: representative.startTime } : {}),
+      ...(representative.endTime ? { endTime: representative.endTime } : {}),
+      ...(recurrenceSummary ? { recurrence_summary: recurrenceSummary } : {}),
+      found_in_calendars: distinctCalendars,
+      ...(attendees ? { attendees } : {}),
+      ...(organizer ? { organizer } : {}),
+    });
+  }
+
+  sharedEvents.sort((left, right) =>
+    left.label.localeCompare(right.label) || left.id.localeCompare(right.id),
+  );
+
+  return sharedEvents;
+}
+
+function buildCommonAvailability(
+  evaluator: RangeEvaluator,
+  ranges: DateRange[],
+  from: string,
+  to: string,
+  options: {
+    minDuration: number;
+    dayStart: string;
+    dayEnd: string;
+  },
+): Array<{
+  date: string;
+  start: string;
+  end: string;
+  duration_minutes: number;
+}> {
+  return dateRange(from, to).flatMap(date =>
+    evaluator.findFreeSlots(ranges, date, options).map(slot => ({
+      date: slot.date,
+      start: slot.startTime,
+      end: slot.endTime,
+      duration_minutes: slot.duration,
+    })),
+  );
 }
 
 function findRangeById(ranges: DateRange[], rangeId: string): DateRange | undefined {
@@ -1049,6 +1366,45 @@ export async function handleToolCall(
         return jsonResult(
           truncateArray(freeSlots, 'free_slots', limit),
         );
+      }
+
+      case 'find_shared_events': {
+        const requestedCalendars = optionalStringArray(args, 'calendars');
+        const calendarsCompared = requestedCalendars
+          ? requireLoadedCalendars(session, requestedCalendars)
+          : [...session.calendars.keys()];
+        const from = optionalString(args, 'from');
+        const to = optionalString(args, 'to');
+        const limit = optionalLimit(args);
+        const sharedEvents = buildSharedEvents(session, calendarsCompared, from, to);
+
+        return jsonResult({
+          ...truncateArray(sharedEvents, 'shared_events', limit),
+          calendars_compared: calendarsCompared,
+        });
+      }
+
+      case 'find_common_availability': {
+        const calendars = requireLoadedCalendars(session, requireStringArray(args, 'calendars'));
+        if (calendars.length < 2) {
+          throw new Error('"calendars" must include at least two calendar ids.');
+        }
+
+        const from = requireString(args, 'from');
+        const to = requireString(args, 'to');
+        const limit = optionalLimit(args, 20);
+        const ranges = session.getAllRanges(calendars);
+        const commonSlots = buildCommonAvailability(session.evaluator, ranges, from, to, {
+          minDuration: optionalNumber(args, 'min_duration', 30),
+          dayStart: optionalString(args, 'day_start') ?? '09:00',
+          dayEnd: optionalString(args, 'day_end') ?? '17:00',
+        });
+
+        return jsonResult({
+          ...truncateArray(commonSlots, 'common_slots', limit),
+          calendars_checked: calendars,
+          search_window: { from, to },
+        });
       }
 
       case 'find_next_free_slot': {

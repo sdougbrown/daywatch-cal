@@ -6,6 +6,11 @@ export interface LoadedCalendar {
   source: 'ics' | 'ranges';
 }
 
+export interface CalendarRangeEntry {
+  calendarId: string;
+  range: DateRange;
+}
+
 export class CalendarSession {
   calendars: Map<string, LoadedCalendar>;
   timezone: string;
@@ -57,6 +62,42 @@ export class CalendarSession {
     }
 
     return ranges;
+  }
+
+  getRangeEntries(calendarIds?: string[]): CalendarRangeEntry[] {
+    if (!calendarIds || calendarIds.length === 0) {
+      return [...this.calendars.entries()].flatMap(([calendarId, calendar]) =>
+        calendar.ranges.map(range => ({ calendarId, range })),
+      );
+    }
+
+    const selectedIds = new Set(calendarIds);
+    const entries: CalendarRangeEntry[] = [];
+
+    for (const [calendarId, calendar] of this.calendars.entries()) {
+      if (!selectedIds.has(calendarId)) {
+        continue;
+      }
+
+      entries.push(...calendar.ranges.map(range => ({ calendarId, range })));
+    }
+
+    return entries;
+  }
+
+  groupRangesByIdAcrossCalendars(calendarIds?: string[]): Map<string, CalendarRangeEntry[]> {
+    const grouped = new Map<string, CalendarRangeEntry[]>();
+
+    for (const entry of this.getRangeEntries(calendarIds)) {
+      const existing = grouped.get(entry.range.id);
+      if (existing) {
+        existing.push(entry);
+      } else {
+        grouped.set(entry.range.id, [entry]);
+      }
+    }
+
+    return grouped;
   }
 
   findRangeCalendar(rangeId: string): string | undefined {

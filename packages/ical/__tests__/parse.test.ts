@@ -230,4 +230,85 @@ describe('parseICS', () => {
       },
     ]);
   });
+
+  it('extracts attendee, organizer, and location metadata from VEVENT properties', () => {
+    const ranges = parseICS(loadFixture('shared-meetings-alice.ics'), makeWindow('2026-04-01', '2026-04-30'));
+
+    expect(byId(ranges, 'shared-sync')).toEqual({
+      id: 'shared-sync',
+      label: 'Shared Sync',
+      title: 'Cross-calendar planning',
+      dates: ['2026-04-02'],
+      startTime: '15:00',
+      endTime: '16:00',
+      duration: 60,
+      timezone: 'UTC',
+      metadata: {
+        attendees: [
+          {
+            email: 'alice@example.com',
+            name: 'Alice Example',
+            role: 'required',
+            status: 'accepted',
+          },
+          {
+            email: 'bob@example.com',
+            name: 'Bob Example',
+            role: 'optional',
+            status: 'tentative',
+          },
+        ],
+        organizer: {
+          email: 'alice@example.com',
+          name: 'Alice Example',
+        },
+        location: 'Room 500',
+      },
+    });
+
+    expect(byId(ranges, 'shared-weekly')).toEqual(
+      expect.objectContaining({
+        metadata: {
+          attendees: [
+            {
+              email: 'alice@example.com',
+              name: 'Alice Example',
+              role: 'required',
+              status: 'accepted',
+            },
+            {
+              email: 'bob@example.com',
+              name: 'Bob Example',
+              role: 'required',
+              status: 'needs-action',
+            },
+          ],
+          organizer: {
+            email: 'alice@example.com',
+            name: 'Alice Example',
+          },
+        },
+      }),
+    );
+  });
+
+  it('omits metadata when a VEVENT has no attendees, organizer, or location', () => {
+    const ranges = parseICS(loadFixture('simple-events.ics'), makeWindow('2026-03-01', '2026-03-31'));
+
+    expect(byId(ranges, 'timed-single').metadata).toBeUndefined();
+  });
+
+  it('extracts organizer email even when no CN parameter is present', () => {
+    const ranges = parseICS(loadFixture('shared-meetings-bob.ics'), makeWindow('2026-04-01', '2026-04-30'));
+
+    expect(byId(ranges, 'shared-sync')).toEqual(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          organizer: {
+            email: 'alice@example.com',
+          },
+        }),
+      }),
+    );
+  });
 });

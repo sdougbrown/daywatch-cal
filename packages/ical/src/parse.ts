@@ -15,6 +15,18 @@ interface ParseWindow {
   to: Date;
 }
 
+interface AttendeeInfo {
+  email: string;
+  name?: string;
+  role?: 'required' | 'optional' | 'chair' | 'non-participant';
+  status?: 'accepted' | 'tentative' | 'declined' | 'needs-action';
+}
+
+interface OrganizerInfo {
+  email: string;
+  name?: string;
+}
+
 const ICS_DATE_PATTERN =
   /(?:^|\n)(?:DTSTART|DTEND)(?:;[^:\n]*)?:(\d{8})(?:T\d{6}Z?)?|(?:^|\n)RRULE(?:;[^:\n]*)?:[^\n]*\bUNTIL=(\d{8})(?:T\d{6}Z?)?/g;
 
@@ -136,6 +148,101 @@ function getExceptDates(component: Component): string[] | undefined {
   return exceptDates.size > 0 ? [...exceptDates].sort() : undefined;
 }
 
+function stripMailto(value: string): string {
+  return value.replace(/^mailto:/i, '');
+}
+
+function mapAttendeeRole(value: string | null | undefined): AttendeeInfo['role'] | undefined {
+  switch (value?.toUpperCase()) {
+    case 'REQ-PARTICIPANT':
+      return 'required';
+    case 'OPT-PARTICIPANT':
+      return 'optional';
+    case 'CHAIR':
+      return 'chair';
+    case 'NON-PARTICIPANT':
+      return 'non-participant';
+    default:
+      return undefined;
+  }
+}
+
+function mapAttendeeStatus(value: string | null | undefined): AttendeeInfo['status'] | undefined {
+  switch (value?.toUpperCase()) {
+    case 'ACCEPTED':
+      return 'accepted';
+    case 'TENTATIVE':
+      return 'tentative';
+    case 'DECLINED':
+      return 'declined';
+    case 'NEEDS-ACTION':
+      return 'needs-action';
+    default:
+      return undefined;
+  }
+}
+
+function extractAttendees(component: Component): AttendeeInfo[] {
+  const attendees: AttendeeInfo[] = [];
+
+  for (const property of component.getAllProperties('attendee')) {
+    const rawValue = property.getFirstValue();
+    if (typeof rawValue !== 'string' || rawValue.trim() === '') {
+      continue;
+    }
+
+    const email = stripMailto(rawValue.trim());
+    if (email === '') {
+      continue;
+    }
+
+    const attendee: AttendeeInfo = { email };
+    const name = property.getFirstParameter('cn');
+    if (typeof name === 'string' && name.trim() !== '') {
+      attendee.name = name;
+    }
+
+    const role = mapAttendeeRole(property.getFirstParameter('role'));
+    if (role) {
+      attendee.role = role;
+    }
+
+    const status = mapAttendeeStatus(property.getFirstParameter('partstat'));
+    if (status) {
+      attendee.status = status;
+    }
+
+    attendees.push(attendee);
+  }
+
+  return attendees;
+}
+
+function extractOrganizer(component: Component): OrganizerInfo | undefined {
+  const property = component.getFirstProperty('organizer');
+  if (!property) {
+    return undefined;
+  }
+
+  const rawValue = property.getFirstValue();
+  if (typeof rawValue !== 'string' || rawValue.trim() === '') {
+    return undefined;
+  }
+
+  const email = stripMailto(rawValue.trim());
+  if (email === '') {
+    return undefined;
+  }
+
+  const organizer: OrganizerInfo = { email };
+  const name = property.getFirstParameter('cn');
+  if (typeof name === 'string' && name.trim() !== '') {
+    organizer.name = name;
+  }
+
+  return organizer;
+}
+
 const VEVENT_BLOCK_PATTERN = /BEGIN:VEVENT\n([\s\S]*?)END:VEVENT/g;
 
 export function detectDataWindow(icsText: string): ParseWindow | null {
@@ -219,6 +326,24 @@ function buildDateRange(component: Component, window: ParseWindow): DateRange | 
 
   if (event.description) {
     baseRange.title = event.description;
+  }
+
+  const metadata: Record<string, unknown> = {};
+  const attendees = extractAttendees(component);
+  const organizer = extractOrganizer(component);
+  const location = event.location || undefined;
+
+  if (attendees.length > 0) {
+    metadata.attendees = attendees;
+  }
+  if (organizer) {
+    metadata.organizer = organizer;
+  }
+  if (location) {
+    metadata.location = location;
+  }
+  if (Object.keys(metadata).length > 0) {
+    baseRange.metadata = metadata;
   }
 
   Object.assign(baseRange, getTimeFields(component, event));

@@ -1,51 +1,96 @@
 # @neo-reckoning/ical
 
-Browser-compatible iCal (.ics) parsing adapter for [@neo-reckoning/core](https://www.npmjs.com/package/@neo-reckoning/core).
+iCal (.ics) parser and generator for @neo-reckoning/core. Converts VEVENT data to DateRange[] and back.
 
-Parses external calendar feeds and produces `CalendarEvent[]` for the same rendering pipeline as native date ranges.
+This package parses `.ics` calendar data into neo-reckoning `DateRange[]`, preserves recurrence structure when possible, and generates valid `.ics` output from those ranges.
 
-## Status
+## What this does
 
-**This package is a placeholder.** The types and interface are defined but the implementation is pending. It will use:
+- **Parse VEVENT data** — convert all-day events, timed events, spans, recurrence rules, and exceptions into `DateRange[]`
+- **Generate `.ics` output** — export `DateRange[]` back to `VCALENDAR` / `VEVENT` form
+- **Preserve recurrence structure** — directly map simple RRULE patterns into native neo-reckoning recurrence fields
+- **Expand complex rules when needed** — fall back to explicit date expansion for recurrence patterns that do not fit the native model
+- **Work in browser and Node** — built on `ical.js`, which runs in both environments
 
-- [ical.js](https://github.com/nicjansma/ical.js) (Mozilla's browser-compatible parser) for .ics text parsing
-- [rrule](https://github.com/jakubroztocil/rrule) for RRULE recurrence expansion
+## Install
 
-## Planned API
+```bash
+npm install @neo-reckoning/ical
+```
+
+## Quick start
 
 ```typescript
-import { parseICS, fetchAndParse } from '@neo-reckoning/ical';
-import type { CacheAdapter } from '@neo-reckoning/core';
+import { detectDataWindow, generateICS, parseICS } from '@neo-reckoning/ical';
 
-// Parse raw .ics text into normalized events
-const events = parseICS(icsText, { from: windowStart, to: windowEnd });
+const window = {
+  from: new Date('2026-03-01T00:00:00'),
+  to: new Date('2026-03-31T00:00:00'),
+};
 
-// Fetch via a CORS proxy and parse in one call
-const events = await fetchAndParse(
-  '/api/subscription/abc-123/proxy',
-  { from: windowStart, to: windowEnd },
-  {
-    cache: myAdapter,   // pluggable: localStorage, AsyncStorage, etc.
-    cacheTTL: 300000,   // 5 minutes
-  },
-);
+const ranges = parseICS(icsText, window);
+const detected = detectDataWindow(icsText);
+const ics = generateICS(ranges, { calendarName: 'Roundtrip' });
 ```
 
-## Intended flow
+## API
 
-```
-External .ics URL (Google Calendar, Outlook, etc.)
-  → API proxy endpoint fetches server-side (avoids CORS)
-  → Raw .ics text returned to browser
-  → This package parses + expands RRULE occurrences
-  → CalendarEvent[] feeds into the same pipeline as native DateRanges
-```
+### `parseICS(icsText, window)`
 
-## Design decisions
+Parses `.ics` text into `DateRange[]` within a time window.
 
-- **Browser-first** — no Node.js APIs. Works in web browsers and React Native.
-- **RRULE stays as RRULE** — imported recurrence is expanded by the `rrule` library, not converted to neo-reckoning's native model. Two parallel evaluation paths converge into one `CalendarEvent[]` shape.
-- **Pluggable cache** — `CacheAdapter` interface supports sync (localStorage) and async (AsyncStorage/MMKV) implementations.
+- Single-day, timed, and multi-day VEVENTs become native neo-reckoning ranges
+- Simple RRULEs map directly to recurrence fields like `everyWeekday`, `everyDate`, and `everyMonth`
+- Complex RRULEs are expanded to explicit `dates` within the requested window
+- `EXDATE` values become `exceptDates`
+
+### `generateICS(ranges, options?)`
+
+Exports `DateRange[]` back to `.ics` format.
+
+- Writes a valid `VCALENDAR` wrapper
+- Generates `VEVENT` entries for single events, spans, and supported recurrence patterns
+- Preserves timezones, `EXDATE` values, and optional calendar metadata such as `calendarName`
+
+### `detectDataWindow(icsText)`
+
+Performs a lightweight regex scan of raw `.ics` text to find where the actual calendar data lives.
+
+- Scans VEVENT `DTSTART`, `DTEND`, and `UNTIL` values
+- Ignores unrelated timezone blocks
+- Returns a padded `{ from, to }` window or `null` if no event dates are present
+
+## Two-tier RRULE handling
+
+Neo-reckoning has its own native recurrence model, but `.ics` RRULEs are broader. This package handles them in two tiers:
+
+- **Tier 1: direct mapping** — simple RRULEs are converted into native `DateRange` recurrence fields so they stay compact and editable.
+- **Tier 2: expansion** — complex RRULEs are expanded with the `rrule` library into explicit `dates` within the requested parse window.
+
+Tier 2 is used for patterns like ordinal weekdays (`BYDAY=2TU`), non-daily `INTERVAL > 1`, and other RRULE parts that do not map cleanly onto the native model.
+
+## Supported patterns
+
+| RRULE pattern | DateRange mapping | Notes |
+|---|---|---|
+| `FREQ=DAILY` | `everyWeekday: [0, 1, 2, 3, 4, 5, 6]` | Daily recurrence across all weekdays |
+| `FREQ=WEEKLY;BYDAY=...` | `everyWeekday` | If `BYDAY` is omitted, the DTSTART weekday is used |
+| `FREQ=MONTHLY;BYMONTHDAY=...` | `everyDate` | If `BYMONTHDAY` is omitted, the DTSTART day-of-month is used |
+| `FREQ=YEARLY;BYMONTH=...` | `everyMonth` | If `BYMONTH` is omitted, the DTSTART month is used |
+| `UNTIL` or `COUNT` | `fromDate`, `toDate`, `fixedBetween` | Bounds the recurrence window |
+| `EXDATE` | `exceptDates` | Applied to both mapped and expanded recurrences |
+
+Patterns outside those mappings fall back to Tier 2 expansion inside the requested parse window.
+
+## Round-trip
+
+`parseICS()` followed by `generateICS()` preserves the parsed `DateRange` structure for supported data. That means ranges can be imported from `.ics`, manipulated in neo-reckoning form, then exported back without flattening simple recurrence into one-off events.
+
+This is a structural round-trip, not a byte-for-byte source preservation guarantee.
+
+## Browser-first design
+
+This package uses `ical.js`, which works in browsers and Node. That keeps the parser and generator usable in frontend apps, React Native, workers, Node services, and MCP servers without separate platform-specific implementations.
 
 ## License
 

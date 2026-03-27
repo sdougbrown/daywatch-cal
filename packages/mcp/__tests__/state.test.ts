@@ -64,4 +64,35 @@ describe('CalendarSession', () => {
     expect(first).toBe('calendar-1');
     expect(second).toBe('calendar-2');
   });
+
+  it('finds, updates, removes, and adds ranges by calendar', () => {
+    const session = new CalendarSession('UTC');
+
+    session.loadCalendar('work', [makeRange('meeting', 'Meeting')], 'ranges');
+    session.loadCalendar('personal', [makeRange('gym', 'Gym')], 'ics');
+
+    expect(session.findRangeCalendar('meeting')).toBe('work');
+    expect(session.findRangeCalendar('gym')).toBe('personal');
+    expect(session.findRangeCalendar('missing')).toBeUndefined();
+
+    expect(session.updateRange('meeting', { startTime: '10:00', endTime: '11:00' })).toBe(true);
+    expect(session.getAllRanges(['work'])).toEqual([
+      makeRange('meeting', 'Meeting', {
+        startTime: '10:00',
+        endTime: '11:00',
+      }),
+    ]);
+
+    expect(session.removeRange('gym')).toBe(true);
+    expect(session.getAllRanges(['personal'])).toEqual([]);
+    expect(session.removeRange('missing')).toBe(false);
+
+    session.addRange('personal', makeRange('lunch', 'Lunch', { startTime: '12:00', endTime: '13:00' }));
+    expect(session.getAllRanges(['personal'])).toEqual([
+      makeRange('lunch', 'Lunch', {
+        startTime: '12:00',
+        endTime: '13:00',
+      }),
+    ]);
+  });
 });

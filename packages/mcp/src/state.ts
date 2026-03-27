@@ -59,6 +59,59 @@ export class CalendarSession {
     return ranges;
   }
 
+  findRangeCalendar(rangeId: string): string | undefined {
+    for (const [calendarId, calendar] of this.calendars.entries()) {
+      if (calendar.ranges.some(range => range.id === rangeId)) {
+        return calendarId;
+      }
+    }
+
+    return undefined;
+  }
+
+  updateRange(rangeId: string, updates: Partial<DateRange>): boolean {
+    for (const calendar of this.calendars.values()) {
+      const rangeIndex = calendar.ranges.findIndex(range => range.id === rangeId);
+      if (rangeIndex === -1) {
+        continue;
+      }
+
+      calendar.ranges[rangeIndex] = {
+        ...calendar.ranges[rangeIndex],
+        ...updates,
+      };
+
+      return true;
+    }
+
+    return false;
+  }
+
+  removeRange(rangeId: string): boolean {
+    for (const calendar of this.calendars.values()) {
+      const originalLength = calendar.ranges.length;
+      calendar.ranges = calendar.ranges.filter(range => range.id !== rangeId);
+      if (calendar.ranges.length !== originalLength) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  addRange(calendarId: string, range: DateRange): void {
+    const calendar = this.calendars.get(calendarId);
+    if (calendar) {
+      calendar.ranges.push(range);
+      return;
+    }
+
+    this.calendars.set(calendarId, {
+      ranges: [range],
+      source: 'ranges',
+    });
+  }
+
   getCalendarSummary(): Array<{ id: string; rangeCount: number; labels: string[] }> {
     return [...this.calendars.entries()].map(([id, calendar]) => ({
       id,

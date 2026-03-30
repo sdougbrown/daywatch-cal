@@ -75,6 +75,59 @@ const { slots } = useTimeline({
 // slots[0].events[0] → { event, top, height, column, totalColumns }
 ```
 
+### `useDateSelection`
+
+Controlled date-range selection hook for click + hover interactions.
+
+```typescript
+import { useState } from 'react';
+import { useDateSelection } from '@neo-reckoning/react';
+import type { DateSelection } from '@neo-reckoning/models';
+
+const [selection, setSelection] = useState<DateSelection>({
+  start: null,
+  end: null,
+  preview: null,
+});
+
+const { selection: currentSelection, onDateClick, onDateHover, clear } = useDateSelection({
+  selection,
+  onSelectionChange: setSelection,
+  allowSameDay: true,
+});
+```
+
+`useDateSelection` is controlled: you own the `DateSelection` state and pass updates back through `onSelectionChange`. See [examples/react/](../../examples/react/) for complete, copy-paste-ready component implementations.
+
+### `useTimeSelection`
+
+Controlled time-block selection hook for timeline or slot-list UIs.
+
+```typescript
+import { useState } from 'react';
+import { useTimeSelection } from '@neo-reckoning/react';
+import type { TimeSelection } from '@neo-reckoning/models';
+
+const [selection, setSelection] = useState<TimeSelection>({
+  date: '2026-03-23',
+  startTime: null,
+  endTime: null,
+  preview: null,
+});
+
+const { selection: currentSelection, onTimeClick, onTimeHover, clear } = useTimeSelection({
+  selection,
+  onSelectionChange: setSelection,
+  date: '2026-03-23',
+  intervalMinutes: 30,
+  minDuration: 30,
+  dayStart: '08:00',
+  dayEnd: '18:00',
+});
+```
+
+Like `useDateSelection`, this hook is controlled and keeps the reducer logic in `@neo-reckoning/models`. See [examples/react/](../../examples/react/) for complete, copy-paste-ready component implementations.
+
 ### `useSpans`
 
 Span-level overlap detection with lane assignment for consistent multi-day bar rendering.

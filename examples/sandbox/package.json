@@ -1,0 +1,23 @@
+{
+  "name": "neo-reckoning-sandbox",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "sandbox:build": "vite build"
+  },
+  "dependencies": {
+    "@neo-reckoning/core": "workspace:^",
+    "@neo-reckoning/models": "workspace:^",
+    "@neo-reckoning/react": "workspace:^",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.6.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.0"
+  }
+}

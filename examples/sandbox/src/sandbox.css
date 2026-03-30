@@ -1,0 +1,192 @@
+:root {
+  --bg: #f4f1eb;
+  --panel: #fffdf8;
+  --line: #d8d0c2;
+  --text: #231f1a;
+  --muted: #6e6658;
+  --selected: #0f766e;
+  --range: #c7efe5;
+  --preview: #f59e0b;
+  --blocked: #f3d9d4;
+  --occupied: #d7e3ff;
+  --free: #dcfce7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.4 'Iowan Old Style', 'Palatino Linotype', serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.sandbox {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+.sandbox__header,
+.sandbox__panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1rem;
+}
+
+.sandbox__header {
+  margin-bottom: 1rem;
+}
+
+.sandbox__tabs,
+.sandbox__controls,
+.sandbox__stack {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sandbox__tabs {
+  margin-bottom: 1rem;
+}
+
+.sandbox__tab,
+.neo-datepicker__nav button,
+.neo-datepicker__day,
+.neo-timepicker__slot {
+  border: 1px solid var(--line);
+  background: white;
+  color: inherit;
+}
+
+.sandbox__tab {
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+}
+
+.sandbox__tab[data-active] {
+  background: var(--selected);
+  color: white;
+  border-color: var(--selected);
+}
+
+.sandbox__panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.sandbox__debug {
+  margin: 0;
+  padding: 0.75rem;
+  overflow: auto;
+  border-radius: 12px;
+  background: #201c17;
+  color: #f5f0e8;
+}
+
+.sandbox__list {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.sandbox__list li + li {
+  margin-top: 0.5rem;
+}
+
+.neo-datepicker__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.neo-datepicker__grid {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.neo-datepicker__weekday,
+.neo-datepicker__grid td {
+  padding: 0.2rem;
+  text-align: center;
+}
+
+.neo-datepicker__day {
+  width: 100%;
+  min-height: 2.75rem;
+  border-radius: 10px;
+}
+
+.neo-timepicker {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.neo-timepicker__slot {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.neo-timepicker__label {
+  font-weight: 700;
+}
+
+.neo-timepicker__events {
+  color: var(--muted);
+}
+
+.neo-datepicker__day[data-selected],
+.neo-timepicker__slot[data-selected] {
+  background: var(--selected);
+  border-color: var(--selected);
+  color: white;
+}
+
+.neo-datepicker__day[data-in-range],
+.neo-timepicker__slot[data-in-range] {
+  background: var(--range);
+}
+
+.neo-datepicker__day[data-preview],
+.neo-timepicker__slot[data-preview] {
+  outline: 2px solid var(--preview);
+  outline-offset: 1px;
+}
+
+.neo-datepicker__day[data-blocked] {
+  background: var(--blocked);
+  color: var(--muted);
+}
+
+.neo-timepicker__slot[data-occupied] {
+  background: var(--occupied);
+}
+
+.neo-timepicker__slot[data-free] {
+  box-shadow: inset 0 0 0 2px var(--free);
+}
+
+.neo-datepicker__day[data-outside-month] {
+  opacity: 0.45;
+}
+
+@media (max-width: 720px) {
+  .neo-timepicker__slot {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

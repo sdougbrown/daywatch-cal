@@ -11,3 +11,7 @@ npm install @neo-reckoning/preact @neo-reckoning/core preact
 ```
 
 If you want framework-neutral derived helpers without hooks, use `@neo-reckoning/models` directly.
+
+This package also includes controlled selection hooks: `useDateSelection` for date-range picking and `useTimeSelection` for time-block picking.
+
+See [examples/preact/](../../examples/preact/) for complete reference components built from those hooks.

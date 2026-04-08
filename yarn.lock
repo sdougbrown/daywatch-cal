@@ -469,28 +469,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@daywatch/cal-ical@workspace:^, @daywatch/cal-ical@workspace:packages/ical":
-  version: 0.0.0-use.local
-  resolution: "@daywatch/cal-ical@workspace:packages/ical"
-  dependencies:
-    "@daywatch/cal": "workspace:^"
-    ical.js: "npm:^2.2.1"
-    rrule: "npm:^2.8.1"
-  languageName: unknown
-  linkType: soft
-
-"@daywatch/cal-mcp@workspace:packages/mcp":
-  version: 0.0.0-use.local
-  resolution: "@daywatch/cal-mcp@workspace:packages/mcp"
-  dependencies:
-    "@daywatch/cal": "workspace:^"
-    "@daywatch/cal-ical": "workspace:^"
-    "@modelcontextprotocol/sdk": "npm:^1.27.1"
-  bin:
-    daywatch-cal-mcp: ./dist/index.js
-  languageName: unknown
-  linkType: soft
-
 "@daywatch/cal-models@workspace:^, @daywatch/cal-models@workspace:packages/models":
   version: 0.0.0-use.local
   resolution: "@daywatch/cal-models@workspace:packages/models"
@@ -558,6 +536,28 @@ __metadata:
 "@daywatch/cal@workspace:^, @daywatch/cal@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@daywatch/cal@workspace:packages/core"
+  languageName: unknown
+  linkType: soft
+
+"@daywatch/ical@workspace:^, @daywatch/ical@workspace:packages/ical":
+  version: 0.0.0-use.local
+  resolution: "@daywatch/ical@workspace:packages/ical"
+  dependencies:
+    "@daywatch/cal": "workspace:^"
+    ical.js: "npm:^2.2.1"
+    rrule: "npm:^2.8.1"
+  languageName: unknown
+  linkType: soft
+
+"@daywatch/mcp@workspace:packages/mcp":
+  version: 0.0.0-use.local
+  resolution: "@daywatch/mcp@workspace:packages/mcp"
+  dependencies:
+    "@daywatch/cal": "workspace:^"
+    "@daywatch/ical": "workspace:^"
+    "@modelcontextprotocol/sdk": "npm:^1.27.1"
+  bin:
+    daywatch-mcp: ./dist/index.js
   languageName: unknown
   linkType: soft
 

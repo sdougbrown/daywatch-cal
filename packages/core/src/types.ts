@@ -301,7 +301,7 @@ export interface TimelineGridConfig {
 }
 
 /**
- * Pluggable cache adapter for @daywatch/cal-ical.
+ * Pluggable cache adapter for @daywatch/ical.
  * Supports both sync (web localStorage) and async (React Native AsyncStorage) implementations.
  */
 export interface CacheAdapter {

@@ -1,4 +1,4 @@
-# @daywatch/cal-mcp
+# @daywatch/mcp
 
 MCP server for calendar computation. Analyze schedules, find conflicts, free time, and suggest optimizations — powered by @daywatch/cal.
 
@@ -19,7 +19,7 @@ daywatch-cal MCP exposes calendar analysis and schedule optimization as MCP tool
 Run the server over stdio:
 
 ```bash
-npx @daywatch/cal-mcp
+npx @daywatch/mcp
 ```
 
 Your MCP client will start the process and communicate over stdin/stdout.
@@ -35,7 +35,7 @@ Add this to `claude_desktop_config.json`:
   "mcpServers": {
     "daywatch-cal": {
       "command": "npx",
-      "args": ["-y", "@daywatch/cal-mcp"],
+      "args": ["-y", "@daywatch/mcp"],
       "env": {}
     }
   }
@@ -51,7 +51,7 @@ Add this to your project `.mcp.json`:
   "mcpServers": {
     "daywatch-cal": {
       "command": "npx",
-      "args": ["-y", "@daywatch/cal-mcp"],
+      "args": ["-y", "@daywatch/mcp"],
       "env": {}
     }
   }
@@ -65,7 +65,7 @@ Add this to `~/.codex/config.toml`:
 ```toml
 [mcp_servers.daywatch_cal]
 command = "npx"
-args = ["-y", "@daywatch/cal-mcp"]
+args = ["-y", "@daywatch/mcp"]
 ```
 
 ## Tools

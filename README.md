@@ -11,7 +11,7 @@ Headless calendar state management for modern web and mobile apps. A spiritual s
 | [`@daywatch/cal-react`](packages/react) | Headless React hooks. 12 hooks wrapping core, plus controlled selection helpers. No DOM, no CSS. | [![npm](https://img.shields.io/npm/v/@daywatch/cal-react)](https://www.npmjs.com/package/@daywatch/cal-react) |
 | [`@daywatch/cal-preact`](packages/preact) | Headless Preact hooks with the same shape as the React adapter, backed by `@daywatch/cal-models`. | [![npm](https://img.shields.io/npm/v/@daywatch/cal-preact)](https://www.npmjs.com/package/@daywatch/cal-preact) |
 | [`@daywatch/cal-solid`](packages/solid) | Solid `create*` primitives backed by `@daywatch/cal-models`, exposing reactive accessors instead of hooks. | [![npm](https://img.shields.io/npm/v/@daywatch/cal-solid)](https://www.npmjs.com/package/@daywatch/cal-solid) |
-| [`@daywatch/cal-ical`](packages/ical) | Browser-compatible .ics parsing adapter. Planned — types stubbed. | [![npm](https://img.shields.io/npm/v/@daywatch/cal-ical)](https://www.npmjs.com/package/@daywatch/cal-ical) |
+| [`@daywatch/ical`](packages/ical) | Browser-compatible .ics parsing adapter. Planned — types stubbed. | [![npm](https://img.shields.io/npm/v/@daywatch/ical)](https://www.npmjs.com/package/@daywatch/ical) |
 | [`examples/`](examples/) | Copy-paste-ready example components for React, Preact, and Solid. Includes an interactive sandbox. | n/a |
 
 ## What this is

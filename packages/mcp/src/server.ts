@@ -7,7 +7,7 @@ import {
   type DayRangeInfo,
   type TimeSlot,
 } from '@daywatch/cal';
-import { detectDataWindow, generateICS, parseICS } from '@daywatch/cal-ical';
+import { detectDataWindow, generateICS, parseICS } from '@daywatch/ical';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   CallToolRequestSchema,
@@ -1562,7 +1562,7 @@ export async function handleToolCall(
 
 export function createServer(session = new CalendarSession()): Server {
   const server = new Server(
-    { name: 'daywatch-cal-mcp', version: '0.1.0' },
+    { name: 'daywatch-mcp', version: '0.1.0' },
     {
       capabilities: {
         tools: {},

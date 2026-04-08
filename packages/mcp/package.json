@@ -1,11 +1,11 @@
 {
-  "name": "@daywatch/cal-mcp",
+  "name": "@daywatch/mcp",
   "version": "0.1.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "daywatch-cal-mcp": "./dist/index.js"
+    "daywatch-mcp": "./dist/index.js"
   },
   "exports": {
     ".": {
@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@daywatch/cal": "workspace:^",
-    "@daywatch/cal-ical": "workspace:^",
+    "@daywatch/ical": "workspace:^",
     "@modelcontextprotocol/sdk": "^1.27.1"
   },
   "files": [

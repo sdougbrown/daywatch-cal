@@ -4,7 +4,7 @@ import type { DateRange, CalendarEvent } from '@daywatch/cal';
 export interface CalendarEventsModelConfig {
   /** Native DateRanges from the API */
   ranges: DateRange[];
-  /** Imported events from @daywatch/cal-ical, already CalendarEvent[] */
+  /** Imported events from @daywatch/ical, already CalendarEvent[] */
   importedEvents: CalendarEvent[];
   /** View window start */
   from: Date;

@@ -180,7 +180,7 @@ jobs:
           yarn pack -o package.tgz
           npm publish package.tgz --provenance --access public --tag "$TAG"
 
-      - name: Publish @daywatch/cal-ical
+      - name: Publish @daywatch/ical
         if: needs.detect-version-changes.outputs.ical_changed == 'true'
         working-directory: packages/ical
         run: |
@@ -190,7 +190,7 @@ jobs:
           yarn pack -o package.tgz
           npm publish package.tgz --provenance --access public --tag "$TAG"
 
-      - name: Publish @daywatch/cal-mcp
+      - name: Publish @daywatch/mcp
         if: needs.detect-version-changes.outputs.mcp_changed == 'true'
         working-directory: packages/mcp
         run: |

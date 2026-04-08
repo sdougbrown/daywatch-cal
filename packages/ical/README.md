@@ -1,4 +1,4 @@
-# @daywatch/cal-ical
+# @daywatch/ical
 
 iCal (.ics) parser and generator for @daywatch/cal. Converts VEVENT data to DateRange[] and back.
 
@@ -15,13 +15,13 @@ This package parses `.ics` calendar data into daywatch-cal `DateRange[]`, preser
 ## Install
 
 ```bash
-npm install @daywatch/cal-ical
+npm install @daywatch/ical
 ```
 
 ## Quick start
 
 ```typescript
-import { detectDataWindow, generateICS, parseICS } from '@daywatch/cal-ical';
+import { detectDataWindow, generateICS, parseICS } from '@daywatch/ical';
 
 const window = {
   from: new Date('2026-03-01T00:00:00'),

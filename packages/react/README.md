@@ -50,7 +50,7 @@ import { useCalendarEvents } from '@daywatch/cal-react';
 
 const events = useCalendarEvents({
   ranges: myRanges,
-  importedEvents: icsEvents,  // from @daywatch/cal-ical
+  importedEvents: icsEvents,  // from @daywatch/ical
   from: windowStart,
   to: windowEnd,
   userTimezone: 'America/New_York',

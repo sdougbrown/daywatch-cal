@@ -1,5 +1,5 @@
 {
-  "name": "neo-reckoning-sandbox",
+  "name": "daywatch-cal-sandbox",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,9 +7,9 @@
     "sandbox:build": "vite build"
   },
   "dependencies": {
-    "@neo-reckoning/core": "workspace:^",
-    "@neo-reckoning/models": "workspace:^",
-    "@neo-reckoning/react": "workspace:^",
+    "@daywatch/cal": "workspace:^",
+    "@daywatch/cal-models": "workspace:^",
+    "@daywatch/cal-react": "workspace:^",
     "react": "^19.2.0",
     "react-dom": "^19.2.4"
   },

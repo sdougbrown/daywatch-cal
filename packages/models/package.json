@@ -1,5 +1,5 @@
 {
-  "name": "@neo-reckoning/models",
+  "name": "@daywatch/cal-models",
   "version": "0.1.1",
   "type": "module",
   "main": "./dist/index.js",
@@ -16,14 +16,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@neo-reckoning/core": "workspace:^"
+    "@daywatch/cal": "workspace:^"
   },
   "files": [
     "dist"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sdougbrown/neo-reckoning.git",
+    "url": "git+https://github.com/sdougbrown/daywatch-cal.git",
     "directory": "packages/models"
   },
   "publishConfig": {

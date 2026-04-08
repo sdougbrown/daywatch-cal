@@ -1,11 +1,11 @@
 {
-  "name": "@neo-reckoning/mcp",
+  "name": "@daywatch/cal-mcp",
   "version": "0.1.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "neo-reckoning-mcp": "./dist/index.js"
+    "daywatch-cal-mcp": "./dist/index.js"
   },
   "exports": {
     ".": {
@@ -19,16 +19,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
-    "@neo-reckoning/core": "workspace:^",
-    "@neo-reckoning/ical": "workspace:^"
+    "@daywatch/cal": "workspace:^",
+    "@daywatch/cal-ical": "workspace:^",
+    "@modelcontextprotocol/sdk": "^1.27.1"
   },
   "files": [
     "dist"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sdougbrown/neo-reckoning.git",
+    "url": "git+https://github.com/sdougbrown/daywatch-cal.git",
     "directory": "packages/mcp"
   },
   "publishConfig": {

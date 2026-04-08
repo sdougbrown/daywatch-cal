@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "neo-reckoning",
+  "name": "daywatch-cal",
   "type": "module",
   "packageManager": "yarn@4.13.0",
   "engines": {

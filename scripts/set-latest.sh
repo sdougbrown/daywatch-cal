@@ -121,9 +121,22 @@ if [[ ${#TARGETS[@]} -eq 0 ]]; then
 fi
 
 # Expand short names to full npm package names
+declare -A PKG_MAP=(
+  [core]="@daywatch/cal"
+  [models]="@daywatch/cal-models"
+  [react]="@daywatch/cal-react"
+  [preact]="@daywatch/cal-preact"
+  [solid]="@daywatch/cal-solid"
+  [ical]="@daywatch/ical"
+  [mcp]="@daywatch/mcp"
+)
+
 FULL_NAMES=()
 for t in "${TARGETS[@]}"; do
-  FULL_NAMES+=("@daywatch-cal/$t")
+  if [[ -z "${PKG_MAP[$t]+x}" ]]; then
+    echo -e "  ${C_RED}unknown package: $t${C_RESET}" >&2; exit 1
+  fi
+  FULL_NAMES+=("${PKG_MAP[$t]}")
 done
 
 echo ""

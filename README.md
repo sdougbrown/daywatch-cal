@@ -16,7 +16,7 @@ Headless calendar state management for modern web and mobile apps. A spiritual s
 
 ## What this is
 
-Neo-reckoning is a **computation library**, not a UI library. It answers questions like:
+daywatch-cal is a **computation library**, not a UI library. It answers questions like:
 
 - Does this date/time fall within a range?
 - What does a month grid look like with these ranges applied?
@@ -24,7 +24,7 @@ Neo-reckoning is a **computation library**, not a UI library. It answers questio
 - Where can I fit a 30-minute meeting this week?
 - How fragmented is this schedule? How many focus blocks are there?
 
-Your app — whether React, React Native, Vue, or vanilla JS — provides the rendering. Neo-reckoning provides the data.
+Your app — whether React, React Native, Vue, or vanilla JS — provides the rendering. daywatch-cal provides the data.
 
 ## Key features
 

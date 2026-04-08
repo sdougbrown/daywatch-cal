@@ -6,7 +6,7 @@ A modern TypeScript rewrite of the concepts from [reckoning](https://github.com/
 
 ## What this does
 
-Neo-reckoning is a **computation library**, not a UI library. It tells you *what* and *when* — your app decides *how it looks*.
+daywatch-cal is a **computation library**, not a UI library. It tells you *what* and *when* — your app decides *how it looks*.
 
 - **DateRange evaluation** — does a date/time fall within a range? Supports explicit dates, day-of-week/month recurrence, hourly recurrence (`everyHour` or `startTime`/`repeatEvery`), and timezone conversion.
 - **Calendar grid generation** — produces Month/Week/Day data structures for rendering, with configurable fidelity (year/month/week/day) so you only compute what you need.

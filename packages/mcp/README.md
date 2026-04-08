@@ -6,7 +6,7 @@ Works with any MCP client that supports stdio transport, including Claude Deskto
 
 ## What this does
 
-Neo-reckoning MCP exposes calendar analysis and schedule optimization as MCP tools:
+daywatch-cal MCP exposes calendar analysis and schedule optimization as MCP tools:
 
 - Load `.ics` calendar data or native `DateRange[]` JSON into a session
 - Analyze conflicts, free time, next-available slots, and day-level detail
@@ -63,7 +63,7 @@ Add this to your project `.mcp.json`:
 Add this to `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.neo_reckoning]
+[mcp_servers.daywatch_cal]
 command = "npx"
 args = ["-y", "@daywatch/cal-mcp"]
 ```

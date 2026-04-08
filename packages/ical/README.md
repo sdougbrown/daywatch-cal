@@ -62,7 +62,7 @@ Performs a lightweight regex scan of raw `.ics` text to find where the actual ca
 
 ## Two-tier RRULE handling
 
-Neo-reckoning has its own native recurrence model, but `.ics` RRULEs are broader. This package handles them in two tiers:
+daywatch-cal has its own native recurrence model, but `.ics` RRULEs are broader. This package handles them in two tiers:
 
 - **Tier 1: direct mapping** — simple RRULEs are converted into native `DateRange` recurrence fields so they stay compact and editable.
 - **Tier 2: expansion** — complex RRULEs are expanded with the `rrule` library into explicit `dates` within the requested parse window.

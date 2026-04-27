@@ -406,7 +406,7 @@ export class RangeEvaluator {
         return compareDates(allSpans[a].endDate, allSpans[b].endDate);
       });
 
-    const lanes = new Array<number>(allSpans.length).fill(-1);
+    const lanes = Array.from({ length: allSpans.length }, () => -1);
     const laneEndDates: string[] = [];
 
     for (const idx of sortedIndices) {
@@ -428,7 +428,7 @@ export class RangeEvaluator {
     }
 
     // Step 4: Compute maxOverlap per span and totalLanes for overlap groups
-    const maxOverlaps = new Array<number>(allSpans.length).fill(1);
+    const maxOverlaps = Array.from({ length: allSpans.length }, () => 1);
     for (let i = 0; i < allSpans.length; i++) {
       for (const day of allSpans[i].days) {
         const overlapping = dayToSpans.get(day)!;
@@ -452,7 +452,7 @@ export class RangeEvaluator {
     }
 
     const visited = new Set<number>();
-    const componentOf = new Array<number>(allSpans.length).fill(-1);
+    const componentOf = Array.from({ length: allSpans.length }, () => -1);
     const components: number[][] = [];
 
     for (let i = 0; i < allSpans.length; i++) {

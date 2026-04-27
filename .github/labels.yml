@@ -1,0 +1,68 @@
+# Canonical GitHub label definitions for daywatch-cal.
+
+# ── Type ─────────────────────────────────────────────
+- name: "🐛 bug"
+  color: D3F0AA
+  description: Something isn't working
+
+- name: "✨ feature"
+  color: 8AC4FF
+  description: New functionality
+
+- name: "📝 docs"
+  color: 87d7d7
+  description: Documentation only
+
+- name: "🔧 chore"
+  color: B8DBFF
+  description: Maintenance and housekeeping
+
+- name: "⚙️ refactor"
+  color: B8DBFF
+  description: Code restructuring, no behavior change
+
+- name: "📐 types"
+  color: B8DBFF
+  description: Type system changes
+
+- name: "💅 polish"
+  color: FFB8F5
+  description: Refinement and cleanup
+
+# ── Origin ───────────────────────────────────────────
+- name: "👾 agent"
+  color: d4b8ff
+  description: Created or co-authored by an AI agent
+
+- name: "🧰 tools"
+  color: ffd6a5
+  description: CI, scripts, tooling, and workflow changes
+
+# ── Meta ─────────────────────────────────────────────
+- name: "🐪 bump"
+  color: c4a882
+  description: Version bump / changeset release
+
+- name: "🔁 duplicate"
+  color: bcbcbc
+  description: Already exists
+
+- name: "🙅 wontfix"
+  color: 3a3a4a
+  description: Will not be worked on
+
+- name: "❌ invalid"
+  color: e4e669
+  description: Not valid
+
+- name: "❓ question"
+  color: d78fff
+  description: Needs more information
+
+- name: "👋 good first issue"
+  color: 7057ff
+  description: Good for newcomers
+
+- name: "🙏 help wanted"
+  color: 1cd862
+  description: Extra attention needed

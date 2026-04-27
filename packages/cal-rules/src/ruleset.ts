@@ -45,6 +45,10 @@ function isIanaTimezone(value: unknown): boolean {
   }
 }
 
+function isPlainObject(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export const RANGE_KEYS = [
   'id',
   'label',
@@ -246,11 +250,22 @@ export const rangeInputUmp = umpire({
       validator: isIanaTimezone,
       error: 'timezone must be a valid IANA timezone',
     },
+    fixedBetween: {
+      validator: (value: unknown) => typeof value === 'boolean',
+      error: 'fixedBetween must be a boolean',
+    },
+    title: {
+      validator: (value: unknown) => typeof value === 'string',
+      error: 'title must be a string',
+    },
+    metadata: {
+      validator: isPlainObject,
+      error: 'metadata must be an object',
+    },
     displayType: {
       validator: (value: unknown) =>
-        ['auto', 'span', 'dot', 'fill', 'chip', 'block'].includes(
-          String(value),
-        ),
+        typeof value === 'string' &&
+        ['auto', 'span', 'dot', 'fill', 'chip', 'block'].includes(value),
       error: 'displayType must be one of auto|span|dot|fill|chip|block',
     },
     flexibility: {

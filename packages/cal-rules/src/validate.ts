@@ -13,13 +13,39 @@ import type {
 
 const RANGE_KEYS_SET = new Set<string>(RANGE_KEYS);
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function sanitizeCandidate(record: Record<string, unknown>): DateRangeInput {
+  const sanitized: DateRangeInput = {};
+
+  for (const key of RANGE_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(record, key)) {
+      sanitized[key] = record[key] as never;
+    }
+  }
+
+  return sanitized;
+}
+
+function invalidInputIssue(label: string): RangeValidationIssue {
+  return {
+    field: '$',
+    code: 'invalid',
+    message: `${label} must be a non-null object`,
+  };
+}
+
 function toRequiredDisabledFoulInvalidIssues(
   candidate: DateRangeInput,
 ): RangeValidationIssue[] {
   const availability = rangeInputUmp.check(candidate);
   const issues: RangeValidationIssue[] = [];
 
-  for (const field of Object.keys(availability) as Array<keyof DateRange>) {
+  for (const field of Object.keys(availability) as Array<
+    Extract<keyof DateRange, string>
+  >) {
     const status = availability[field];
 
     if (status.enabled && status.required && !status.satisfied) {
@@ -62,7 +88,7 @@ function toRequiredDisabledFoulInvalidIssues(
 }
 
 function toUnknownKeyIssues(
-  candidate: DateRangeInput,
+  candidate: Record<string, unknown>,
   mode: RangeValidationMode,
 ): RangeValidationIssue[] {
   if (mode !== 'strict') {
@@ -94,47 +120,71 @@ function toResult(
 }
 
 export function validateRangeCreate(
-  candidate: DateRangeInput,
+  candidate: unknown,
   options: RangeValidationOptions = {},
 ): RangeValidationResult {
   const mode = optionsToMode(options);
 
-  return toResult(candidate, [
-    ...toRequiredDisabledFoulInvalidIssues(candidate),
+  if (!isPlainObject(candidate)) {
+    return toResult({}, [invalidInputIssue('candidate')]);
+  }
+
+  const sanitizedCandidate = sanitizeCandidate(candidate);
+
+  return toResult(sanitizedCandidate, [
+    ...toRequiredDisabledFoulInvalidIssues(sanitizedCandidate),
     ...toUnknownKeyIssues(candidate, mode),
   ]);
 }
 
 export function validateRangePatch(
-  existing: DateRangeInput,
-  patch: DateRangeInput,
+  existing: unknown,
+  patch: unknown,
   options: RangeValidationOptions = {},
 ): RangeValidationResult {
   const mode = optionsToMode(options);
-  const candidate = { ...existing, ...patch };
+  const issues: RangeValidationIssue[] = [];
 
-  const issues = [
-    ...toRequiredDisabledFoulInvalidIssues(candidate),
-    ...toUnknownKeyIssues(candidate, mode),
-  ];
-
-  const fouls = rangeInputUmp.play({ values: existing }, { values: candidate });
-
-  for (const foul of fouls) {
-    issues.push({
-      field: foul.field as keyof DateRange,
-      code: 'foul',
-      message: foul.reason,
-    });
+  if (!isPlainObject(existing)) {
+    issues.push(invalidInputIssue('existing'));
   }
+
+  if (!isPlainObject(patch)) {
+    issues.push(invalidInputIssue('patch'));
+  }
+
+  const safeExisting = isPlainObject(existing) ? existing : {};
+  const safePatch = isPlainObject(patch) ? patch : {};
+  const rawMerged = { ...safeExisting, ...safePatch };
+  const candidate = sanitizeCandidate(rawMerged);
+
+  issues.push(
+    ...toRequiredDisabledFoulInvalidIssues(candidate),
+    ...toUnknownKeyIssues(rawMerged, mode),
+  );
 
   return toResult(candidate, issues);
 }
 
 export function validateRanges(
-  ranges: DateRangeInput[],
+  ranges: unknown,
   options: RangeValidationOptions = {},
 ): IndexedRangeValidationResult[] {
+  if (!Array.isArray(ranges)) {
+    return [
+      {
+        index: 0,
+        ...toResult({}, [
+          {
+            field: '$',
+            code: 'invalid',
+            message: 'ranges must be an array',
+          },
+        ]),
+      },
+    ];
+  }
+
   return ranges.map((candidate, index) => ({
     index,
     ...validateRangeCreate(candidate, options),

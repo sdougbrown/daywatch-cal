@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { useDateSelection } from '../src/useDateSelection.js';
 
@@ -8,7 +8,7 @@ describe('useDateSelection', () => {
   });
 
   it('calls onSelectionChange with the updated selection on click', () => {
-    const onSelectionChange = jest.fn();
+    const onSelectionChange = vi.fn();
     const { result } = renderHook(() =>
       useDateSelection({
         selection: { start: null, end: null, preview: null },
@@ -28,7 +28,7 @@ describe('useDateSelection', () => {
   });
 
   it('calls onSelectionChange with preview updates on hover', () => {
-    const onSelectionChange = jest.fn();
+    const onSelectionChange = vi.fn();
     const { result } = renderHook(() =>
       useDateSelection({
         selection: { start: '2026-03-10', end: null, preview: null },
@@ -48,7 +48,7 @@ describe('useDateSelection', () => {
   });
 
   it('clears the controlled selection', () => {
-    const onSelectionChange = jest.fn();
+    const onSelectionChange = vi.fn();
     const { result } = renderHook(() =>
       useDateSelection({
         selection: { start: '2026-03-10', end: '2026-03-12', preview: '2026-03-11' },
@@ -69,7 +69,7 @@ describe('useDateSelection', () => {
 
   it('respects isDateSelectable when handling interactions', () => {
     const selection = { start: null, end: null, preview: null };
-    const onSelectionChange = jest.fn();
+    const onSelectionChange = vi.fn();
     const { result } = renderHook(() =>
       useDateSelection({
         selection,

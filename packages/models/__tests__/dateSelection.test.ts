@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import {
   createIsDateBlocked,
   selectionToDateRange,
@@ -194,7 +194,7 @@ describe('date selection helpers', () => {
   });
 
   it('converts a complete selection to a DateRange', () => {
-    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(1234567890);
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(1234567890);
 
     const range = selectionToDateRange({
       start: '2026-03-10',
@@ -213,7 +213,7 @@ describe('date selection helpers', () => {
   });
 
   it('merges template fields when converting to a DateRange', () => {
-    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(1234567890);
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(1234567890);
 
     const range = selectionToDateRange(
       {

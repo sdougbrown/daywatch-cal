@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { useTimeSelection } from '../src/useTimeSelection.js';
 
@@ -8,7 +8,7 @@ describe('useTimeSelection', () => {
   });
 
   it('calls onSelectionChange with snapped times on click', () => {
-    const onSelectionChange = jest.fn();
+    const onSelectionChange = vi.fn();
     const { result } = renderHook(() =>
       useTimeSelection({
         date: '2026-03-10',
@@ -31,7 +31,7 @@ describe('useTimeSelection', () => {
   });
 
   it('updates preview on hover', () => {
-    const onSelectionChange = jest.fn();
+    const onSelectionChange = vi.fn();
     const { result } = renderHook(() =>
       useTimeSelection({
         date: '2026-03-10',
@@ -54,7 +54,7 @@ describe('useTimeSelection', () => {
   });
 
   it('preserves date when clearing the selection', () => {
-    const onSelectionChange = jest.fn();
+    const onSelectionChange = vi.fn();
     const { result } = renderHook(() =>
       useTimeSelection({
         date: '2026-03-10',
@@ -76,7 +76,7 @@ describe('useTimeSelection', () => {
   });
 
   it('respects intervalMinutes snapping in the controlled callback flow', () => {
-    const onSelectionChange = jest.fn();
+    const onSelectionChange = vi.fn();
     const { result } = renderHook(() =>
       useTimeSelection({
         date: '2026-03-10',

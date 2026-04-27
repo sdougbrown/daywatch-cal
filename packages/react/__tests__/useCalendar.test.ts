@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { useCalendar } from '../src/useCalendar.js';
 
@@ -8,7 +8,7 @@ describe('useCalendar', () => {
   });
 
   it('recomputes from the controlled focusDate prop', () => {
-    const onFocusDateChange = jest.fn();
+    const onFocusDateChange = vi.fn();
     const { result, rerender } = renderHook(
       ({ focusDate, onFocusDateChange }: { focusDate: string; onFocusDateChange: (date: string) => void }) =>
         useCalendar({
@@ -39,7 +39,7 @@ describe('useCalendar', () => {
   });
 
   it('reports navigation changes through onFocusDateChange', () => {
-    const onFocusDateChange = jest.fn();
+    const onFocusDateChange = vi.fn();
     const { result } = renderHook(() =>
       useCalendar({
         focusDate: '2026-03-31',

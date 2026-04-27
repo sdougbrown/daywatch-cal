@@ -12,11 +12,14 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "NODE_OPTIONS='--experimental-vm-modules' jest --passWithNoTests",
+    "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@daywatch/cal": "workspace:^"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.5"
   },
   "files": [
     "dist"

@@ -1,6 +1,6 @@
 import { h, render } from 'preact';
 import { act } from 'preact/test-utils';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { useCalendar } from '../src/useCalendar.js';
 
 describe('useCalendar', () => {
@@ -15,7 +15,7 @@ describe('useCalendar', () => {
     container = document.createElement('div');
     document.body.appendChild(container);
 
-    const onFocusDateChange = jest.fn();
+    const onFocusDateChange = vi.fn();
     let latestResult: ReturnType<typeof useCalendar> | undefined;
 
     function Harness(props: { focusDate: string }) {

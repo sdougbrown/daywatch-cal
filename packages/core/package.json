@@ -13,12 +13,15 @@
   "scripts": {
     "build": "tsc",
     "bench": "yarn build && node ./scripts/benchmark.mjs",
-    "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "files": [
     "dist"
   ],
+  "devDependencies": {
+    "vitest": "^4.1.5"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sdougbrown/daywatch-cal.git",

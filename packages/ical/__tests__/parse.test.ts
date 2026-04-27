@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import type { DateRange } from '@daywatch/cal';
 
 import { detectDataWindow, parseICS } from '../src/parse.js';
@@ -179,7 +179,7 @@ describe('parseICS', () => {
   });
 
   it('expands Tier 2 RRULEs into explicit dates within the requested window', () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const ranges = parseICS(loadFixture('complex-rrules.ics'), makeWindow('2026-03-01', '2026-04-30'));
 

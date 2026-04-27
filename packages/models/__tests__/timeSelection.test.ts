@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { snapToInterval, updateTimeSelection } from '../src/index.js';
 
 describe('time selection helpers', () => {
@@ -187,7 +187,7 @@ describe('time selection helpers', () => {
   });
 
   it('snaps before running the selectability check', () => {
-    const isTimeSelectable = jest.fn((time: string) => time === '14:00');
+    const isTimeSelectable = vi.fn((time: string) => time === '14:00');
 
     const selection = updateTimeSelection(
       { date: '2026-03-10', startTime: null, endTime: null, preview: null },

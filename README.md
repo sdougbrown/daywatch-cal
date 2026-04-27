@@ -83,9 +83,11 @@ See individual package READMEs for full API documentation.
 Built with Yarn workspaces and Turborepo.
 
 ```bash
-yarn install          # install all dependencies
-yarn turbo run build  # build all packages
-yarn turbo run test   # run the package test suite
+yarn install     # install all dependencies
+yarn build       # build all packages
+yarn test        # run the package test suite
+yarn typecheck   # typecheck all packages
+yarn lint        # lint all packages
 ```
 
 ## License

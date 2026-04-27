@@ -7,6 +7,7 @@ Headless calendar state management for modern web and mobile apps. A spiritual s
 | Package | Description | npm |
 |---|---|---|
 | [`@daywatch/cal`](packages/core) | Zero-dependency computation library. DateRange evaluation, calendar grids, timeline positioning, conflict detection, free slot finding, schedule scoring. | [![npm](https://img.shields.io/npm/v/@daywatch/cal)](https://www.npmjs.com/package/@daywatch/cal) |
+| [`@daywatch/cal-rules`](packages/cal-rules) | Validation for DateRange inputs. Required fields, mutual exclusivity, dependency chains, format rules, and logical fairness. | [![npm](https://img.shields.io/npm/v/@daywatch/cal-rules)](https://www.npmjs.com/package/@daywatch/cal-rules) |
 | [`@daywatch/cal-models`](packages/models) | Framework-neutral derived models and controller helpers built on top of core. Intended for advanced consumers and adapter packages. | [![npm](https://img.shields.io/npm/v/@daywatch/cal-models)](https://www.npmjs.com/package/@daywatch/cal-models) |
 | [`@daywatch/cal-react`](packages/react) | Headless React hooks. 12 hooks wrapping core, plus controlled selection helpers. No DOM, no CSS. | [![npm](https://img.shields.io/npm/v/@daywatch/cal-react)](https://www.npmjs.com/package/@daywatch/cal-react) |
 | [`@daywatch/cal-preact`](packages/preact) | Headless Preact hooks with the same shape as the React adapter, backed by `@daywatch/cal-models`. | [![npm](https://img.shields.io/npm/v/@daywatch/cal-preact)](https://www.npmjs.com/package/@daywatch/cal-preact) |

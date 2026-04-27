@@ -27,9 +27,9 @@ describe('CalendarGrid fidelity', () => {
         fidelity: 'year',
       });
 
-      const allDays = grid.months[0].weeks.flatMap(w => w.days);
-      const march10 = allDays.find(d => d.date === '2026-03-10');
-      const march16 = allDays.find(d => d.date === '2026-03-16');
+      const allDays = grid.months[0].weeks.flatMap((w) => w.days);
+      const march10 = allDays.find((d) => d.date === '2026-03-10');
+      const march16 = allDays.find((d) => d.date === '2026-03-16');
 
       expect(march10?.hasActivity).toBe(true);
       expect(march16?.hasActivity).toBe(false);
@@ -43,8 +43,8 @@ describe('CalendarGrid fidelity', () => {
         fidelity: 'year',
       });
 
-      const allDays = grid.months[0].weeks.flatMap(w => w.days);
-      const march12 = allDays.find(d => d.date === '2026-03-12');
+      const allDays = grid.months[0].weeks.flatMap((w) => w.days);
+      const march12 = allDays.find((d) => d.date === '2026-03-12');
       expect(march12?.ranges).toHaveLength(0);
     });
 
@@ -56,9 +56,9 @@ describe('CalendarGrid fidelity', () => {
         fidelity: 'year',
       });
 
-      const allDays = grid.months[0].weeks.flatMap(w => w.days);
+      const allDays = grid.months[0].weeks.flatMap((w) => w.days);
       // Monday March 23 — would normally have time slots
-      const monday = allDays.find(d => d.date === '2026-03-23');
+      const monday = allDays.find((d) => d.date === '2026-03-23');
       expect(monday?.timeSlots).toHaveLength(0);
       expect(monday?.hasActivity).toBe(true);
     });
@@ -73,8 +73,8 @@ describe('CalendarGrid fidelity', () => {
         fidelity: 'month',
       });
 
-      const allDays = grid.months[0].weeks.flatMap(w => w.days);
-      const march12 = allDays.find(d => d.date === '2026-03-12');
+      const allDays = grid.months[0].weeks.flatMap((w) => w.days);
+      const march12 = allDays.find((d) => d.date === '2026-03-12');
 
       // ranges[] should be populated
       expect(march12?.ranges.length).toBeGreaterThan(0);
@@ -89,9 +89,9 @@ describe('CalendarGrid fidelity', () => {
         ranges: [timedRange],
       });
 
-      const allDays = grid.months[0].weeks.flatMap(w => w.days);
+      const allDays = grid.months[0].weeks.flatMap((w) => w.days);
       // Monday March 23
-      const monday = allDays.find(d => d.date === '2026-03-23');
+      const monday = allDays.find((d) => d.date === '2026-03-23');
       // month fidelity: ranges populated, timeSlots empty
       expect(monday?.ranges).toHaveLength(1);
       expect(monday?.timeSlots).toHaveLength(0);
@@ -107,8 +107,8 @@ describe('CalendarGrid fidelity', () => {
         fidelity: 'week',
       });
 
-      const allDays = grid.months[0].weeks.flatMap(w => w.days);
-      const monday = allDays.find(d => d.date === '2026-03-23');
+      const allDays = grid.months[0].weeks.flatMap((w) => w.days);
+      const monday = allDays.find((d) => d.date === '2026-03-23');
 
       expect(monday?.ranges).toHaveLength(1);
       expect(monday?.timeSlots).toHaveLength(1);
@@ -125,8 +125,8 @@ describe('CalendarGrid fidelity', () => {
         fidelity: 'day',
       });
 
-      const allDays = grid.months[0].weeks.flatMap(w => w.days);
-      const monday = allDays.find(d => d.date === '2026-03-23');
+      const allDays = grid.months[0].weeks.flatMap((w) => w.days);
+      const monday = allDays.find((d) => d.date === '2026-03-23');
 
       expect(monday?.ranges).toHaveLength(1);
       expect(monday?.timeSlots).toHaveLength(1);
@@ -142,8 +142,8 @@ describe('CalendarGrid fidelity', () => {
       fidelity: 'month',
     });
 
-    const allDays = grid.months[0].weeks.flatMap(w => w.days);
-    const march12 = allDays.find(d => d.date === '2026-03-12');
+    const allDays = grid.months[0].weeks.flatMap((w) => w.days);
+    const march12 = allDays.find((d) => d.date === '2026-03-12');
     expect(march12?.hasActivity).toBeUndefined();
   });
 });

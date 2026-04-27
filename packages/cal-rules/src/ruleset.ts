@@ -21,11 +21,7 @@ function isValidDateString(value: unknown): boolean {
   const [year, month, day] = value.split('-').map(Number);
   const date = new Date(year, month - 1, day);
 
-  return (
-    date.getFullYear() === year &&
-    date.getMonth() === month - 1 &&
-    date.getDate() === day
-  );
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 }
 
 function isIanaTimezone(value: unknown): boolean {
@@ -122,8 +118,7 @@ export const rangeInputUmp = umpire({
         isEmptyStringLike(values.endTime) &&
         values.repeatEvery == null,
       {
-        reason:
-          'everyHour is mutually exclusive with startTime/endTime/repeatEvery',
+        reason: 'everyHour is mutually exclusive with startTime/endTime/repeatEvery',
       },
     ),
     enabledWhen('startTime', (values) => isEmptyArrayLike(values.everyHour), {
@@ -154,20 +149,16 @@ export const rangeInputUmp = umpire({
   ],
   validators: {
     id: {
-      validator: (value: unknown) =>
-        typeof value === 'string' && value.trim().length > 0,
+      validator: (value: unknown) => typeof value === 'string' && value.trim().length > 0,
       error: 'id is required',
     },
     label: {
-      validator: (value: unknown) =>
-        typeof value === 'string' && value.trim().length > 0,
+      validator: (value: unknown) => typeof value === 'string' && value.trim().length > 0,
       error: 'label is required',
     },
     dates: {
       validator: (value: unknown) =>
-        !Array.isArray(value)
-          ? false
-          : value.every((item) => isValidDateString(item)),
+        !Array.isArray(value) ? false : value.every((item) => isValidDateString(item)),
       error: 'dates must contain valid YYYY-MM-DD strings',
     },
     fromDate: {
@@ -180,9 +171,7 @@ export const rangeInputUmp = umpire({
     },
     exceptDates: {
       validator: (value: unknown) =>
-        !Array.isArray(value)
-          ? false
-          : value.every((item) => isValidDateString(item)),
+        !Array.isArray(value) ? false : value.every((item) => isValidDateString(item)),
       error: 'exceptDates must contain valid YYYY-MM-DD strings',
     },
     exceptBetween: {
@@ -197,43 +186,34 @@ export const rangeInputUmp = umpire({
                 isValidDateString(item[1]) &&
                 item[0] <= item[1],
             ),
-      error:
-        'exceptBetween must be [fromDate, toDate] tuples of valid YYYY-MM-DD strings',
+      error: 'exceptBetween must be [fromDate, toDate] tuples of valid YYYY-MM-DD strings',
     },
     everyDate: {
       validator: (value: unknown) =>
         !Array.isArray(value)
           ? false
-          : value.every(
-              (item) => Number.isInteger(item) && item >= 1 && item <= 31,
-            ),
+          : value.every((item) => Number.isInteger(item) && item >= 1 && item <= 31),
       error: 'everyDate must be integers 1-31',
     },
     everyWeekday: {
       validator: (value: unknown) =>
         !Array.isArray(value)
           ? false
-          : value.every(
-              (item) => Number.isInteger(item) && item >= 0 && item <= 6,
-            ),
+          : value.every((item) => Number.isInteger(item) && item >= 0 && item <= 6),
       error: 'everyWeekday must be integers 0-6',
     },
     everyMonth: {
       validator: (value: unknown) =>
         !Array.isArray(value)
           ? false
-          : value.every(
-              (item) => Number.isInteger(item) && item >= 1 && item <= 12,
-            ),
+          : value.every((item) => Number.isInteger(item) && item >= 1 && item <= 12),
       error: 'everyMonth must be integers 1-12',
     },
     everyHour: {
       validator: (value: unknown) =>
         !Array.isArray(value)
           ? false
-          : value.every(
-              (item) => Number.isInteger(item) && item >= 0 && item <= 23,
-            ),
+          : value.every((item) => Number.isInteger(item) && item >= 0 && item <= 23),
       error: 'everyHour must be integers 0-23',
     },
     startTime: {
@@ -241,8 +221,7 @@ export const rangeInputUmp = umpire({
       error: 'startTime must be HH:mm',
     },
     endTime: {
-      validator: (value: unknown) =>
-        typeof value === 'string' && END_TIME_RE.test(value),
+      validator: (value: unknown) => typeof value === 'string' && END_TIME_RE.test(value),
       error: 'endTime must be HH:mm or 24:00',
     },
     repeatEvery: {
@@ -279,10 +258,7 @@ export const rangeInputUmp = umpire({
     },
     flexibility: {
       validator: (value: unknown) =>
-        typeof value === 'number' &&
-        Number.isInteger(value) &&
-        value >= 0 &&
-        value <= 5,
+        typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 5,
       error: 'flexibility must be an integer 0-5',
     },
   },

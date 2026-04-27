@@ -28,9 +28,7 @@ function normalizeRange(range: DateRange): DateRange {
 }
 
 function normalizeRanges(ranges: DateRange[]): DateRange[] {
-  return [...ranges]
-    .map(normalizeRange)
-    .sort((a, b) => a.id.localeCompare(b.id));
+  return [...ranges].map(normalizeRange).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 describe('parse/generate roundtrip', () => {

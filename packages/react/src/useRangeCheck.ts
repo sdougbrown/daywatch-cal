@@ -6,9 +6,6 @@ import type { DateRange } from '@daywatch/cal';
 /**
  * Range evaluation hook — provides isInRange checks and occurrence expansion.
  */
-export function useRangeCheck(
-  ranges: DateRange[],
-  userTimezone?: string,
-): RangeCheck {
+export function useRangeCheck(ranges: DateRange[], userTimezone?: string): RangeCheck {
   return useMemo(() => createRangeCheck(ranges, userTimezone), [ranges, userTimezone]);
 }

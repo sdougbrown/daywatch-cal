@@ -18,7 +18,7 @@ export function buildCalendarEvents(config: CalendarEventsModelConfig): Calendar
   const { ranges, importedEvents, from, to, userTimezone } = config;
   const evaluator = new RangeEvaluator(userTimezone);
 
-  const nativeEvents = ranges.flatMap(range => {
+  const nativeEvents = ranges.flatMap((range) => {
     const occurrences = evaluator.expand(range, from, to);
     return expandToEvents(range, occurrences);
   });

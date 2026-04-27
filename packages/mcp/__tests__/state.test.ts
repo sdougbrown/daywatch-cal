@@ -19,7 +19,7 @@ describe('CalendarSession', () => {
     session.loadCalendar('personal', [makeRange('gym', 'Gym')], 'ics');
 
     expect(session.calendars.size).toBe(2);
-    expect(session.getAllRanges().map(range => range.id)).toEqual(['meeting', 'gym']);
+    expect(session.getAllRanges().map((range) => range.id)).toEqual(['meeting', 'gym']);
   });
 
   it('getAllRanges filters by calendar id', () => {
@@ -35,8 +35,16 @@ describe('CalendarSession', () => {
   it('groups ranges with matching ids across calendars', () => {
     const session = new CalendarSession('UTC');
 
-    session.loadCalendar('alice', [makeRange('shared', 'Shared Sync'), makeRange('solo-a', 'Alice Solo')], 'ranges');
-    session.loadCalendar('bob', [makeRange('shared', 'Shared Sync'), makeRange('solo-b', 'Bob Solo')], 'ranges');
+    session.loadCalendar(
+      'alice',
+      [makeRange('shared', 'Shared Sync'), makeRange('solo-a', 'Alice Solo')],
+      'ranges',
+    );
+    session.loadCalendar(
+      'bob',
+      [makeRange('shared', 'Shared Sync'), makeRange('solo-b', 'Bob Solo')],
+      'ranges',
+    );
 
     expect(session.getRangeEntries(['alice'])).toEqual([
       { calendarId: 'alice', range: makeRange('shared', 'Shared Sync') },
@@ -74,7 +82,11 @@ describe('CalendarSession', () => {
       {
         id: 'work',
         rangeCount: 34,
-        labels: ['Planning', 'Focus', ...Array.from({ length: 28 }, (_, index) => `Label ${index}`)],
+        labels: [
+          'Planning',
+          'Focus',
+          ...Array.from({ length: 28 }, (_, index) => `Label ${index}`),
+        ],
         has_more_labels: true,
       },
     ]);
@@ -113,7 +125,10 @@ describe('CalendarSession', () => {
     expect(session.getAllRanges(['personal'])).toEqual([]);
     expect(session.removeRange('missing')).toBe(false);
 
-    session.addRange('personal', makeRange('lunch', 'Lunch', { startTime: '12:00', endTime: '13:00' }));
+    session.addRange(
+      'personal',
+      makeRange('lunch', 'Lunch', { startTime: '12:00', endTime: '13:00' }),
+    );
     expect(session.getAllRanges(['personal'])).toEqual([
       makeRange('lunch', 'Lunch', {
         startTime: '12:00',

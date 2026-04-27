@@ -9,13 +9,7 @@ import type {
   ViewFidelity,
 } from './types.js';
 import { RangeEvaluator } from './evaluator.js';
-import {
-  compareDates,
-  parseDate,
-  formatDate,
-  daysInMonth,
-  getToday,
-} from './time.js';
+import { compareDates, parseDate, formatDate, daysInMonth, getToday } from './time.js';
 
 /**
  * CalendarGrid — generates the data structure for rendering month-based
@@ -96,22 +90,27 @@ export class CalendarGrid {
       const y = d.getFullYear();
       const layout = this.buildMonthLayout(y, m);
       monthLayouts.push(layout);
-      displayDates.push(...layout.dayCells.map(day => day.date));
+      displayDates.push(...layout.dayCells.map((day) => day.date));
     }
 
     const dayContext = this.buildDayContext(displayDates);
 
-    return monthLayouts.map(layout => ({
+    return monthLayouts.map((layout) => ({
       year: layout.year,
       month: layout.month,
       label: layout.label,
-      weeks: this.chunkWeeks(layout.dayCells.map(day =>
-        this.createDay(day.date, day.dayOfMonth, day.isCurrentMonth, today, dayContext),
-      )),
+      weeks: this.chunkWeeks(
+        layout.dayCells.map((day) =>
+          this.createDay(day.date, day.dayOfMonth, day.isCurrentMonth, today, dayContext),
+        ),
+      ),
     }));
   }
 
-  private buildMonthLayout(year: number, month: number): {
+  private buildMonthLayout(
+    year: number,
+    month: number,
+  ): {
     year: number;
     month: number;
     label: string;
@@ -202,9 +201,10 @@ export class CalendarGrid {
     const ranges = this.evaluateRangesForDay(dateStr, matchingRanges, dayContext.rangeSetByDate);
 
     // Week and day fidelity: also compute timeSlots[]
-    const timeSlots = (fidelity === 'week' || fidelity === 'day')
-      ? matchingRanges.flatMap(r => this.evaluator.getTimeSlots(dateStr, r))
-      : CalendarGrid.EMPTY_TIME_SLOTS;
+    const timeSlots =
+      fidelity === 'week' || fidelity === 'day'
+        ? matchingRanges.flatMap((r) => this.evaluator.getTimeSlots(dateStr, r))
+        : CalendarGrid.EMPTY_TIME_SLOTS;
 
     return {
       date: dateStr,
@@ -222,8 +222,10 @@ export class CalendarGrid {
     rangeSetByDate: Map<string, Set<DateRange>>,
   ): DayRangeInfo[] {
     const infos: DayRangeInfo[] = [];
-    const prevRangeSet = rangeSetByDate.get(this.shiftDay(dateStr, -1)) ?? CalendarGrid.EMPTY_RANGE_SET;
-    const nextRangeSet = rangeSetByDate.get(this.shiftDay(dateStr, 1)) ?? CalendarGrid.EMPTY_RANGE_SET;
+    const prevRangeSet =
+      rangeSetByDate.get(this.shiftDay(dateStr, -1)) ?? CalendarGrid.EMPTY_RANGE_SET;
+    const nextRangeSet =
+      rangeSetByDate.get(this.shiftDay(dateStr, 1)) ?? CalendarGrid.EMPTY_RANGE_SET;
 
     for (const range of matchingRanges) {
       const prevInRange = prevRangeSet.has(range);

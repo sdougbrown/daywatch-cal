@@ -35,7 +35,7 @@ export function scoreSchedule(
 
   for (const day of days) {
     const timedEntries = evaluator.getTimedEntriesForDay(ranges, day);
-    const allSlots: TimeSlot[] = timedEntries.map(entry => entry.slot);
+    const allSlots: TimeSlot[] = timedEntries.map((entry) => entry.slot);
 
     // --- Conflicts ---
     // Count pairs of slots that overlap in time

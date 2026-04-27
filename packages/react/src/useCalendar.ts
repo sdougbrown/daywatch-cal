@@ -1,8 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import {
-  buildCalendarModel,
-  createCalendarController,
-} from '@daywatch/cal-models';
+import { buildCalendarModel, createCalendarController } from '@daywatch/cal-models';
 import type { CalendarModelConfig } from '@daywatch/cal-models';
 import type { Month } from '@daywatch/cal';
 
@@ -65,9 +62,12 @@ export function useCalendar(config: UseCalendarConfig): UseCalendarResult {
     config.onFocusDateChange(controller.prev());
   }, [config.onFocusDateChange, controller]);
 
-  const goTo = useCallback((date: string) => {
-    config.onFocusDateChange(controller.goTo(date));
-  }, [config.onFocusDateChange, controller]);
+  const goTo = useCallback(
+    (date: string) => {
+      config.onFocusDateChange(controller.goTo(date));
+    },
+    [config.onFocusDateChange, controller],
+  );
 
   return {
     months: model.months,

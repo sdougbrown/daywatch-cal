@@ -25,7 +25,7 @@ function formatDateValue(date: Date): string {
 }
 
 function byId(ranges: DateRange[], id: string): DateRange {
-  const range = ranges.find(item => item.id === id);
+  const range = ranges.find((item) => item.id === id);
   if (!range) {
     throw new Error(`Missing range ${id}`);
   }
@@ -72,7 +72,10 @@ describe('parseICS', () => {
   });
 
   it('parses single and multi-day events from VEVENT components', () => {
-    const ranges = parseICS(loadFixture('simple-events.ics'), makeWindow('2026-03-01', '2026-03-31'));
+    const ranges = parseICS(
+      loadFixture('simple-events.ics'),
+      makeWindow('2026-03-01', '2026-03-31'),
+    );
 
     expect(ranges).toHaveLength(4);
     expect(byId(ranges, 'all-day-single')).toEqual({
@@ -111,7 +114,10 @@ describe('parseICS', () => {
   });
 
   it('maps weekly RRULEs, EXDATE values, and timezone metadata', () => {
-    const [range] = parseICS(loadFixture('recurring-weekly.ics'), makeWindow('2026-03-01', '2026-04-30'));
+    const [range] = parseICS(
+      loadFixture('recurring-weekly.ics'),
+      makeWindow('2026-03-01', '2026-04-30'),
+    );
 
     expect(range).toEqual({
       id: 'weekly-class',
@@ -130,7 +136,10 @@ describe('parseICS', () => {
   });
 
   it('maps monthly BYMONTHDAY recurrences with COUNT into DateRange bounds', () => {
-    const [range] = parseICS(loadFixture('recurring-monthly.ics'), makeWindow('2026-01-01', '2026-03-31'));
+    const [range] = parseICS(
+      loadFixture('recurring-monthly.ics'),
+      makeWindow('2026-01-01', '2026-03-31'),
+    );
 
     expect(range).toEqual({
       id: 'paydays',
@@ -145,8 +154,14 @@ describe('parseICS', () => {
   });
 
   it('maps daily and yearly Tier 1 RRULEs and filters by the requested window', () => {
-    const marchRanges = parseICS(loadFixture('multi-event.ics'), makeWindow('2026-03-01', '2026-03-31'));
-    const juneRanges = parseICS(loadFixture('multi-event.ics'), makeWindow('2026-06-01', '2026-06-30'));
+    const marchRanges = parseICS(
+      loadFixture('multi-event.ics'),
+      makeWindow('2026-03-01', '2026-03-31'),
+    );
+    const juneRanges = parseICS(
+      loadFixture('multi-event.ics'),
+      makeWindow('2026-06-01', '2026-06-30'),
+    );
 
     expect(marchRanges).toEqual([
       {
@@ -181,7 +196,10 @@ describe('parseICS', () => {
   it('expands Tier 2 RRULEs into explicit dates within the requested window', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const ranges = parseICS(loadFixture('complex-rrules.ics'), makeWindow('2026-03-01', '2026-04-30'));
+    const ranges = parseICS(
+      loadFixture('complex-rrules.ics'),
+      makeWindow('2026-03-01', '2026-04-30'),
+    );
 
     expect(ranges).toEqual([
       {
@@ -209,7 +227,10 @@ describe('parseICS', () => {
   });
 
   it('parses realistic Google Calendar exports with VTIMEZONE data', () => {
-    const ranges = parseICS(loadFixture('google-export.ics'), makeWindow('2026-06-01', '2026-12-31'));
+    const ranges = parseICS(
+      loadFixture('google-export.ics'),
+      makeWindow('2026-06-01', '2026-12-31'),
+    );
 
     expect(ranges).toEqual([
       {
@@ -235,7 +256,10 @@ describe('parseICS', () => {
   });
 
   it('extracts attendee, organizer, and location metadata from VEVENT properties', () => {
-    const ranges = parseICS(loadFixture('shared-meetings-alice.ics'), makeWindow('2026-04-01', '2026-04-30'));
+    const ranges = parseICS(
+      loadFixture('shared-meetings-alice.ics'),
+      makeWindow('2026-04-01', '2026-04-30'),
+    );
 
     expect(byId(ranges, 'shared-sync')).toEqual({
       id: 'shared-sync',
@@ -296,13 +320,19 @@ describe('parseICS', () => {
   });
 
   it('omits metadata when a VEVENT has no attendees, organizer, or location', () => {
-    const ranges = parseICS(loadFixture('simple-events.ics'), makeWindow('2026-03-01', '2026-03-31'));
+    const ranges = parseICS(
+      loadFixture('simple-events.ics'),
+      makeWindow('2026-03-01', '2026-03-31'),
+    );
 
     expect(byId(ranges, 'timed-single').metadata).toBeUndefined();
   });
 
   it('extracts TRANSP and STATUS into metadata', () => {
-    const ranges = parseICS(loadFixture('transparency-events.ics'), makeWindow('2026-04-01', '2026-04-30'));
+    const ranges = parseICS(
+      loadFixture('transparency-events.ics'),
+      makeWindow('2026-04-01', '2026-04-30'),
+    );
 
     expect(byId(ranges, 'transp-transparent').metadata).toEqual(
       expect.objectContaining({
@@ -329,7 +359,10 @@ describe('parseICS', () => {
   });
 
   it('extracts organizer email even when no CN parameter is present', () => {
-    const ranges = parseICS(loadFixture('shared-meetings-bob.ics'), makeWindow('2026-04-01', '2026-04-30'));
+    const ranges = parseICS(
+      loadFixture('shared-meetings-bob.ics'),
+      makeWindow('2026-04-01', '2026-04-30'),
+    );
 
     expect(byId(ranges, 'shared-sync')).toEqual(
       expect.objectContaining({

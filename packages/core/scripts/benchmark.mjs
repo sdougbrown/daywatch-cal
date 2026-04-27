@@ -1,11 +1,5 @@
 import { performance } from 'node:perf_hooks';
-import {
-  RangeEvaluator,
-  CalendarGrid,
-  YearGrid,
-  scoreSchedule,
-  dateRange,
-} from '../dist/index.js';
+import { RangeEvaluator, CalendarGrid, YearGrid, scoreSchedule, dateRange } from '../dist/index.js';
 
 const userTimezone = 'America/Toronto';
 
@@ -33,7 +27,7 @@ function benchmark(name, iterations, fn) {
 }
 
 function printResults(results) {
-  const table = results.map(result => ({
+  const table = results.map((result) => ({
     benchmark: result.name,
     iterations: result.iterations,
     total_ms: result.totalMs.toFixed(2),
@@ -62,8 +56,15 @@ function makeDayRanges(count) {
       everyWeekday: [weekday, altWeekday],
       everyDate: [dayOfMonth],
       everyMonth: [fromMonth, ((fromMonth + 2 - 1) % 12) + 1],
-      exceptDates: [`2026-${String(fromMonth).padStart(2, '0')}-${String(dayOfMonth).padStart(2, '0')}`],
-      exceptBetween: [[`2026-${String(fromMonth).padStart(2, '0')}-10`, `2026-${String(fromMonth).padStart(2, '0')}-12`]],
+      exceptDates: [
+        `2026-${String(fromMonth).padStart(2, '0')}-${String(dayOfMonth).padStart(2, '0')}`,
+      ],
+      exceptBetween: [
+        [
+          `2026-${String(fromMonth).padStart(2, '0')}-10`,
+          `2026-${String(fromMonth).padStart(2, '0')}-12`,
+        ],
+      ],
     };
   });
 }
@@ -73,7 +74,7 @@ function makeTimedRanges(count, timezone) {
     const month = (index % 12) + 1;
     const startHour = 6 + (index % 8);
     const repeatEvery = index % 3 === 0 ? 180 : undefined;
-    const duration = 30 + ((index % 4) * 15);
+    const duration = 30 + (index % 4) * 15;
 
     if (index % 2 === 0) {
       return {

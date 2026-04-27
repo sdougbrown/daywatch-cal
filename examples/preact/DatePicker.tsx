@@ -89,35 +89,32 @@ export function DatePicker({
   const { onDateClick, onDateHover } = useDateSelection({
     selection,
     onSelectionChange,
-    isDateSelectable: date => !isDateBlocked(date),
+    isDateSelectable: (date) => !isDateBlocked(date),
   });
 
   const rangeEnd = selection.end ?? selection.preview;
 
   return (
-    <div className="neo-datepicker">
-      <div className="neo-datepicker__nav">
-        <button type="button" onClick={prev}>
+    <div className='neo-datepicker'>
+      <div className='neo-datepicker__nav'>
+        <button type='button' onClick={prev}>
           Previous
         </button>
         <strong>{months[0]?.label}</strong>
-        <button type="button" onClick={next}>
+        <button type='button' onClick={next}>
           Next
         </button>
       </div>
 
-      {months.map(month => (
-        <div
-          key={`${month.year}-${month.month}`}
-          className="neo-datepicker__month"
-        >
+      {months.map((month) => (
+        <div key={`${month.year}-${month.month}`} className='neo-datepicker__month'>
           {numberOfMonths > 1 ? <h3>{month.label}</h3> : null}
 
-          <table className="neo-datepicker__grid">
+          <table className='neo-datepicker__grid'>
             <thead>
               <tr>
-                {weekdayLabels.map(label => (
-                  <th key={label} className="neo-datepicker__weekday" scope="col">
+                {weekdayLabels.map((label) => (
+                  <th key={label} className='neo-datepicker__weekday' scope='col'>
                     {label}
                   </th>
                 ))}
@@ -127,19 +124,20 @@ export function DatePicker({
             <tbody>
               {month.weeks.map((week, weekIndex) => (
                 <tr key={`${month.label}-week-${weekIndex}`}>
-                  {week.days.map(day => {
+                  {week.days.map((day) => {
                     const blocked = isDateBlocked(day.date);
                     const selected = day.date === selection.start || day.date === selection.end;
                     const preview = !selection.end && day.date === selection.preview;
-                    const inRange = selection.start && rangeEnd
-                      ? isDateBetween(day.date, selection.start, rangeEnd)
-                      : false;
+                    const inRange =
+                      selection.start && rangeEnd
+                        ? isDateBetween(day.date, selection.start, rangeEnd)
+                        : false;
 
                     return (
                       <td key={day.date}>
                         <button
-                          type="button"
-                          className="neo-datepicker__day"
+                          type='button'
+                          className='neo-datepicker__day'
                           data-blocked={blocked ? '' : undefined}
                           data-in-range={inRange ? '' : undefined}
                           data-outside-month={!day.isCurrentMonth ? '' : undefined}

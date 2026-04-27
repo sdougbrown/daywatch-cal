@@ -24,10 +24,7 @@ export type DateSelectionAction =
   | { type: 'hover'; date: string }
   | { type: 'clear' };
 
-function buildSelection(
-  selection: DateSelection,
-  next: DateSelection,
-): DateSelection {
+function buildSelection(selection: DateSelection, next: DateSelection): DateSelection {
   if (
     selection.start === next.start &&
     selection.end === next.end &&
@@ -116,7 +113,7 @@ export function createIsDateBlocked(
   const evaluator = new RangeEvaluator(options?.userTimezone);
 
   return (date: string): boolean => {
-    return ranges.some(range => evaluator.isDateInRange(date, range));
+    return ranges.some((range) => evaluator.isDateInRange(date, range));
   };
 }
 

@@ -9,9 +9,7 @@ export interface CreateRangeCheckConfig {
   userTimezone?: string;
 }
 
-export function createRangeCheck(
-  config: MaybeAccessor<CreateRangeCheckConfig>,
-): RangeCheck {
+export function createRangeCheck(config: MaybeAccessor<CreateRangeCheckConfig>): RangeCheck {
   const resolvedConfig = toAccessor(config);
   const rangeCheck = createMemo(() => {
     const current = resolvedConfig();

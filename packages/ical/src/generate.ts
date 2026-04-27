@@ -58,14 +58,20 @@ function getAnchorDate(range: DateRange): string | null {
   }
 
   if (range.dates?.length && range.dates.length > 1) {
-    console.warn(`Skipping DateRange ${range.id}: multiple explicit dates are not supported for export`);
+    console.warn(
+      `Skipping DateRange ${range.id}: multiple explicit dates are not supported for export`,
+    );
     return null;
   }
 
   return range.fromDate ?? null;
 }
 
-function createTime(date: string, time: string | null, timezone?: string | null): InstanceType<typeof ICAL.Time> {
+function createTime(
+  date: string,
+  time: string | null,
+  timezone?: string | null,
+): InstanceType<typeof ICAL.Time> {
   const { year, month, day } = parseDate(date);
 
   if (!time) {
@@ -75,18 +81,26 @@ function createTime(date: string, time: string | null, timezone?: string | null)
   const [hour, minute] = time.split(':').map(Number);
   const zone = timezone === 'UTC' ? ICAL.Timezone.utcTimezone : undefined;
 
-  return ICAL.Time.fromData({
-    year,
-    month,
-    day,
-    hour,
-    minute,
-    second: 0,
-    isDate: false,
-  }, zone);
+  return ICAL.Time.fromData(
+    {
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      second: 0,
+      isDate: false,
+    },
+    zone,
+  );
 }
 
-function createDateProperty(name: string, date: string, time: string | null, timezone?: string | null): InstanceType<typeof ICAL.Property> {
+function createDateProperty(
+  name: string,
+  date: string,
+  time: string | null,
+  timezone?: string | null,
+): InstanceType<typeof ICAL.Property> {
   const property = new ICAL.Property(name);
   if (!time) {
     property.resetType('date');
@@ -101,7 +115,11 @@ function createDateProperty(name: string, date: string, time: string | null, tim
   return property;
 }
 
-function addEventEnd(component: InstanceType<typeof ICAL.Component>, range: DateRange, anchorDate: string): void {
+function addEventEnd(
+  component: InstanceType<typeof ICAL.Component>,
+  range: DateRange,
+  anchorDate: string,
+): void {
   if (!range.startTime) {
     if (!hasRecurrence(range) && range.fromDate && range.toDate) {
       component.addProperty(createDateProperty('dtend', addDays(range.toDate, 1), null));
@@ -124,7 +142,9 @@ function addEventEnd(component: InstanceType<typeof ICAL.Component>, range: Date
 
   if (range.toDate) {
     if (range.endTime) {
-      component.addProperty(createDateProperty('dtend', range.toDate, range.endTime, range.timezone));
+      component.addProperty(
+        createDateProperty('dtend', range.toDate, range.endTime, range.timezone),
+      );
       return;
     }
 
@@ -143,10 +163,12 @@ function addExceptDates(component: InstanceType<typeof ICAL.Component>, range: D
   const property = new ICAL.Property('exdate');
   if (!range.startTime) {
     property.resetType('date');
-    property.setValues(range.exceptDates.map(date => createTime(date, null)));
+    property.setValues(range.exceptDates.map((date) => createTime(date, null)));
   } else {
     const startTime = range.startTime;
-    property.setValues(range.exceptDates.map(date => createTime(date, startTime, range.timezone)));
+    property.setValues(
+      range.exceptDates.map((date) => createTime(date, startTime, range.timezone)),
+    );
     if (range.timezone && range.timezone !== 'UTC') {
       property.setParameter('tzid', range.timezone);
     }
@@ -186,7 +208,9 @@ function buildEvent(range: DateRange): InstanceType<typeof ICAL.Component> | nul
     }
   }
 
-  component.addProperty(createDateProperty('dtstart', anchorDate, range.startTime ?? null, range.timezone));
+  component.addProperty(
+    createDateProperty('dtstart', anchorDate, range.startTime ?? null, range.timezone),
+  );
   addEventEnd(component, range, anchorDate);
 
   if (recurrence) {

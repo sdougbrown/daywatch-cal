@@ -10,7 +10,13 @@ describe('useCalendar', () => {
   it('recomputes from the controlled focusDate prop', () => {
     const onFocusDateChange = vi.fn();
     const { result, rerender } = renderHook(
-      ({ focusDate, onFocusDateChange }: { focusDate: string; onFocusDateChange: (date: string) => void }) =>
+      ({
+        focusDate,
+        onFocusDateChange,
+      }: {
+        focusDate: string;
+        onFocusDateChange: (date: string) => void;
+      }) =>
         useCalendar({
           focusDate,
           onFocusDateChange,

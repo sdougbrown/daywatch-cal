@@ -12,15 +12,7 @@ export interface ScheduleScoreModelConfig {
 }
 
 export function buildScheduleScoreModel(config: ScheduleScoreModelConfig): ScheduleScore {
-  const {
-    ranges,
-    from,
-    to,
-    focusBlockMinutes,
-    dayStart,
-    dayEnd,
-    userTimezone,
-  } = config;
+  const { ranges, from, to, focusBlockMinutes, dayStart, dayEnd, userTimezone } = config;
 
   const evaluator = new RangeEvaluator(userTimezone);
 

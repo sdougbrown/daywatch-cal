@@ -49,7 +49,7 @@ export class CalendarSession {
 
   getAllRanges(calendarIds?: string[]): DateRange[] {
     if (!calendarIds || calendarIds.length === 0) {
-      return [...this.calendars.values()].flatMap(calendar => calendar.ranges);
+      return [...this.calendars.values()].flatMap((calendar) => calendar.ranges);
     }
 
     const selectedIds = new Set(calendarIds);
@@ -67,7 +67,7 @@ export class CalendarSession {
   getRangeEntries(calendarIds?: string[]): CalendarRangeEntry[] {
     if (!calendarIds || calendarIds.length === 0) {
       return [...this.calendars.entries()].flatMap(([calendarId, calendar]) =>
-        calendar.ranges.map(range => ({ calendarId, range })),
+        calendar.ranges.map((range) => ({ calendarId, range })),
       );
     }
 
@@ -79,7 +79,7 @@ export class CalendarSession {
         continue;
       }
 
-      entries.push(...calendar.ranges.map(range => ({ calendarId, range })));
+      entries.push(...calendar.ranges.map((range) => ({ calendarId, range })));
     }
 
     return entries;
@@ -102,7 +102,7 @@ export class CalendarSession {
 
   findRangeCalendar(rangeId: string): string | undefined {
     for (const [calendarId, calendar] of this.calendars.entries()) {
-      if (calendar.ranges.some(range => range.id === rangeId)) {
+      if (calendar.ranges.some((range) => range.id === rangeId)) {
         return calendarId;
       }
     }
@@ -112,7 +112,7 @@ export class CalendarSession {
 
   updateRange(rangeId: string, updates: Partial<DateRange>): boolean {
     for (const calendar of this.calendars.values()) {
-      const rangeIndex = calendar.ranges.findIndex(range => range.id === rangeId);
+      const rangeIndex = calendar.ranges.findIndex((range) => range.id === rangeId);
       if (rangeIndex === -1) {
         continue;
       }
@@ -131,7 +131,7 @@ export class CalendarSession {
   removeRange(rangeId: string): boolean {
     for (const calendar of this.calendars.values()) {
       const originalLength = calendar.ranges.length;
-      calendar.ranges = calendar.ranges.filter(range => range.id !== rangeId);
+      calendar.ranges = calendar.ranges.filter((range) => range.id !== rangeId);
       if (calendar.ranges.length !== originalLength) {
         return true;
       }
@@ -153,9 +153,14 @@ export class CalendarSession {
     });
   }
 
-  getCalendarSummary(): Array<{ id: string; rangeCount: number; labels: string[]; has_more_labels: boolean }> {
+  getCalendarSummary(): Array<{
+    id: string;
+    rangeCount: number;
+    labels: string[];
+    has_more_labels: boolean;
+  }> {
     return [...this.calendars.entries()].map(([id, calendar]) => {
-      const labels = [...new Set(calendar.ranges.map(range => range.label))];
+      const labels = [...new Set(calendar.ranges.map((range) => range.label))];
 
       return {
         id,

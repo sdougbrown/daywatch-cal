@@ -26,8 +26,11 @@ function isTimeBetween(time: string, start: string, end: string): boolean {
   return time > from && time < to;
 }
 
-function isTimeInFreeSlots(time: string, freeSlots: { startTime: string; endTime: string }[]): boolean {
-  return freeSlots.some(slot => time >= slot.startTime && time < slot.endTime);
+function isTimeInFreeSlots(
+  time: string,
+  freeSlots: { startTime: string; endTime: string }[],
+): boolean {
+  return freeSlots.some((slot) => time >= slot.startTime && time < slot.endTime);
 }
 
 export function TimePicker({
@@ -65,7 +68,11 @@ export function TimePicker({
   });
 
   // useTimeSelection adds click/hover selection behavior over the slot list.
-  const { selection: currentSelection, onTimeClick, onTimeHover } = useTimeSelection({
+  const {
+    selection: currentSelection,
+    onTimeClick,
+    onTimeHover,
+  } = useTimeSelection({
     selection,
     onSelectionChange,
     date,
@@ -79,22 +86,24 @@ export function TimePicker({
   const fallbackBoundary = useMemo(() => hourToTime(endHour), [endHour]);
 
   return (
-    <div className="neo-timepicker">
+    <div className='neo-timepicker'>
       {slots.map((slot, index) => {
         const nextBoundary = slots[index + 1]?.time ?? fallbackBoundary;
-        const selected = slot.time === currentSelection.startTime || nextBoundary === currentSelection.endTime;
+        const selected =
+          slot.time === currentSelection.startTime || nextBoundary === currentSelection.endTime;
         const preview = !currentSelection.endTime && slot.time === currentSelection.preview;
-        const inRange = currentSelection.startTime && rangeEnd
-          ? isTimeBetween(slot.time, currentSelection.startTime, rangeEnd)
-          : false;
+        const inRange =
+          currentSelection.startTime && rangeEnd
+            ? isTimeBetween(slot.time, currentSelection.startTime, rangeEnd)
+            : false;
         const occupied = slot.events.length > 0;
         const free = showAvailability && isTimeInFreeSlots(slot.time, freeSlots);
 
         return (
           <button
             key={slot.time}
-            type="button"
-            className="neo-timepicker__slot"
+            type='button'
+            className='neo-timepicker__slot'
             data-free={free ? '' : undefined}
             data-in-range={inRange ? '' : undefined}
             data-occupied={occupied ? '' : undefined}
@@ -104,8 +113,8 @@ export function TimePicker({
             onFocus={() => onTimeHover(slot.time)}
             onMouseEnter={() => onTimeHover(slot.time)}
           >
-            <span className="neo-timepicker__label">{slot.time}</span>
-            <span className="neo-timepicker__events">
+            <span className='neo-timepicker__label'>{slot.time}</span>
+            <span className='neo-timepicker__events'>
               {occupied ? slot.events.map(({ event }) => event.title).join(', ') : 'Available'}
             </span>
           </button>

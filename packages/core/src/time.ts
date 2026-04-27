@@ -19,7 +19,7 @@ interface ZonedDateTimeParts {
 }
 
 function parseTwoDigits(value: string, start: number): number {
-  return ((value.charCodeAt(start) - 48) * 10) + (value.charCodeAt(start + 1) - 48);
+  return (value.charCodeAt(start) - 48) * 10 + (value.charCodeAt(start + 1) - 48);
 }
 
 function getDateTimePartsFormatter(timezone: string): Intl.DateTimeFormat {
@@ -104,7 +104,7 @@ export function minutesToTime(minutes: number): string {
 
 /** Convert "HH:mm" to minutes since midnight */
 export function timeToMinutes(time: string): number {
-  return (parseTwoDigits(time, 0) * 60) + parseTwoDigits(time, 3);
+  return parseTwoDigits(time, 0) * 60 + parseTwoDigits(time, 3);
 }
 
 /** Add minutes to a time string, clamping at 24:00. Returns null if result >= 24:00. */
@@ -116,12 +116,11 @@ export function addMinutes(time: string, minutes: number): string | null {
 
 /** Parse "YYYY-MM-DD" into { year, month, day } */
 export function parseDate(date: string): { year: number; month: number; day: number } {
-  const year = (
-    ((date.charCodeAt(0) - 48) * 1000) +
-    ((date.charCodeAt(1) - 48) * 100) +
-    ((date.charCodeAt(2) - 48) * 10) +
-    (date.charCodeAt(3) - 48)
-  );
+  const year =
+    (date.charCodeAt(0) - 48) * 1000 +
+    (date.charCodeAt(1) - 48) * 100 +
+    (date.charCodeAt(2) - 48) * 10 +
+    (date.charCodeAt(3) - 48);
   return {
     year,
     month: parseTwoDigits(date, 5) - 1,

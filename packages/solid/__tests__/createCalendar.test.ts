@@ -3,7 +3,7 @@ import { createCalendar } from '../src/createCalendar.js';
 
 describe('createCalendar', () => {
   it('reacts to controlled focus-date changes and navigation', () => {
-    createRoot(dispose => {
+    createRoot((dispose) => {
       const [focusDate, setFocusDate] = createSignal('2026-03-31');
 
       const calendar = createCalendar(() => ({

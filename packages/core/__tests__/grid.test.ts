@@ -34,8 +34,8 @@ describe('CalendarGrid', () => {
       ranges: [],
     });
 
-    const allDays = grid.months[0].weeks.flatMap(w => w.days);
-    const marchDays = allDays.filter(d => d.isCurrentMonth);
+    const allDays = grid.months[0].weeks.flatMap((w) => w.days);
+    const marchDays = allDays.filter((d) => d.isCurrentMonth);
 
     // March 2026 has 31 days
     expect(marchDays).toHaveLength(31);
@@ -93,11 +93,11 @@ describe('CalendarGrid', () => {
       ranges: [range],
     });
 
-    const allDays = grid.months[0].weeks.flatMap(w => w.days);
-    const march10 = allDays.find(d => d.date === '2026-03-10');
-    const march12 = allDays.find(d => d.date === '2026-03-12');
-    const march15 = allDays.find(d => d.date === '2026-03-15');
-    const march16 = allDays.find(d => d.date === '2026-03-16');
+    const allDays = grid.months[0].weeks.flatMap((w) => w.days);
+    const march10 = allDays.find((d) => d.date === '2026-03-10');
+    const march12 = allDays.find((d) => d.date === '2026-03-12');
+    const march15 = allDays.find((d) => d.date === '2026-03-15');
+    const march16 = allDays.find((d) => d.date === '2026-03-16');
 
     expect(march10?.ranges).toHaveLength(1);
     expect(march10?.ranges[0].isStart).toBe(true);
@@ -171,14 +171,14 @@ describe('CalendarGrid', () => {
       fidelity: 'week',
     });
 
-    const allDays = grid.months[0].weeks.flatMap(w => w.days);
+    const allDays = grid.months[0].weeks.flatMap((w) => w.days);
     // Monday March 23
-    const monday = allDays.find(d => d.date === '2026-03-23');
+    const monday = allDays.find((d) => d.date === '2026-03-23');
     expect(monday?.timeSlots).toHaveLength(1);
     expect(monday?.timeSlots[0].startTime).toBe('09:00');
 
     // Saturday March 21
-    const saturday = allDays.find(d => d.date === '2026-03-21');
+    const saturday = allDays.find((d) => d.date === '2026-03-21');
     expect(saturday?.timeSlots).toHaveLength(0);
   });
 });

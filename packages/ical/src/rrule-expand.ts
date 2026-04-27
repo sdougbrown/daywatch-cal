@@ -30,7 +30,10 @@ function getDateParts(date: Date, useUTC: boolean): { year: number; month: numbe
   };
 }
 
-function getTimeParts(date: Date, useUTC: boolean): { hour: number; minute: number; second: number } {
+function getTimeParts(
+  date: Date,
+  useUTC: boolean,
+): { hour: number; minute: number; second: number } {
   if (useUTC) {
     return {
       hour: date.getUTCHours(),
@@ -54,7 +57,10 @@ function formatExpandedDate(date: Date): string {
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
 }
 
-function formatDtstart(date: Date, { dtstartIsDate = false, dtstartIsUTC = false }: ExpandOptions = {}): string {
+function formatDtstart(
+  date: Date,
+  { dtstartIsDate = false, dtstartIsUTC = false }: ExpandOptions = {},
+): string {
   const dateParts = getDateParts(date, dtstartIsUTC);
   const formattedDate = formatDateParts(dateParts.year, dateParts.month, dateParts.day);
 
@@ -96,7 +102,10 @@ export function expandRRuleToExplicitDates(
 
   for (const date of dates) {
     const formattedDate = formatExpandedDate(date);
-    if (compareDates(formattedDate, windowFrom) >= 0 && compareDates(formattedDate, windowTo) <= 0) {
+    if (
+      compareDates(formattedDate, windowFrom) >= 0 &&
+      compareDates(formattedDate, windowTo) <= 0
+    ) {
       expandedDates.add(formattedDate);
     }
   }

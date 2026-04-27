@@ -20,7 +20,10 @@ export function subtractOneDay(dateStr: string): string {
   return formatDate(date);
 }
 
-export function gcalEventToDateRange(event: GCalEvent, options: GCalAdapterOptions = {}): DateRange {
+export function gcalEventToDateRange(
+  event: GCalEvent,
+  options: GCalAdapterOptions = {},
+): DateRange {
   const metadata: Record<string, unknown> = {
     gcalId: event.id,
   };
@@ -67,6 +70,11 @@ export function gcalEventToDateRange(event: GCalEvent, options: GCalAdapterOptio
   };
 }
 
-export function gcalEventsToDateRanges(events: GCalEvent[], options: GCalAdapterOptions = {}): DateRange[] {
-  return events.filter(event => isBlockingEvent(event, options)).map(event => gcalEventToDateRange(event, options));
+export function gcalEventsToDateRanges(
+  events: GCalEvent[],
+  options: GCalAdapterOptions = {},
+): DateRange[] {
+  return events
+    .filter((event) => isBlockingEvent(event, options))
+    .map((event) => gcalEventToDateRange(event, options));
 }

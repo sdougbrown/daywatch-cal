@@ -57,7 +57,12 @@ describe('scoreSchedule', () => {
         endTime: '15:00',
       });
 
-      const score = scoreSchedule(evaluator, [rangeA, rangeB], day('2026-03-23'), day('2026-03-23'));
+      const score = scoreSchedule(
+        evaluator,
+        [rangeA, rangeB],
+        day('2026-03-23'),
+        day('2026-03-23'),
+      );
       expect(score.conflicts).toBe(0);
       expect(score.conflictDays).toBe(0);
       // 480 total - 60 (a) - 60 (b) = 360 free
@@ -84,7 +89,12 @@ describe('scoreSchedule', () => {
         endTime: '12:00',
       });
 
-      const score = scoreSchedule(evaluator, [rangeA, rangeB], day('2026-03-23'), day('2026-03-23'));
+      const score = scoreSchedule(
+        evaluator,
+        [rangeA, rangeB],
+        day('2026-03-23'),
+        day('2026-03-23'),
+      );
       expect(score.conflicts).toBe(1);
       expect(score.conflictDays).toBe(1);
     });
@@ -115,7 +125,12 @@ describe('scoreSchedule', () => {
         endTime: '14:00',
       });
 
-      const score = scoreSchedule(evaluator, [rangeA, rangeB, rangeC], day('2026-03-23'), day('2026-03-23'));
+      const score = scoreSchedule(
+        evaluator,
+        [rangeA, rangeB, rangeC],
+        day('2026-03-23'),
+        day('2026-03-23'),
+      );
       // A overlaps B, A overlaps C, B overlaps C = 3 conflicts
       expect(score.conflicts).toBe(3);
       expect(score.conflictDays).toBe(1);
@@ -141,7 +156,12 @@ describe('scoreSchedule', () => {
         endTime: '17:00',
       });
 
-      const score = scoreSchedule(evaluator, [rangeA, rangeB], day('2026-03-23'), day('2026-03-23'));
+      const score = scoreSchedule(
+        evaluator,
+        [rangeA, rangeB],
+        day('2026-03-23'),
+        day('2026-03-23'),
+      );
       // Gap from 10:00-11:30 = 90min >= 60 → 1 focus block
       // No gap before 09:00 (day starts at 09:00), no gap after 17:00
       expect(score.focusBlocks).toBe(1);
@@ -165,7 +185,12 @@ describe('scoreSchedule', () => {
         endTime: '17:00',
       });
 
-      const score = scoreSchedule(evaluator, [rangeA, rangeB], day('2026-03-23'), day('2026-03-23'));
+      const score = scoreSchedule(
+        evaluator,
+        [rangeA, rangeB],
+        day('2026-03-23'),
+        day('2026-03-23'),
+      );
       // Gap from 10:00-10:45 = 45min < 60 → 0 focus blocks
       expect(score.focusBlocks).toBe(0);
     });
@@ -226,7 +251,12 @@ describe('scoreSchedule', () => {
         endTime: '12:00',
       });
 
-      const score = scoreSchedule(evaluator, [rangeA1, rangeA2], day('2026-03-23'), day('2026-03-23'));
+      const score = scoreSchedule(
+        evaluator,
+        [rangeA1, rangeA2],
+        day('2026-03-23'),
+        day('2026-03-23'),
+      );
       expect(score.avgContextSwitches).toBe(0);
     });
   });
@@ -250,7 +280,12 @@ describe('scoreSchedule', () => {
         endTime: '11:30',
       });
 
-      const score = scoreSchedule(evaluator, [rangeA, rangeB], day('2026-03-23'), day('2026-03-24'));
+      const score = scoreSchedule(
+        evaluator,
+        [rangeA, rangeB],
+        day('2026-03-23'),
+        day('2026-03-24'),
+      );
       // 1 conflict per day * 2 days
       expect(score.conflicts).toBe(2);
       expect(score.conflictDays).toBe(2);
@@ -275,7 +310,12 @@ describe('scoreSchedule', () => {
         endTime: '11:00',
       });
 
-      const score = scoreSchedule(evaluator, [rangeA, rangeB], day('2026-03-23'), day('2026-03-24'));
+      const score = scoreSchedule(
+        evaluator,
+        [rangeA, rangeB],
+        day('2026-03-23'),
+        day('2026-03-24'),
+      );
       // Total switches: 2, days: 2, avg: 1
       expect(score.avgContextSwitches).toBe(1);
     });

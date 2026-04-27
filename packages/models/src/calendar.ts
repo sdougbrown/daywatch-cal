@@ -54,9 +54,7 @@ export function buildCalendarModel(config: CalendarModelConfig): CalendarModel {
   };
 }
 
-export function createCalendarController(config: {
-  focusDate: string;
-}): CalendarController {
+export function createCalendarController(config: { focusDate: string }): CalendarController {
   return {
     next: () => shiftMonth(config.focusDate, 1),
     prev: () => shiftMonth(config.focusDate, -1),

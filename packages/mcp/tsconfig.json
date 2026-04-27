@@ -5,8 +5,5 @@
     "rootDir": "./src"
   },
   "include": ["src"],
-  "references": [
-    { "path": "../core" },
-    { "path": "../ical" }
-  ]
+  "references": [{ "path": "../core" }, { "path": "../ical" }]
 }

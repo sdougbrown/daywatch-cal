@@ -92,7 +92,10 @@ function getInclusiveEndDate(component: Component, event: Event): string {
   return formatDateFromTime(end);
 }
 
-function getEventDateFields(component: Component, event: Event): Pick<DateRange, 'dates' | 'fromDate' | 'toDate'> {
+function getEventDateFields(
+  component: Component,
+  event: Event,
+): Pick<DateRange, 'dates' | 'fromDate' | 'toDate'> {
   const startDate = formatDateFromTime(event.startDate);
   const endDate = getInclusiveEndDate(component, event);
 
@@ -108,7 +111,10 @@ function getEventDateFields(component: Component, event: Event): Pick<DateRange,
   };
 }
 
-function getTimeFields(component: Component, event: Event): Pick<DateRange, 'startTime' | 'endTime' | 'duration' | 'timezone'> {
+function getTimeFields(
+  component: Component,
+  event: Event,
+): Pick<DateRange, 'startTime' | 'endTime' | 'duration' | 'timezone'> {
   const start = event.startDate;
 
   if (start.isDate) {
@@ -288,7 +294,9 @@ function overlapsWindow(range: DateRange, window: ParseWindow): boolean {
   const windowTo = formatDate(window.to);
 
   if (range.dates?.length) {
-    return range.dates.some(date => compareDates(date, windowFrom) >= 0 && compareDates(date, windowTo) <= 0);
+    return range.dates.some(
+      (date) => compareDates(date, windowFrom) >= 0 && compareDates(date, windowTo) <= 0,
+    );
   }
 
   if (range.toDate && compareDates(range.toDate, windowFrom) < 0) {
@@ -299,7 +307,9 @@ function overlapsWindow(range: DateRange, window: ParseWindow): boolean {
     return false;
   }
 
-  const hasRecurrence = Boolean(range.everyWeekday?.length || range.everyDate?.length || range.everyMonth?.length);
+  const hasRecurrence = Boolean(
+    range.everyWeekday?.length || range.everyDate?.length || range.everyMonth?.length,
+  );
   if (hasRecurrence) {
     return true;
   }
@@ -386,7 +396,9 @@ function buildDateRange(component: Component, window: ParseWindow): DateRange | 
       );
 
       if (expandedDates.length === 0) {
-        console.warn(`Skipping VEVENT ${baseRange.id}: no occurrences in window (${mapped.reason})`);
+        console.warn(
+          `Skipping VEVENT ${baseRange.id}: no occurrences in window (${mapped.reason})`,
+        );
         return null;
       }
 
@@ -404,7 +416,7 @@ function buildDateRange(component: Component, window: ParseWindow): DateRange | 
     baseRange.exceptDates = exceptDates;
     if (baseRange.dates?.length) {
       const exceptDateSet = new Set(exceptDates);
-      baseRange.dates = baseRange.dates.filter(date => !exceptDateSet.has(date));
+      baseRange.dates = baseRange.dates.filter((date) => !exceptDateSet.has(date));
       if (baseRange.dates.length === 0) {
         return null;
       }

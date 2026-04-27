@@ -4,16 +4,26 @@ import { subtractOneDay } from './gcal.js';
 import type { MsftAdapterOptions, MsftGraphEvent } from './types.js';
 import { toIanaTimezone } from './windows-timezones.js';
 
-export function isBlockingMsftEvent(event: MsftGraphEvent, options: MsftAdapterOptions = {}): boolean {
+export function isBlockingMsftEvent(
+  event: MsftGraphEvent,
+  options: MsftAdapterOptions = {},
+): boolean {
   if (event.isCancelled) return false;
   if (event.type === 'seriesMaster') return false;
-  if ((event.showAs === 'free' || event.showAs === 'workingElsewhere') && options.includeFree !== true) return false;
+  if (
+    (event.showAs === 'free' || event.showAs === 'workingElsewhere') &&
+    options.includeFree !== true
+  )
+    return false;
   if (event.responseStatus?.response === 'declined') return false;
   if (event.showAs === 'tentative' && options.includeTentative === false) return false;
   return true;
 }
 
-export function msftEventToDateRange(event: MsftGraphEvent, options: MsftAdapterOptions = {}): DateRange {
+export function msftEventToDateRange(
+  event: MsftGraphEvent,
+  options: MsftAdapterOptions = {},
+): DateRange {
   const metadata: Record<string, unknown> = {
     msftId: event.id,
   };
@@ -54,6 +64,11 @@ export function msftEventToDateRange(event: MsftGraphEvent, options: MsftAdapter
   };
 }
 
-export function msftEventsToDateRanges(events: MsftGraphEvent[], options: MsftAdapterOptions = {}): DateRange[] {
-  return events.filter(event => isBlockingMsftEvent(event, options)).map(event => msftEventToDateRange(event, options));
+export function msftEventsToDateRanges(
+  events: MsftGraphEvent[],
+  options: MsftAdapterOptions = {},
+): DateRange[] {
+  return events
+    .filter((event) => isBlockingMsftEvent(event, options))
+    .map((event) => msftEventToDateRange(event, options));
 }

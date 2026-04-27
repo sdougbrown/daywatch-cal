@@ -27,9 +27,6 @@ export function fromDateRange(range: DateRange, occurrence: Occurrence): Calenda
 /**
  * Batch-convert: expand a DateRange within a window and return CalendarEvents.
  */
-export function expandToEvents(
-  range: DateRange,
-  occurrences: Occurrence[],
-): CalendarEvent[] {
-  return occurrences.map(o => fromDateRange(range, o));
+export function expandToEvents(range: DateRange, occurrences: Occurrence[]): CalendarEvent[] {
+  return occurrences.map((o) => fromDateRange(range, o));
 }

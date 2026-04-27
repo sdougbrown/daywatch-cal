@@ -50,7 +50,7 @@ const testRanges: DateRange[] = [
 ];
 
 function getTextContent(result: CallToolResult): string {
-  const entry = result.content.find(item => item.type === 'text');
+  const entry = result.content.find((item) => item.type === 'text');
   if (!entry) {
     throw new Error('Expected text content in tool result.');
   }
@@ -306,7 +306,9 @@ describe('handleToolCall', () => {
     const result = await handleToolCall(session, 'list_calendars');
 
     expect(
-      parseJsonContent<Array<{ id: string; rangeCount: number; labels: string[]; has_more_labels: boolean }>>(result),
+      parseJsonContent<
+        Array<{ id: string; rangeCount: number; labels: string[]; has_more_labels: boolean }>
+      >(result),
     ).toEqual([
       {
         id: 'work',
@@ -386,7 +388,14 @@ describe('handleToolCall', () => {
       limit: 1,
     });
 
-    expect(parseJsonContent<{ free_slots: FreeSlot[]; total: number; truncated: boolean; message: string }>(result)).toEqual(
+    expect(
+      parseJsonContent<{
+        free_slots: FreeSlot[];
+        total: number;
+        truncated: boolean;
+        message: string;
+      }>(result),
+    ).toEqual(
       expect.objectContaining({
         free_slots: [
           {
@@ -984,7 +993,12 @@ describe('handleToolCall', () => {
     });
 
     expect(
-      parseJsonContent<{ occurrences: Occurrence[]; total: number; truncated: boolean; message: string }>(result),
+      parseJsonContent<{
+        occurrences: Occurrence[];
+        total: number;
+        truncated: boolean;
+        message: string;
+      }>(result),
     ).toEqual(
       expect.objectContaining({
         occurrences: [
@@ -1040,7 +1054,9 @@ describe('handleToolCall', () => {
     expect(suggestion.after.conflicts).toBe(0);
 
     const dayDetail = await handleToolCall(session, 'day_detail', { date: '2026-03-25' });
-    const detail = parseJsonContent<{ timeSlots: TimeSlot[]; allDayRanges: DayRangeInfo[] }>(dayDetail);
+    const detail = parseJsonContent<{ timeSlots: TimeSlot[]; allDayRanges: DayRangeInfo[] }>(
+      dayDetail,
+    );
 
     expect(detail.timeSlots).toEqual(
       expect.arrayContaining([
@@ -1070,7 +1086,9 @@ describe('handleToolCall', () => {
       ],
     });
 
-    expect(parseJsonContent<{ changes_applied: number; total_ranges: number }>(applyResult)).toEqual({
+    expect(
+      parseJsonContent<{ changes_applied: number; total_ranges: number }>(applyResult),
+    ).toEqual({
       changes_applied: 1,
       total_ranges: 4,
     });
@@ -1108,9 +1126,9 @@ describe('handleToolCall', () => {
 
     const calendarsResult = await handleToolCall(session, 'list_calendars');
     expect(
-      parseJsonContent<Array<{ id: string; rangeCount: number; labels: string[]; has_more_labels: boolean }>>(
-        calendarsResult,
-      ),
+      parseJsonContent<
+        Array<{ id: string; rangeCount: number; labels: string[]; has_more_labels: boolean }>
+      >(calendarsResult),
     ).toEqual([
       expect.objectContaining({
         id: 'work',
@@ -1138,7 +1156,14 @@ describe('handleToolCall', () => {
       date: '2026-03-21',
     });
 
-    expect(parseJsonContent<{ timeSlots: TimeSlot[]; allDayRanges: DayRangeInfo[]; total: number; total_time_slots: number }>(result)).toEqual({
+    expect(
+      parseJsonContent<{
+        timeSlots: TimeSlot[];
+        allDayRanges: DayRangeInfo[];
+        total: number;
+        total_time_slots: number;
+      }>(result),
+    ).toEqual({
       timeSlots: [],
       allDayRanges: [],
       total: 0,
@@ -1178,6 +1203,8 @@ describe('handleToolCall', () => {
     });
 
     expect(invalidLoad.isError).toBe(true);
-    expect(getTextContent(invalidLoad)).toContain('"source" must be "ics", "ranges", "gcal", or "msft".');
+    expect(getTextContent(invalidLoad)).toContain(
+      '"source" must be "ics", "ranges", "gcal", or "msft".',
+    );
   });
 });

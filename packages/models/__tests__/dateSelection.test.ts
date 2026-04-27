@@ -1,9 +1,5 @@
 import { vi } from 'vitest';
-import {
-  createIsDateBlocked,
-  selectionToDateRange,
-  updateDateSelection,
-} from '../src/index.js';
+import { createIsDateBlocked, selectionToDateRange, updateDateSelection } from '../src/index.js';
 
 describe('date selection helpers', () => {
   it('sets start on the first click', () => {

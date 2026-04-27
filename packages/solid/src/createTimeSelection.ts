@@ -1,9 +1,6 @@
 import { createMemo, type Accessor } from 'solid-js';
 import { updateTimeSelection } from '@daywatch/cal-models';
-import type {
-  TimeSelection,
-  TimeSelectionConfig,
-} from '@daywatch/cal-models';
+import type { TimeSelection, TimeSelectionConfig } from '@daywatch/cal-models';
 import { toAccessor, type MaybeAccessor } from './utils.js';
 
 export interface CreateTimeSelectionConfig extends TimeSelectionConfig {

@@ -1,9 +1,4 @@
-import type {
-  DateRange,
-  YearGridConfig,
-  YearMonth,
-  YearDay,
-} from './types.js';
+import type { DateRange, YearGridConfig, YearMonth, YearDay } from './types.js';
 import { RangeEvaluator } from './evaluator.js';
 import { formatDate, daysInMonth } from './time.js';
 

@@ -10,8 +10,6 @@
     },
     "typecheck": {
       "dependsOn": ["^build"]
-    },
-    "lint": {},
-    "format:check": {}
+    }
   }
 }

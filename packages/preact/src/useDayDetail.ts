@@ -8,5 +8,8 @@ export function useDayDetail(
   ranges: DateRange[],
   userTimezone?: string,
 ): DayDetailModel {
-  return useMemo(() => buildDayDetailModel(date, ranges, userTimezone), [date, ranges, userTimezone]);
+  return useMemo(
+    () => buildDayDetailModel(date, ranges, userTimezone),
+    [date, ranges, userTimezone],
+  );
 }

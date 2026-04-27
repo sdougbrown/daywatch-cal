@@ -2,12 +2,7 @@ import type { DateRange } from '@daywatch/cal';
 
 export type RangeValidationMode = 'lenient' | 'strict';
 
-export type RangeValidationIssueCode =
-  | 'required'
-  | 'disabled'
-  | 'foul'
-  | 'invalid'
-  | 'unknown_key';
+export type RangeValidationIssueCode = 'required' | 'disabled' | 'foul' | 'invalid' | 'unknown_key';
 
 export interface RangeValidationIssue {
   code: RangeValidationIssueCode;
@@ -33,9 +28,7 @@ export type RangeValidationFailure = {
   issues: [RangeValidationIssue, ...RangeValidationIssue[]];
 };
 
-export type RangeValidationResult =
-  | RangeValidationSuccess
-  | RangeValidationFailure;
+export type RangeValidationResult = RangeValidationSuccess | RangeValidationFailure;
 
 export type DateRangeInput = Partial<DateRange> & Record<string, unknown>;
 

@@ -119,7 +119,7 @@ describe('findConflicts', () => {
     const conflicts = evaluator.findConflicts([rangeA, rangeB, rangeC], '2026-03-23');
     expect(conflicts).toHaveLength(3);
 
-    const pairIds = conflicts.map(c => [c.rangeA.id, c.rangeB.id].sort().join('-'));
+    const pairIds = conflicts.map((c) => [c.rangeA.id, c.rangeB.id].sort().join('-'));
     expect(pairIds).toContain('a-b');
     expect(pairIds).toContain('a-c');
     expect(pairIds).toContain('b-c');

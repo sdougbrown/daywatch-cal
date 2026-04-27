@@ -97,10 +97,7 @@ describe('TimelineGrid', () => {
 
 describe('computeEventPositions', () => {
   it('positions non-overlapping events in column 0', () => {
-    const events = [
-      makeEvent('a', 9, 0, 10, 0),
-      makeEvent('b', 11, 0, 12, 0),
-    ];
+    const events = [makeEvent('a', 9, 0, 10, 0), makeEvent('b', 11, 0, 12, 0)];
 
     const positioned = computeEventPositions(events, 0, 24);
     expect(positioned).toHaveLength(2);
@@ -111,15 +108,12 @@ describe('computeEventPositions', () => {
   });
 
   it('assigns separate columns to overlapping events', () => {
-    const events = [
-      makeEvent('a', 9, 0, 11, 0),
-      makeEvent('b', 10, 0, 12, 0),
-    ];
+    const events = [makeEvent('a', 9, 0, 11, 0), makeEvent('b', 10, 0, 12, 0)];
 
     const positioned = computeEventPositions(events, 0, 24);
     expect(positioned).toHaveLength(2);
 
-    const columns = positioned.map(p => p.column).sort();
+    const columns = positioned.map((p) => p.column).sort();
     expect(columns).toEqual([0, 1]);
     expect(positioned[0].totalColumns).toBe(2);
     expect(positioned[1].totalColumns).toBe(2);
@@ -135,7 +129,7 @@ describe('computeEventPositions', () => {
     const positioned = computeEventPositions(events, 0, 24);
     expect(positioned).toHaveLength(3);
 
-    const columns = positioned.map(p => p.column).sort();
+    const columns = positioned.map((p) => p.column).sort();
     expect(columns).toEqual([0, 1, 2]);
     expect(positioned[0].totalColumns).toBe(3);
   });
@@ -162,8 +156,8 @@ describe('computeEventPositions', () => {
 
   it('reuses columns when earlier events end', () => {
     const events = [
-      makeEvent('a', 9, 0, 10, 0),   // column 0, ends at 10
-      makeEvent('b', 9, 0, 10, 0),   // column 1, overlaps with a
+      makeEvent('a', 9, 0, 10, 0), // column 0, ends at 10
+      makeEvent('b', 9, 0, 10, 0), // column 1, overlaps with a
       makeEvent('c', 10, 30, 12, 0), // column 0, both a and b have ended
     ];
 
@@ -172,7 +166,7 @@ describe('computeEventPositions', () => {
 
     // Events a and b overlap, so 2 columns for that group
     // Event c starts after both a and b end, so it gets its own group
-    const eventC = positioned.find(p => p.event.id === 'c');
+    const eventC = positioned.find((p) => p.event.id === 'c');
     expect(eventC?.column).toBe(0);
     expect(eventC?.totalColumns).toBe(1);
   });

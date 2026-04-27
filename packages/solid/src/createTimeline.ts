@@ -7,9 +7,7 @@ export interface CreateTimelineResult {
   slots: Accessor<TimelineModel['slots']>;
 }
 
-export function createTimeline(
-  config: MaybeAccessor<TimelineModelConfig>,
-): CreateTimelineResult {
+export function createTimeline(config: MaybeAccessor<TimelineModelConfig>): CreateTimelineResult {
   const resolvedConfig = toAccessor(config);
   const model = createMemo(() => buildTimelineModel(resolvedConfig()));
 

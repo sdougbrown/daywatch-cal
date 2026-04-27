@@ -8,18 +8,15 @@ export interface RangeCheck {
   getOccurrences: (from: Date, to: Date) => Occurrence[];
 }
 
-export function createRangeCheck(
-  ranges: DateRange[],
-  userTimezone?: string,
-): RangeCheck {
+export function createRangeCheck(ranges: DateRange[], userTimezone?: string): RangeCheck {
   const evaluator = new RangeEvaluator(userTimezone);
 
   return {
     isInRange: (datetime: Date): DateRange[] => {
-      return ranges.filter(range => evaluator.isInRange(datetime, range));
+      return ranges.filter((range) => evaluator.isInRange(datetime, range));
     },
     getOccurrences: (from: Date, to: Date): Occurrence[] => {
-      return ranges.flatMap(range => evaluator.expand(range, from, to));
+      return ranges.flatMap((range) => evaluator.expand(range, from, to));
     },
   };
 }

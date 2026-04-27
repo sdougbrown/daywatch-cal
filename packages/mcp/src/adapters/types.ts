@@ -46,7 +46,13 @@ export interface MsftGraphEvent {
   end: { dateTime: string; timeZone: string };
   showAs?: 'free' | 'tentative' | 'busy' | 'oof' | 'workingElsewhere' | 'unknown';
   responseStatus?: {
-    response: 'none' | 'organizer' | 'tentativelyAccepted' | 'accepted' | 'declined' | 'notResponded';
+    response:
+      | 'none'
+      | 'organizer'
+      | 'tentativelyAccepted'
+      | 'accepted'
+      | 'declined'
+      | 'notResponded';
     time?: string;
   };
   attendees?: Array<{

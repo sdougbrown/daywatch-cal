@@ -151,11 +151,13 @@ export const TOOLS: Tool[] = [
         },
         window_from: {
           type: 'string',
-          description: 'Optional parse window start date (YYYY-MM-DD). Must be paired with window_to.',
+          description:
+            'Optional parse window start date (YYYY-MM-DD). Must be paired with window_to.',
         },
         window_to: {
           type: 'string',
-          description: 'Optional parse window end date (YYYY-MM-DD). Must be paired with window_from.',
+          description:
+            'Optional parse window end date (YYYY-MM-DD). Must be paired with window_from.',
         },
       },
       required: ['source', 'data'],
@@ -182,11 +184,13 @@ export const TOOLS: Tool[] = [
         },
         window_from: {
           type: 'string',
-          description: 'Optional parse window start date (YYYY-MM-DD). Must be paired with window_to.',
+          description:
+            'Optional parse window start date (YYYY-MM-DD). Must be paired with window_to.',
         },
         window_to: {
           type: 'string',
-          description: 'Optional parse window end date (YYYY-MM-DD). Must be paired with window_from.',
+          description:
+            'Optional parse window end date (YYYY-MM-DD). Must be paired with window_from.',
         },
       },
       required: ['path'],
@@ -247,14 +251,16 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'find_shared_events',
-    description: 'Find events that appear in two or more loaded calendars, grouped by shared event UID.',
+    description:
+      'Find events that appear in two or more loaded calendars, grouped by shared event UID.',
     inputSchema: {
       type: 'object',
       properties: {
         calendars: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Optional list of calendar ids to compare. Defaults to all loaded calendars.',
+          description:
+            'Optional list of calendar ids to compare. Defaults to all loaded calendars.',
         },
         from: {
           type: 'string',
@@ -332,7 +338,8 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'score_schedule',
-    description: 'Score a schedule window for conflicts, free time, focus blocks, and context switches.',
+    description:
+      'Score a schedule window for conflicts, free time, focus blocks, and context switches.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -406,7 +413,8 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'suggest_changes',
-    description: 'Preview schedule changes with before/after scoring and conflict counts without mutating session state.',
+    description:
+      'Preview schedule changes with before/after scoring and conflict counts without mutating session state.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -417,11 +425,13 @@ export const TOOLS: Tool[] = [
         },
         from: {
           type: 'string',
-          description: 'Optional scoring window start date. Defaults to earliest affected date minus 7 days.',
+          description:
+            'Optional scoring window start date. Defaults to earliest affected date minus 7 days.',
         },
         to: {
           type: 'string',
-          description: 'Optional scoring window end date. Defaults to latest affected date plus 7 days.',
+          description:
+            'Optional scoring window end date. Defaults to latest affected date plus 7 days.',
         },
       },
       required: ['changes'],
@@ -577,7 +587,7 @@ function optionalStringArray(args: Record<string, unknown>, key: string): string
     return undefined;
   }
 
-  if (!Array.isArray(value) || value.some(item => typeof item !== 'string')) {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
     throw new Error(`"${key}" must be an array of strings when provided.`);
   }
 
@@ -696,8 +706,11 @@ function truncateArray<T>(items: T[], key: string, limit: number): Record<string
   };
 }
 
-function collectUniqueLabels(ranges: DateRange[], limit: number): { labels: string[]; hasMore: boolean } {
-  const labels = [...new Set(ranges.map(range => range.label))];
+function collectUniqueLabels(
+  ranges: DateRange[],
+  limit: number,
+): { labels: string[]; hasMore: boolean } {
+  const labels = [...new Set(ranges.map((range) => range.label))];
   return {
     labels: labels.slice(0, limit),
     hasMore: labels.length > limit,
@@ -711,7 +724,7 @@ function requireLoadedCalendars(session: CalendarSession, calendarIds: string[])
     throw new Error('"calendars" must include at least one calendar id.');
   }
 
-  const missing = uniqueIds.filter(calendarId => !session.calendars.has(calendarId));
+  const missing = uniqueIds.filter((calendarId) => !session.calendars.has(calendarId));
   if (missing.length > 0) {
     throw new Error(`Unknown calendar id${missing.length === 1 ? '' : 's'}: ${missing.join(', ')}`);
   }
@@ -745,9 +758,15 @@ function readAttendees(value: unknown): AttendeeInfo[] | undefined {
     return [
       {
         email: record.email,
-        ...(typeof record.name === 'string' && record.name.trim() !== '' ? { name: record.name } : {}),
-        ...(typeof record.role === 'string' && record.role.trim() !== '' ? { role: record.role } : {}),
-        ...(typeof record.status === 'string' && record.status.trim() !== '' ? { status: record.status } : {}),
+        ...(typeof record.name === 'string' && record.name.trim() !== ''
+          ? { name: record.name }
+          : {}),
+        ...(typeof record.role === 'string' && record.role.trim() !== ''
+          ? { role: record.role }
+          : {}),
+        ...(typeof record.status === 'string' && record.status.trim() !== ''
+          ? { status: record.status }
+          : {}),
       },
     ];
   });
@@ -809,7 +828,7 @@ function buildRecurrenceSummary(range: DateRange): string | undefined {
   const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   if (range.everyWeekday?.length) {
-    return `weekly on ${range.everyWeekday.map(day => weekdayLabels[day] ?? String(day)).join(', ')}`;
+    return `weekly on ${range.everyWeekday.map((day) => weekdayLabels[day] ?? String(day)).join(', ')}`;
   }
 
   if (range.everyDate?.length) {
@@ -832,7 +851,7 @@ function rangeOverlapsDateFilter(range: DateRange, from?: string, to?: string): 
   const windowTo = to ?? from!;
 
   if (range.dates?.length) {
-    return range.dates.some(date => date >= windowFrom && date <= windowTo);
+    return range.dates.some((date) => date >= windowFrom && date <= windowTo);
   }
 
   if (range.toDate && range.toDate < windowFrom) {
@@ -923,15 +942,17 @@ function buildSharedEvents(
   }> = [];
 
   for (const [id, entries] of session.groupRangesByIdAcrossCalendars(calendarIds)) {
-    const filteredEntries = entries.filter(entry => rangeOverlapsDateFilter(entry.range, from, to));
-    const distinctCalendars = [...new Set(filteredEntries.map(entry => entry.calendarId))].sort();
+    const filteredEntries = entries.filter((entry) =>
+      rangeOverlapsDateFilter(entry.range, from, to),
+    );
+    const distinctCalendars = [...new Set(filteredEntries.map((entry) => entry.calendarId))].sort();
 
     if (distinctCalendars.length < 2) {
       continue;
     }
 
     const representative = filteredEntries[0].range;
-    const ranges = filteredEntries.map(entry => entry.range);
+    const ranges = filteredEntries.map((entry) => entry.range);
     const attendees = mergeAttendees(ranges);
     const organizer = getFirstOrganizer(ranges);
     const recurrenceSummary = buildRecurrenceSummary(representative);
@@ -948,8 +969,8 @@ function buildSharedEvents(
     });
   }
 
-  sharedEvents.sort((left, right) =>
-    left.label.localeCompare(right.label) || left.id.localeCompare(right.id),
+  sharedEvents.sort(
+    (left, right) => left.label.localeCompare(right.label) || left.id.localeCompare(right.id),
   );
 
   return sharedEvents;
@@ -971,8 +992,8 @@ function buildCommonAvailability(
   end: string;
   duration_minutes: number;
 }> {
-  return dateRange(from, to).flatMap(date =>
-    evaluator.findFreeSlots(ranges, date, options).map(slot => ({
+  return dateRange(from, to).flatMap((date) =>
+    evaluator.findFreeSlots(ranges, date, options).map((slot) => ({
       date: slot.date,
       start: slot.startTime,
       end: slot.endTime,
@@ -982,13 +1003,15 @@ function buildCommonAvailability(
 }
 
 function findRangeById(ranges: DateRange[], rangeId: string): DateRange | undefined {
-  return ranges.find(range => range.id === rangeId);
+  return ranges.find((range) => range.id === rangeId);
 }
 
 function applyDateUpdate(range: DateRange, date: string): DateRange {
   if (range.dates?.length) {
     if (range.dates.length !== 1) {
-      throw new Error(`Range "${range.id}" cannot apply a single "date" update because it has multiple explicit dates.`);
+      throw new Error(
+        `Range "${range.id}" cannot apply a single "date" update because it has multiple explicit dates.`,
+      );
     }
 
     return {
@@ -1033,7 +1056,10 @@ function applyMoveToRange(range: DateRange, updates?: ProposedChangeUpdates): Da
   };
 }
 
-function applyChangesToRanges(ranges: DateRange[], changes: ProposedChange[]): { ranges: DateRange[]; changesApplied: number } {
+function applyChangesToRanges(
+  ranges: DateRange[],
+  changes: ProposedChange[],
+): { ranges: DateRange[]; changesApplied: number } {
   let nextRanges = ranges.map(cloneRange);
   let changesApplied = 0;
 
@@ -1044,7 +1070,7 @@ function applyChangesToRanges(ranges: DateRange[], changes: ProposedChange[]): {
           throw new Error('Move changes require "range_id".');
         }
 
-        const index = nextRanges.findIndex(range => range.id === change.range_id);
+        const index = nextRanges.findIndex((range) => range.id === change.range_id);
         if (index === -1) {
           throw new Error(`Range "${change.range_id}" was not found in the current session.`);
         }
@@ -1069,7 +1095,7 @@ function applyChangesToRanges(ranges: DateRange[], changes: ProposedChange[]): {
           throw new Error('Remove changes require "range_id".');
         }
 
-        const filteredRanges = nextRanges.filter(range => range.id !== change.range_id);
+        const filteredRanges = nextRanges.filter((range) => range.id !== change.range_id);
         if (filteredRanges.length === nextRanges.length) {
           throw new Error(`Range "${change.range_id}" was not found in the current session.`);
         }
@@ -1093,7 +1119,9 @@ function getRangeDateWindow(range: DateRange): { from: string; to: string } | un
     };
   }
 
-  const dates = [range.fromDate, range.toDate].filter((value): value is string => Boolean(value)).sort();
+  const dates = [range.fromDate, range.toDate]
+    .filter((value): value is string => Boolean(value))
+    .sort();
   if (dates.length > 0) {
     return {
       from: dates[0],
@@ -1124,7 +1152,9 @@ function getDefaultSuggestionWindow(
     }
 
     if (!change.range_id) {
-      throw new Error(`${change.action === 'move' ? 'Move' : 'Remove'} changes require "range_id".`);
+      throw new Error(
+        `${change.action === 'move' ? 'Move' : 'Remove'} changes require "range_id".`,
+      );
     }
 
     const range = findRangeById(currentRanges, change.range_id);
@@ -1146,11 +1176,13 @@ function getDefaultSuggestionWindow(
   }
 
   if (windows.length === 0) {
-    throw new Error('Could not infer a scoring window from the proposed changes. Provide "from" and "to".');
+    throw new Error(
+      'Could not infer a scoring window from the proposed changes. Provide "from" and "to".',
+    );
   }
 
-  const earliest = windows.map(window => window.from).sort()[0];
-  const latest = windows.map(window => window.to).sort()[windows.length - 1];
+  const earliest = windows.map((window) => window.from).sort()[0];
+  const latest = windows.map((window) => window.to).sort()[windows.length - 1];
 
   return {
     from: shiftDay(earliest, -7),
@@ -1256,10 +1288,7 @@ interface IcsLoadResult {
   detectedWindow: { from: Date; to: Date } | null;
 }
 
-function loadIcsData(
-  icsText: string,
-  requestedWindow: { from: Date; to: Date },
-): IcsLoadResult {
+function loadIcsData(icsText: string, requestedWindow: { from: Date; to: Date }): IcsLoadResult {
   const detectedWindow = detectDataWindow(icsText);
   let ranges = parseICS(icsText, requestedWindow);
   let effectiveWindow = requestedWindow;
@@ -1336,7 +1365,14 @@ export async function handleToolCall(
 
         if (source === 'ics') {
           const result = loadIcsData(data, requestedWindow);
-          return buildLoadResponse(session, result.ranges, calendarId, 'ics', result.effectiveWindow, result.detectedWindow);
+          return buildLoadResponse(
+            session,
+            result.ranges,
+            calendarId,
+            'ics',
+            result.effectiveWindow,
+            result.detectedWindow,
+          );
         }
 
         if (source === 'gcal') {
@@ -1364,7 +1400,14 @@ export async function handleToolCall(
           throw new Error('Range JSON must decode to an array.');
         }
 
-        return buildLoadResponse(session, parsed as DateRange[], calendarId, 'ranges', requestedWindow, null);
+        return buildLoadResponse(
+          session,
+          parsed as DateRange[],
+          calendarId,
+          'ranges',
+          requestedWindow,
+          null,
+        );
       }
 
       case 'load_calendar_file': {
@@ -1388,7 +1431,14 @@ export async function handleToolCall(
 
         const calendarId = session.createCalendarId(id);
         const result = loadIcsData(data, requestedWindow);
-        return buildLoadResponse(session, result.ranges, calendarId, 'ics', result.effectiveWindow, result.detectedWindow);
+        return buildLoadResponse(
+          session,
+          result.ranges,
+          calendarId,
+          'ics',
+          result.effectiveWindow,
+          result.detectedWindow,
+        );
       }
 
       case 'find_conflicts': {
@@ -1396,7 +1446,11 @@ export async function handleToolCall(
         const to = requireString(args, 'to');
         const ranges = getRanges(session, args);
         const limit = optionalLimit(args);
-        const conflicts = session.evaluator.findConflictsInWindow(ranges, parseDateArgument(from), parseDateArgument(to));
+        const conflicts = session.evaluator.findConflictsInWindow(
+          ranges,
+          parseDateArgument(from),
+          parseDateArgument(to),
+        );
 
         return jsonResult(truncateArray(conflicts, 'conflicts', limit));
       }
@@ -1411,9 +1465,7 @@ export async function handleToolCall(
           dayEnd: optionalString(args, 'day_end') ?? '17:00',
         });
 
-        return jsonResult(
-          truncateArray(freeSlots, 'free_slots', limit),
-        );
+        return jsonResult(truncateArray(freeSlots, 'free_slots', limit));
       }
 
       case 'find_shared_events': {
@@ -1466,10 +1518,16 @@ export async function handleToolCall(
         }
 
         return jsonResult(
-          session.evaluator.findNextFreeSlot(ranges, parseDateArgument(from), parseDateArgument(to), duration, {
-            dayStart: optionalString(args, 'day_start'),
-            dayEnd: optionalString(args, 'day_end'),
-          }),
+          session.evaluator.findNextFreeSlot(
+            ranges,
+            parseDateArgument(from),
+            parseDateArgument(to),
+            duration,
+            {
+              dayStart: optionalString(args, 'day_start'),
+              dayEnd: optionalString(args, 'day_end'),
+            },
+          ),
         );
       }
 
@@ -1506,13 +1564,17 @@ export async function handleToolCall(
         const from = requireString(args, 'from');
         const to = requireString(args, 'to');
         const limit = optionalLimit(args);
-        const range = session.getAllRanges().find(candidate => candidate.id === rangeId);
+        const range = session.getAllRanges().find((candidate) => candidate.id === rangeId);
 
         if (!range) {
           throw new Error(`Range "${rangeId}" was not found in the current session.`);
         }
 
-        const occurrences = session.evaluator.expand(range, parseDateArgument(from), parseDateArgument(to));
+        const occurrences = session.evaluator.expand(
+          range,
+          parseDateArgument(from),
+          parseDateArgument(to),
+        );
         return jsonResult(truncateArray(occurrences, 'occurrences', limit));
       }
 
@@ -1575,7 +1637,7 @@ export function createServer(session = new CalendarSession()): Server {
     tools: TOOLS,
   }));
 
-  server.setRequestHandler(CallToolRequestSchema, async request =>
+  server.setRequestHandler(CallToolRequestSchema, async (request) =>
     handleToolCall(session, request.params.name, request.params.arguments),
   );
 

@@ -1,9 +1,4 @@
-import type {
-  TimelineGridConfig,
-  TimelineSlot,
-  PositionedEvent,
-  CalendarEvent,
-} from './types.js';
+import type { TimelineGridConfig, TimelineSlot, PositionedEvent, CalendarEvent } from './types.js';
 import { formatTime, timeToMinutes } from './time.js';
 
 /**
@@ -31,11 +26,7 @@ export class TimelineGrid {
 
   private generate(): TimelineSlot[] {
     const slots: TimelineSlot[] = [];
-    const positioned = computeEventPositions(
-      this.events,
-      this.startHour,
-      this.endHour,
-    );
+    const positioned = computeEventPositions(this.events, this.startHour, this.endHour);
 
     const totalMinutes = (this.endHour - this.startHour) * 60;
     let currentMinutes = this.startHour * 60;
@@ -48,7 +39,7 @@ export class TimelineGrid {
 
       // Find events that overlap this slot
       const slotEnd = currentMinutes + this.intervalMinutes;
-      const overlapping = positioned.filter(pe => {
+      const overlapping = positioned.filter((pe) => {
         const eventStart = this.getEventStartMinutes(pe.event);
         const eventEnd = this.getEventEndMinutes(pe.event);
         return eventStart < slotEnd && eventEnd > currentMinutes;
@@ -99,19 +90,20 @@ export function computeEventPositions(
     const aStart = a.start.getHours() * 60 + a.start.getMinutes();
     const bStart = b.start.getHours() * 60 + b.start.getMinutes();
     if (aStart !== bStart) return aStart - bStart;
-    const aEnd = a.end
-      ? a.end.getHours() * 60 + a.end.getMinutes()
-      : aStart + 30;
-    const bEnd = b.end
-      ? b.end.getHours() * 60 + b.end.getMinutes()
-      : bStart + 30;
-    return (bEnd - bStart) - (aEnd - aStart); // Longer events first
+    const aEnd = a.end ? a.end.getHours() * 60 + a.end.getMinutes() : aStart + 30;
+    const bEnd = b.end ? b.end.getHours() * 60 + b.end.getMinutes() : bStart + 30;
+    return bEnd - bStart - (aEnd - aStart); // Longer events first
   });
 
   // Assign columns using a greedy approach
   // Track when each column becomes free
   const columnEnds: number[] = [];
-  const assignments: Array<{ event: CalendarEvent; column: number; startMin: number; endMin: number }> = [];
+  const assignments: Array<{
+    event: CalendarEvent;
+    column: number;
+    startMin: number;
+    endMin: number;
+  }> = [];
 
   for (const event of sorted) {
     const eventStart = event.start.getHours() * 60 + event.start.getMinutes();
@@ -149,7 +141,7 @@ export function computeEventPositions(
   const positioned: PositionedEvent[] = [];
 
   for (const group of groups) {
-    const maxColumn = Math.max(...group.map(a => a.column)) + 1;
+    const maxColumn = Math.max(...group.map((a) => a.column)) + 1;
 
     for (const assignment of group) {
       const top = ((assignment.startMin - timelineStart) / totalMinutes) * 100;
@@ -177,8 +169,8 @@ function findOverlapGroups(
   if (assignments.length === 0) return [];
 
   const sorted = [...assignments].sort((a, b) => a.startMin - b.startMin);
-  const groups: Array<Array<typeof sorted[number]>> = [];
-  let currentGroup: Array<typeof sorted[number]> = [sorted[0]];
+  const groups: Array<Array<(typeof sorted)[number]>> = [];
+  let currentGroup: Array<(typeof sorted)[number]> = [sorted[0]];
   let groupEnd = sorted[0].endMin;
 
   for (let i = 1; i < sorted.length; i++) {

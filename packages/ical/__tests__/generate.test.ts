@@ -5,8 +5,13 @@ import type { DateRange } from '@daywatch/cal';
 import { DEFAULT_PRODID } from '../src/constants.js';
 import { generateICS } from '../src/generate.js';
 
-function byUid(calendar: InstanceType<typeof ICAL.Component>, uid: string): InstanceType<typeof ICAL.Component> {
-  const event = calendar.getAllSubcomponents('vevent').find(item => item.getFirstPropertyValue('uid') === uid);
+function byUid(
+  calendar: InstanceType<typeof ICAL.Component>,
+  uid: string,
+): InstanceType<typeof ICAL.Component> {
+  const event = calendar
+    .getAllSubcomponents('vevent')
+    .find((item) => item.getFirstPropertyValue('uid') === uid);
   if (!event) {
     throw new Error(`Missing VEVENT ${uid}`);
   }
@@ -76,19 +81,27 @@ describe('generateICS', () => {
     expect(trip.getFirstProperty('dtend')?.toICALString()).toBe('DTEND;VALUE=DATE:20260327');
 
     const weeklyClass = byUid(calendar, 'weekly-class');
-    expect(weeklyClass.getFirstProperty('dtstart')?.toICALString()).toBe('DTSTART;TZID=America/Toronto:20260302T090000');
-    expect(weeklyClass.getFirstProperty('dtend')?.toICALString()).toBe('DTEND;TZID=America/Toronto:20260302T100000');
-    expect(weeklyClass.getFirstPropertyValue('rrule')?.toString()).toBe('FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20260417T090000');
+    expect(weeklyClass.getFirstProperty('dtstart')?.toICALString()).toBe(
+      'DTSTART;TZID=America/Toronto:20260302T090000',
+    );
+    expect(weeklyClass.getFirstProperty('dtend')?.toICALString()).toBe(
+      'DTEND;TZID=America/Toronto:20260302T100000',
+    );
+    expect(weeklyClass.getFirstPropertyValue('rrule')?.toString()).toBe(
+      'FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20260417T090000',
+    );
 
     const exdate = weeklyClass.getFirstProperty('exdate');
     expect(exdate?.getFirstParameter('tzid')).toBe('America/Toronto');
-    expect(exdate?.getValues().map(value => value.toICALString())).toEqual([
+    expect(exdate?.getValues().map((value) => value.toICALString())).toEqual([
       '20260316T090000',
       '20260320T090000',
     ]);
 
     const paydays = byUid(calendar, 'paydays');
     expect(paydays.getFirstProperty('dtstart')?.toICALString()).toBe('DTSTART;VALUE=DATE:20260101');
-    expect(paydays.getFirstProperty('rrule')?.toICALString()).toBe('RRULE:FREQ=MONTHLY;BYMONTHDAY=1,15;UNTIL=20260315');
+    expect(paydays.getFirstProperty('rrule')?.toICALString()).toBe(
+      'RRULE:FREQ=MONTHLY;BYMONTHDAY=1,15;UNTIL=20260315',
+    );
   });
 });

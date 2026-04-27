@@ -33,11 +33,11 @@ function formatTimeAsDate(value: Time): string {
 }
 
 function hasOrdinalWeekdays(days: readonly string[] | undefined): boolean {
-  return Boolean(days?.some(day => /^[-+]?\d/.test(day)));
+  return Boolean(days?.some((day) => /^[-+]?\d/.test(day)));
 }
 
 function getExtraParts(rule: Recur, allowed: readonly string[]): string[] {
-  return Object.keys(rule.parts).filter(part => {
+  return Object.keys(rule.parts).filter((part) => {
     const values = rule.parts[part as keyof typeof rule.parts];
     return Boolean(values?.length) && !allowed.includes(part);
   });
@@ -65,7 +65,10 @@ function getCountEndDate(rule: Recur, dtstart: Time): string {
   return formatTimeAsDate(current);
 }
 
-function getWindowFields(rule: Recur, dtstart: Time): Pick<DateRange, 'fromDate' | 'toDate' | 'fixedBetween'> {
+function getWindowFields(
+  rule: Recur,
+  dtstart: Time,
+): Pick<DateRange, 'fromDate' | 'toDate' | 'fixedBetween'> {
   if (!rule.until && !rule.count) {
     return {
       fromDate: formatTimeAsDate(dtstart),
@@ -128,8 +131,10 @@ export function mapRRuleToDateRangeFields(rule: Recur, dtstart: Time): MapRRuleR
         ? [...rule.parts.BYDAY]
         : [RANGE_TO_ICAL_WEEKDAY[dtstart.dayOfWeek() % 7]];
 
-      const everyWeekday = byDay.map(day => ICAL_TO_RANGE_WEEKDAY[day as keyof typeof ICAL_TO_RANGE_WEEKDAY]);
-      if (everyWeekday.some(day => day === undefined)) {
+      const everyWeekday = byDay.map(
+        (day) => ICAL_TO_RANGE_WEEKDAY[day as keyof typeof ICAL_TO_RANGE_WEEKDAY],
+      );
+      if (everyWeekday.some((day) => day === undefined)) {
         return {
           supported: false,
           reason: `unsupported WEEKLY BYDAY values: ${byDay.join(', ')}`,
@@ -156,9 +161,7 @@ export function mapRRuleToDateRangeFields(rule: Recur, dtstart: Time): MapRRuleR
         };
       }
 
-      const everyDate = rule.parts.BYMONTHDAY?.length
-        ? [...rule.parts.BYMONTHDAY]
-        : [dtstart.day];
+      const everyDate = rule.parts.BYMONTHDAY?.length ? [...rule.parts.BYMONTHDAY] : [dtstart.day];
 
       return {
         supported: true,
@@ -178,9 +181,7 @@ export function mapRRuleToDateRangeFields(rule: Recur, dtstart: Time): MapRRuleR
         };
       }
 
-      const everyMonth = rule.parts.BYMONTH?.length
-        ? [...rule.parts.BYMONTH]
-        : [dtstart.month];
+      const everyMonth = rule.parts.BYMONTH?.length ? [...rule.parts.BYMONTH] : [dtstart.month];
 
       return {
         supported: true,
@@ -200,20 +201,25 @@ export function mapRRuleToDateRangeFields(rule: Recur, dtstart: Time): MapRRuleR
 }
 
 function getUntilTime(range: DateRange): Time {
-  const [year, month, day] = (range.toDate ?? range.fromDate ?? '1970-01-01').split('-').map(Number);
+  const [year, month, day] = (range.toDate ?? range.fromDate ?? '1970-01-01')
+    .split('-')
+    .map(Number);
   const [hour, minute] = range.startTime?.split(':').map(Number) ?? [0, 0];
   const isDate = !range.startTime;
 
   if (range.timezone === 'UTC') {
-    return ICAL.Time.fromData({
-      year,
-      month,
-      day,
-      hour,
-      minute,
-      second: 0,
-      isDate,
-    }, ICAL.Timezone.utcTimezone);
+    return ICAL.Time.fromData(
+      {
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second: 0,
+        isDate,
+      },
+      ICAL.Timezone.utcTimezone,
+    );
   }
 
   return ICAL.Time.fromData({
@@ -228,9 +234,7 @@ function getUntilTime(range: DateRange): Time {
 }
 
 export function buildRRuleFromDateRange(range: DateRange): Recur | null {
-  let data:
-    | Parameters<typeof ICAL.Recur.fromData>[0]
-    | null = null;
+  let data: Parameters<typeof ICAL.Recur.fromData>[0] | null = null;
 
   if (range.everyDate?.length) {
     data = {
@@ -245,9 +249,7 @@ export function buildRRuleFromDateRange(range: DateRange): Recur | null {
   } else if (range.everyWeekday?.length) {
     data = {
       freq: 'WEEKLY',
-      byday: [...range.everyWeekday]
-        .sort((a, b) => a - b)
-        .map(day => RANGE_TO_ICAL_WEEKDAY[day]),
+      byday: [...range.everyWeekday].sort((a, b) => a - b).map((day) => RANGE_TO_ICAL_WEEKDAY[day]),
     };
   }
 

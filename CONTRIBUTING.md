@@ -21,6 +21,8 @@ Always run commands from the repo root through Yarn wrappers.
 | Run all tests | `yarn test` |
 | Typecheck everything | `yarn typecheck` |
 | Lint everything | `yarn lint` |
+| Format everything | `yarn format` |
+| Check formatting | `yarn format:check` |
 
 ### Single-package iteration
 

@@ -1,5 +1,9 @@
 import type { GCalEvent } from '../../src/adapters/types.js';
-import { gcalEventToDateRange, gcalEventsToDateRanges, isBlockingEvent } from '../../src/adapters/gcal.js';
+import {
+  gcalEventToDateRange,
+  gcalEventsToDateRanges,
+  isBlockingEvent,
+} from '../../src/adapters/gcal.js';
 
 const acceptedTimed: GCalEvent = {
   id: 'evt_001_20260330T163000Z',
@@ -175,7 +179,10 @@ describe('gcalEventToDateRange', () => {
   });
 
   it('uses a custom fallback label when provided', () => {
-    const range = gcalEventToDateRange({ ...acceptedTimed, summary: undefined }, { fallbackLabel: 'Private' });
+    const range = gcalEventToDateRange(
+      { ...acceptedTimed, summary: undefined },
+      { fallbackLabel: 'Private' },
+    );
 
     expect(range.label).toBe('Private');
   });
@@ -183,10 +190,15 @@ describe('gcalEventToDateRange', () => {
 
 describe('gcalEventsToDateRanges', () => {
   it('filters out non-blocking events before mapping', () => {
-    const ranges = gcalEventsToDateRanges([acceptedTimed, workingLocation, transparentAllDay, tentativeEvent]);
+    const ranges = gcalEventsToDateRanges([
+      acceptedTimed,
+      workingLocation,
+      transparentAllDay,
+      tentativeEvent,
+    ]);
 
     expect(ranges).toHaveLength(2);
-    expect(ranges.map(range => range.id)).toEqual([acceptedTimed.id, tentativeEvent.id]);
+    expect(ranges.map((range) => range.id)).toEqual([acceptedTimed.id, tentativeEvent.id]);
   });
 
   it('returns an empty array for empty input', () => {

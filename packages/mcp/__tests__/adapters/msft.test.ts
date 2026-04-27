@@ -1,5 +1,9 @@
 import type { MsftGraphEvent } from '../../src/adapters/types.js';
-import { isBlockingMsftEvent, msftEventToDateRange, msftEventsToDateRanges } from '../../src/adapters/msft.js';
+import {
+  isBlockingMsftEvent,
+  msftEventToDateRange,
+  msftEventsToDateRanges,
+} from '../../src/adapters/msft.js';
 
 const normalMeeting: MsftGraphEvent = {
   id: 'msft_001',
@@ -186,7 +190,10 @@ describe('msftEventToDateRange', () => {
   });
 
   it('uses a custom fallback label when provided', () => {
-    const range = msftEventToDateRange({ ...normalMeeting, subject: undefined }, { fallbackLabel: 'Private' });
+    const range = msftEventToDateRange(
+      { ...normalMeeting, subject: undefined },
+      { fallbackLabel: 'Private' },
+    );
 
     expect(range.label).toBe('Private');
   });
@@ -207,7 +214,11 @@ describe('msftEventsToDateRanges', () => {
     ]);
 
     expect(ranges).toHaveLength(3);
-    expect(ranges.map(range => range.id)).toEqual([normalMeeting.id, oofEvent.id, tentativeEvent.id]);
+    expect(ranges.map((range) => range.id)).toEqual([
+      normalMeeting.id,
+      oofEvent.id,
+      tentativeEvent.id,
+    ]);
   });
 
   it('returns an empty array for empty input', () => {
@@ -215,7 +226,13 @@ describe('msftEventsToDateRanges', () => {
   });
 
   it('returns an empty array when all events are excluded', () => {
-    const ranges = msftEventsToDateRanges([freeBlock, workingElsewhere, declinedEvent, cancelledEvent, seriesMaster]);
+    const ranges = msftEventsToDateRanges([
+      freeBlock,
+      workingElsewhere,
+      declinedEvent,
+      cancelledEvent,
+      seriesMaster,
+    ]);
 
     expect(ranges).toEqual([]);
   });

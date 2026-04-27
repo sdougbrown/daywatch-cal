@@ -1,8 +1,4 @@
-import {
-  validateRangeCreate,
-  validateRangePatch,
-  validateRanges,
-} from '../src/index.js';
+import { validateRangeCreate, validateRangePatch, validateRanges } from '../src/index.js';
 
 describe('@daywatch/cal-rules', () => {
   test('accepts a valid create payload', () => {
@@ -87,11 +83,9 @@ describe('@daywatch/cal-rules', () => {
 
     expect(result.ok).toBe(false);
     expect(result.issues).toHaveLength(1);
-    expect(
-      result.issues.some(
-        (issue) => issue.code === 'required' && issue.field === 'id',
-      ),
-    ).toBe(true);
+    expect(result.issues.some((issue) => issue.code === 'required' && issue.field === 'id')).toBe(
+      true,
+    );
   });
 
   test('flags missing label and whitespace-only required strings', () => {
@@ -101,9 +95,7 @@ describe('@daywatch/cal-rules', () => {
     expect(missingLabel.ok).toBe(false);
     expect(missingLabel.issues).toHaveLength(1);
     expect(
-      missingLabel.issues.some(
-        (issue) => issue.code === 'required' && issue.field === 'label',
-      ),
+      missingLabel.issues.some((issue) => issue.code === 'required' && issue.field === 'label'),
     ).toBe(true);
 
     expect(whitespaceValues.ok).toBe(false);
@@ -120,10 +112,7 @@ describe('@daywatch/cal-rules', () => {
 
     expect(result.ok).toBe(false);
     expect(
-      result.issues.some(
-        (issue) =>
-          issue.field === 'everyHour' && issue.code === 'disabled',
-      ),
+      result.issues.some((issue) => issue.field === 'everyHour' && issue.code === 'disabled'),
     ).toBe(true);
   });
 
@@ -137,14 +126,10 @@ describe('@daywatch/cal-rules', () => {
 
     expect(result.ok).toBe(false);
     expect(
-      result.issues.some(
-        (issue) => issue.field === 'endTime' && issue.code === 'disabled',
-      ),
+      result.issues.some((issue) => issue.field === 'endTime' && issue.code === 'disabled'),
     ).toBe(true);
     expect(
-      result.issues.some(
-        (issue) => issue.field === 'repeatEvery' && issue.code === 'disabled',
-      ),
+      result.issues.some((issue) => issue.field === 'repeatEvery' && issue.code === 'disabled'),
     ).toBe(true);
   });
 
@@ -190,19 +175,13 @@ describe('@daywatch/cal-rules', () => {
 
     expect(result.ok).toBe(false);
     expect(
-      result.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === 'fromDate',
-      ),
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'fromDate'),
     ).toBe(true);
     expect(
-      result.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === 'startTime',
-      ),
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'startTime'),
     ).toBe(true);
     expect(
-      result.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === 'endTime',
-      ),
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'endTime'),
     ).toBe(true);
   });
 
@@ -215,9 +194,7 @@ describe('@daywatch/cal-rules', () => {
 
     expect(result.ok).toBe(false);
     expect(
-      result.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === 'fromDate',
-      ),
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'fromDate'),
     ).toBe(true);
   });
 
@@ -245,9 +222,7 @@ describe('@daywatch/cal-rules', () => {
 
     expect(invalid.ok).toBe(false);
     expect(invalid.issues.some((issue) => issue.field === 'everyDate')).toBe(true);
-    expect(
-      invalid.issues.some((issue) => issue.field === 'everyWeekday'),
-    ).toBe(true);
+    expect(invalid.issues.some((issue) => issue.field === 'everyWeekday')).toBe(true);
     expect(invalid.issues.some((issue) => issue.field === 'everyMonth')).toBe(true);
     expect(invalid.issues.some((issue) => issue.field === 'everyHour')).toBe(true);
   });
@@ -274,12 +249,8 @@ describe('@daywatch/cal-rules', () => {
 
     expect(invalid.ok).toBe(false);
     expect(invalid.issues.some((issue) => issue.field === 'dates')).toBe(true);
-    expect(invalid.issues.some((issue) => issue.field === 'exceptDates')).toBe(
-      true,
-    );
-    expect(
-      invalid.issues.some((issue) => issue.field === 'exceptBetween'),
-    ).toBe(true);
+    expect(invalid.issues.some((issue) => issue.field === 'exceptDates')).toBe(true);
+    expect(invalid.issues.some((issue) => issue.field === 'exceptBetween')).toBe(true);
   });
 
   test('flags invalid timezone/displayType/flexibility', () => {
@@ -293,19 +264,13 @@ describe('@daywatch/cal-rules', () => {
 
     expect(result.ok).toBe(false);
     expect(
-      result.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === 'timezone',
-      ),
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'timezone'),
     ).toBe(true);
     expect(
-      result.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === 'displayType',
-      ),
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'displayType'),
     ).toBe(true);
     expect(
-      result.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === 'flexibility',
-      ),
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'flexibility'),
     ).toBe(true);
   });
 
@@ -328,14 +293,10 @@ describe('@daywatch/cal-rules', () => {
 
     expect(result.ok).toBe(false);
     expect(
-      result.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === 'repeatEvery',
-      ),
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'repeatEvery'),
     ).toBe(true);
     expect(
-      result.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === 'duration',
-      ),
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'duration'),
     ).toBe(true);
   });
 
@@ -348,9 +309,7 @@ describe('@daywatch/cal-rules', () => {
 
     expect(result.ok).toBe(false);
     expect(
-      result.issues.some(
-        (issue) => issue.code === 'disabled' && issue.field === 'duration',
-      ),
+      result.issues.some((issue) => issue.code === 'disabled' && issue.field === 'duration'),
     ).toBe(true);
   });
 
@@ -365,19 +324,13 @@ describe('@daywatch/cal-rules', () => {
 
     expect(result.ok).toBe(false);
     expect(
-      result.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === 'fixedBetween',
-      ),
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'fixedBetween'),
     ).toBe(true);
+    expect(result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'title')).toBe(
+      true,
+    );
     expect(
-      result.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === 'title',
-      ),
-    ).toBe(true);
-    expect(
-      result.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === 'metadata',
-      ),
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'metadata'),
     ).toBe(true);
   });
 
@@ -404,8 +357,7 @@ describe('@daywatch/cal-rules', () => {
         (issue) =>
           issue.code === 'disabled' &&
           issue.field === 'everyHour' &&
-          issue.message ===
-            'everyHour is mutually exclusive with startTime/endTime/repeatEvery',
+          issue.message === 'everyHour is mutually exclusive with startTime/endTime/repeatEvery',
       ),
     ).toBe(true);
   });
@@ -434,11 +386,9 @@ describe('@daywatch/cal-rules', () => {
     );
 
     expect(result.ok).toBe(false);
-    expect(
-      result.issues.some(
-        (issue) => issue.code === 'unknown_key' && issue.field === '$',
-      ),
-    ).toBe(true);
+    expect(result.issues.some((issue) => issue.code === 'unknown_key' && issue.field === '$')).toBe(
+      true,
+    );
   });
 
   test('flags unknown keys in strict mode', () => {
@@ -452,11 +402,9 @@ describe('@daywatch/cal-rules', () => {
     );
 
     expect(result.ok).toBe(false);
-    expect(
-      result.issues.some(
-        (issue) => issue.code === 'unknown_key' && issue.field === '$',
-      ),
-    ).toBe(true);
+    expect(result.issues.some((issue) => issue.code === 'unknown_key' && issue.field === '$')).toBe(
+      true,
+    );
   });
 
   test('handles non-object create/patch inputs safely', () => {
@@ -465,24 +413,17 @@ describe('@daywatch/cal-rules', () => {
 
     expect(createResult.ok).toBe(false);
     expect(
-      createResult.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === '$',
-      ),
+      createResult.issues.some((issue) => issue.code === 'invalid' && issue.field === '$'),
     ).toBe(true);
     expect(patchResult.ok).toBe(false);
     expect(patchResult.issues).toHaveLength(2);
     expect(
-      patchResult.issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === '$',
-      ),
+      patchResult.issues.some((issue) => issue.code === 'invalid' && issue.field === '$'),
     ).toBe(true);
   });
 
   test('returns indexed results for validateRanges', () => {
-    const results = validateRanges([
-      { id: 'r1', label: 'Good' },
-      { label: 'Missing ID' },
-    ]);
+    const results = validateRanges([{ id: 'r1', label: 'Good' }, { label: 'Missing ID' }]);
 
     expect(results).toHaveLength(2);
     expect(results[0].index).toBe(0);
@@ -490,9 +431,7 @@ describe('@daywatch/cal-rules', () => {
     expect(results[1].ok).toBe(false);
     expect(results[1].index).toBe(1);
     expect(
-      results[1].issues.some(
-        (issue) => issue.code === 'required' && issue.field === 'id',
-      ),
+      results[1].issues.some((issue) => issue.code === 'required' && issue.field === 'id'),
     ).toBe(true);
   });
 
@@ -502,10 +441,8 @@ describe('@daywatch/cal-rules', () => {
     expect(results).toHaveLength(1);
     expect(results[0].index).toBe(-1);
     expect(results[0].ok).toBe(false);
-    expect(
-      results[0].issues.some(
-        (issue) => issue.code === 'invalid' && issue.field === '$',
-      ),
-    ).toBe(true);
+    expect(results[0].issues.some((issue) => issue.code === 'invalid' && issue.field === '$')).toBe(
+      true,
+    );
   });
 });

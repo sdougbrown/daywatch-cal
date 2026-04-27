@@ -148,7 +148,7 @@ describe('Date exclusions', () => {
       const from = new Date(2026, 2, 1);
       const to = new Date(2026, 2, 31);
       const occurrences = evaluator.expand(range, from, to);
-      const dates = occurrences.map(o => o.date);
+      const dates = occurrences.map((o) => o.date);
 
       expect(dates).toContain('2026-03-02');
       expect(dates).not.toContain('2026-03-09');
@@ -166,12 +166,17 @@ describe('Date exclusions', () => {
       const from = new Date(2026, 2, 1);
       const to = new Date(2026, 2, 10);
       const occurrences = evaluator.expand(range, from, to);
-      const dates = occurrences.map(o => o.date);
+      const dates = occurrences.map((o) => o.date);
 
       expect(dates).toEqual([
-        '2026-03-01', '2026-03-02', '2026-03-03',
+        '2026-03-01',
+        '2026-03-02',
+        '2026-03-03',
         // 04, 05, 06 excluded
-        '2026-03-07', '2026-03-08', '2026-03-09', '2026-03-10',
+        '2026-03-07',
+        '2026-03-08',
+        '2026-03-09',
+        '2026-03-10',
       ]);
     });
   });

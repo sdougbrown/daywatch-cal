@@ -77,9 +77,30 @@ describe('event normalization', () => {
       };
 
       const occurrences: Occurrence[] = [
-        { date: '2026-03-21', startTime: '06:00', endTime: null, rangeId: 'meds', label: 'Medication', allDay: false },
-        { date: '2026-03-21', startTime: '14:00', endTime: null, rangeId: 'meds', label: 'Medication', allDay: false },
-        { date: '2026-03-21', startTime: '22:00', endTime: null, rangeId: 'meds', label: 'Medication', allDay: false },
+        {
+          date: '2026-03-21',
+          startTime: '06:00',
+          endTime: null,
+          rangeId: 'meds',
+          label: 'Medication',
+          allDay: false,
+        },
+        {
+          date: '2026-03-21',
+          startTime: '14:00',
+          endTime: null,
+          rangeId: 'meds',
+          label: 'Medication',
+          allDay: false,
+        },
+        {
+          date: '2026-03-21',
+          startTime: '22:00',
+          endTime: null,
+          rangeId: 'meds',
+          label: 'Medication',
+          allDay: false,
+        },
       ];
 
       const events = expandToEvents(range, occurrences);

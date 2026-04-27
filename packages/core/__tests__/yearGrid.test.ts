@@ -65,19 +65,19 @@ describe('YearGrid', () => {
     const march = grid.months[2];
 
     // March 2, 2026 is a Monday
-    const march2 = march.days.find(d => d.date === '2026-03-02');
+    const march2 = march.days.find((d) => d.date === '2026-03-02');
     expect(march2?.rangeIds).toContain('meeting');
     expect(march2?.rangeIds).toContain('standup');
     expect(march2?.rangeCount).toBe(2);
 
     // March 4, 2026 is a Wednesday
-    const march4 = march.days.find(d => d.date === '2026-03-04');
+    const march4 = march.days.find((d) => d.date === '2026-03-04');
     expect(march4?.rangeIds).not.toContain('meeting');
     expect(march4?.rangeIds).toContain('standup');
     expect(march4?.rangeCount).toBe(1);
 
     // March 3, 2026 is a Tuesday
-    const march3 = march.days.find(d => d.date === '2026-03-03');
+    const march3 = march.days.find((d) => d.date === '2026-03-03');
     expect(march3?.rangeCount).toBe(0);
     expect(march3?.rangeIds).toHaveLength(0);
   });
@@ -93,7 +93,7 @@ describe('YearGrid', () => {
 
     const grid = new YearGrid({ year: 2026, ranges: [range] });
     const march = grid.months[2];
-    const march2 = march.days.find(d => d.date === '2026-03-02');
+    const march2 = march.days.find((d) => d.date === '2026-03-02');
 
     expect(march2?.rangeIds).toEqual(['meds']);
     expect(march2?.rangeCount).toBe(1);

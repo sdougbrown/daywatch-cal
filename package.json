@@ -18,7 +18,7 @@
     "format:check": "oxfmt --check \"packages/**/*.{ts,tsx,js,mjs,cjs,json}\" \"examples/**/*.{ts,tsx,js,mjs,cjs,json}\" \"scripts/**/*.{ts,js,mjs,cjs}\" \"*.{js,json,ts}\"",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "lint": "oxlint ."
+    "lint": "oxlint packages"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",

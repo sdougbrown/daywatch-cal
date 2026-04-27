@@ -1,5 +1,5 @@
 import type { TimelineGridConfig, TimelineSlot, PositionedEvent, CalendarEvent } from './types.js';
-import { formatTime, timeToMinutes } from './time.js';
+import { formatTime } from './time.js';
 
 /**
  * TimelineGrid — produces the data structure for rendering hourly/timeline
@@ -28,7 +28,6 @@ export class TimelineGrid {
     const slots: TimelineSlot[] = [];
     const positioned = computeEventPositions(this.events, this.startHour, this.endHour);
 
-    const totalMinutes = (this.endHour - this.startHour) * 60;
     let currentMinutes = this.startHour * 60;
     const endMinutes = this.endHour * 60;
 

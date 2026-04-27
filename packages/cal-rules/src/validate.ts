@@ -2,7 +2,6 @@ import type { DateRange } from '@daywatch/cal';
 
 import { RANGE_KEYS, rangeInputUmp } from './ruleset.js';
 import type {
-  DateRangeInput,
   IndexedRangeValidationResult,
   RangeValidationIssue,
   RangeValidationMode,

@@ -1,38 +1,21 @@
-name: Build, Test & Publish
+name: Publish
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Enable Corepack
-        run: corepack enable
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: yarn
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Build
-        run: yarn turbo run build
-
-      - name: Test
-        run: yarn turbo run test
-        env:
-          NODE_OPTIONS: '--experimental-vm-modules'
-
   detect-version-changes:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     outputs:
       any_changed: ${{ steps.versions.outputs.any_changed }}
@@ -46,6 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
@@ -55,16 +39,41 @@ jobs:
       - name: Detect package version changes
         id: versions
         env:
-          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          MANUAL_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           node <<'NODE' >> "$GITHUB_OUTPUT"
           const { execFileSync } = require('node:child_process');
           const fs = require('node:fs');
           const path = require('node:path');
 
-          const before = process.env.BEFORE_SHA;
-          const isZeroSha = !before || /^0+$/.test(before);
           const packages = ['core', 'models', 'react', 'preact', 'solid', 'ical', 'mcp'];
+
+          if (process.env.MANUAL_DISPATCH === 'true') {
+            for (const pkg of packages) {
+              console.log(`${pkg}_changed=true`);
+            }
+            console.log('any_changed=true');
+            process.exit(0);
+          }
+
+          const head = process.env.HEAD_SHA;
+          const before = (() => {
+            if (!head) {
+              return null;
+            }
+
+            try {
+              return execFileSync(
+                'git',
+                ['rev-parse', `${head}^1`],
+                { encoding: 'utf8' }
+              ).trim();
+            } catch {
+              return null;
+            }
+          })();
+          const isZeroSha = !before || /^0+$/.test(before);
 
           const readCurrentVersion = (pkg) => {
             const packageJson = path.join('packages', pkg, 'package.json');
@@ -106,8 +115,8 @@ jobs:
           NODE
 
   publish:
-    needs: [build-and-test, detect-version-changes]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.detect-version-changes.outputs.any_changed == 'true'
+    needs: [detect-version-changes]
+    if: needs.detect-version-changes.outputs.any_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -115,6 +124,8 @@ jobs:
     environment: npm
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Enable Corepack
         run: corepack enable

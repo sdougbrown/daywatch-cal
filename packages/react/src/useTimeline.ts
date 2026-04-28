@@ -17,9 +17,7 @@ export function useTimeline(config: UseTimelineConfig): UseTimelineResult {
   const { date, events, startHour, endHour, intervalMinutes } = config;
 
   const slots = useMemo(
-    () =>
-      buildTimelineModel({ date, events, startHour, endHour, intervalMinutes })
-        .slots,
+    () => buildTimelineModel({ date, events, startHour, endHour, intervalMinutes }).slots,
     [date, events, startHour, endHour, intervalMinutes],
   );
 

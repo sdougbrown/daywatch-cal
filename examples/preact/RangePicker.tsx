@@ -64,15 +64,12 @@ export function RangePicker({
   userTimezone,
 }: RangePickerProps) {
   const today = getTodayDateString();
-  const [dateSelection, setDateSelection] =
-    useState<DateSelection>(emptyDateSelection);
+  const [dateSelection, setDateSelection] = useState<DateSelection>(emptyDateSelection);
   const [timeSelection, setTimeSelection] = useState<TimeSelection>(() =>
     emptyTimeSelection(today),
   );
   const activeDate = dateSelection.start ?? today;
-  const dateSelectionComplete = Boolean(
-    dateSelection.start && dateSelection.end,
-  );
+  const dateSelectionComplete = Boolean(dateSelection.start && dateSelection.end);
 
   // Once the date span changes, reset the time step so the two phases stay in sync.
   useEffect(() => {

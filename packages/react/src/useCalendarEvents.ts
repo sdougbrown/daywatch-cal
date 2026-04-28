@@ -9,9 +9,7 @@ export interface UseCalendarEventsConfig extends CalendarEventsModelConfig {}
  * Event normalization hook — merges native ranges and imported events
  * into a single CalendarEvent[] for the rendering pipeline.
  */
-export function useCalendarEvents(
-  config: UseCalendarEventsConfig,
-): CalendarEvent[] {
+export function useCalendarEvents(config: UseCalendarEventsConfig): CalendarEvent[] {
   const { ranges, importedEvents, from, to, userTimezone } = config;
 
   return useMemo(() => {

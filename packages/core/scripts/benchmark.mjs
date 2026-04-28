@@ -1,11 +1,5 @@
 import { performance } from 'node:perf_hooks';
-import {
-  RangeEvaluator,
-  CalendarGrid,
-  YearGrid,
-  scoreSchedule,
-  dateRange,
-} from '../dist/index.js';
+import { RangeEvaluator, CalendarGrid, YearGrid, scoreSchedule, dateRange } from '../dist/index.js';
 
 const userTimezone = 'America/Toronto';
 
@@ -105,11 +99,7 @@ function makeTimedRanges(count, timezone) {
       toDate: `2026-${String(month).padStart(2, '0')}-28`,
       fixedBetween: true,
       everyWeekday: [1, 3, 5],
-      everyHour: [
-        startHour,
-        Math.min(startHour + 4, 23),
-        Math.min(startHour + 8, 23),
-      ],
+      everyHour: [startHour, Math.min(startHour + 4, 23), Math.min(startHour + 8, 23)],
       duration,
       timezone,
     };
@@ -122,9 +112,7 @@ function makeExplicitDateRanges(count) {
     for (let i = 0; i < 12; i++) {
       const month = ((index + i) % 12) + 1;
       const day = ((index * 3 + i * 5) % 28) + 1;
-      dates.push(
-        `2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-      );
+      dates.push(`2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
     }
 
     return {
@@ -180,9 +168,7 @@ const results = [
     });
 
     return grid.months.reduce(
-      (sum, month) =>
-        sum +
-        month.weeks.reduce((weekSum, week) => weekSum + week.days.length, 0),
+      (sum, month) => sum + month.weeks.reduce((weekSum, week) => weekSum + week.days.length, 0),
       0,
     );
   }),
@@ -226,12 +212,7 @@ const results = [
       },
     );
 
-    return (
-      score.conflicts +
-      score.freeMinutes +
-      score.focusBlocks +
-      score.conflictDays
-    );
+    return score.conflicts + score.freeMinutes + score.focusBlocks + score.conflictDays;
   }),
 ];
 

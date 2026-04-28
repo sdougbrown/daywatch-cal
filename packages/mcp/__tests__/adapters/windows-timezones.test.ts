@@ -9,13 +9,9 @@ describe('toIanaTimezone', () => {
     expect(toIanaTimezone('GMT Standard Time')).toBe('Europe/London');
     expect(toIanaTimezone('W. Europe Standard Time')).toBe('Europe/Berlin');
     expect(toIanaTimezone('Tokyo Standard Time')).toBe('Asia/Tokyo');
-    expect(toIanaTimezone('AUS Eastern Standard Time')).toBe(
-      'Australia/Sydney',
-    );
+    expect(toIanaTimezone('AUS Eastern Standard Time')).toBe('Australia/Sydney');
     expect(toIanaTimezone('India Standard Time')).toBe('Asia/Kolkata');
-    expect(toIanaTimezone('New Zealand Standard Time')).toBe(
-      'Pacific/Auckland',
-    );
+    expect(toIanaTimezone('New Zealand Standard Time')).toBe('Pacific/Auckland');
   });
 
   it('passes through IANA timezone strings unchanged', () => {

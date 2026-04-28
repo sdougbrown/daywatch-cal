@@ -20,11 +20,7 @@ describe('computeSpans', () => {
       toDate: '2026-03-27',
     });
 
-    const spans = evaluator.computeSpans(
-      [range],
-      new Date(2026, 2, 23),
-      new Date(2026, 2, 27),
-    );
+    const spans = evaluator.computeSpans([range], new Date(2026, 2, 23), new Date(2026, 2, 27));
 
     expect(spans).toHaveLength(1);
     expect(spans[0]).toMatchObject({
@@ -169,11 +165,7 @@ describe('computeSpans', () => {
       fixedBetween: true,
     });
 
-    const spans = evaluator.computeSpans(
-      [range],
-      new Date(2026, 2, 23),
-      new Date(2026, 2, 27),
-    );
+    const spans = evaluator.computeSpans([range], new Date(2026, 2, 23), new Date(2026, 2, 27));
 
     // Mon(23), Wed(25), Fri(27) — three separate 1-day spans
     expect(spans).toHaveLength(3);
@@ -202,11 +194,7 @@ describe('computeSpans', () => {
   });
 
   it('empty ranges → empty result', () => {
-    const spans = evaluator.computeSpans(
-      [],
-      new Date(2026, 2, 23),
-      new Date(2026, 2, 27),
-    );
+    const spans = evaluator.computeSpans([], new Date(2026, 2, 23), new Date(2026, 2, 27));
 
     expect(spans).toHaveLength(0);
   });
@@ -218,11 +206,7 @@ describe('computeSpans', () => {
       toDate: '2026-04-05',
     });
 
-    const spans = evaluator.computeSpans(
-      [range],
-      new Date(2026, 2, 23),
-      new Date(2026, 2, 27),
-    );
+    const spans = evaluator.computeSpans([range], new Date(2026, 2, 23), new Date(2026, 2, 27));
 
     expect(spans).toHaveLength(0);
   });
@@ -235,11 +219,7 @@ describe('computeSpans', () => {
       displayType: 'chip',
     });
 
-    const spans = evaluator.computeSpans(
-      [range],
-      new Date(2026, 2, 23),
-      new Date(2026, 2, 25),
-    );
+    const spans = evaluator.computeSpans([range], new Date(2026, 2, 23), new Date(2026, 2, 25));
 
     expect(spans).toHaveLength(1);
     expect(spans[0].displayType).toBe('chip');
@@ -252,11 +232,7 @@ describe('computeSpans', () => {
       toDate: '2026-03-25',
     });
 
-    const spans = evaluator.computeSpans(
-      [range],
-      new Date(2026, 2, 23),
-      new Date(2026, 2, 25),
-    );
+    const spans = evaluator.computeSpans([range], new Date(2026, 2, 23), new Date(2026, 2, 25));
 
     expect(spans).toHaveLength(1);
     expect(spans[0]).not.toHaveProperty('displayType');
@@ -278,11 +254,7 @@ describe('computeSpans', () => {
       }),
     ];
 
-    const spans = evaluator.computeSpans(
-      ranges,
-      new Date(2026, 2, 23),
-      new Date(2026, 2, 28),
-    );
+    const spans = evaluator.computeSpans(ranges, new Date(2026, 2, 23), new Date(2026, 2, 28));
 
     expect(spans[0].rangeId).toBe('early');
     expect(spans[1].rangeId).toBe('late');
@@ -310,11 +282,7 @@ describe('computeSpans', () => {
       }),
     ];
 
-    const spans = evaluator.computeSpans(
-      ranges,
-      new Date(2026, 2, 25),
-      new Date(2026, 2, 25),
-    );
+    const spans = evaluator.computeSpans(ranges, new Date(2026, 2, 25), new Date(2026, 2, 25));
 
     expect(spans).toHaveLength(3);
     const lanesUsed = new Set(spans.map((s) => s.lane));
@@ -333,11 +301,7 @@ describe('computeSpans', () => {
       toDate: '2026-03-30',
     });
 
-    const spans = evaluator.computeSpans(
-      [range],
-      new Date(2026, 2, 25),
-      new Date(2026, 2, 27),
-    );
+    const spans = evaluator.computeSpans([range], new Date(2026, 2, 25), new Date(2026, 2, 27));
 
     expect(spans).toHaveLength(1);
     expect(spans[0]).toMatchObject({

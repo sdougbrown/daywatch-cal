@@ -15,9 +15,7 @@ export interface UseTimeSelectionResult {
   clear: () => void;
 }
 
-export function useTimeSelection(
-  config: UseTimeSelectionConfig,
-): UseTimeSelectionResult {
+export function useTimeSelection(config: UseTimeSelectionConfig): UseTimeSelectionResult {
   const selection = useMemo(() => {
     if (config.selection.date === config.date) {
       return config.selection;
@@ -31,26 +29,20 @@ export function useTimeSelection(
 
   const onTimeClick = useCallback(
     (time: string) => {
-      config.onSelectionChange(
-        updateTimeSelection(selection, { type: 'click', time }, config),
-      );
+      config.onSelectionChange(updateTimeSelection(selection, { type: 'click', time }, config));
     },
     [config, selection],
   );
 
   const onTimeHover = useCallback(
     (time: string) => {
-      config.onSelectionChange(
-        updateTimeSelection(selection, { type: 'hover', time }, config),
-      );
+      config.onSelectionChange(updateTimeSelection(selection, { type: 'hover', time }, config));
     },
     [config, selection],
   );
 
   const clear = useCallback(() => {
-    config.onSelectionChange(
-      updateTimeSelection(selection, { type: 'clear' }, config),
-    );
+    config.onSelectionChange(updateTimeSelection(selection, { type: 'clear' }, config));
   }, [config, selection]);
 
   return {

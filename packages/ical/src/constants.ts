@@ -12,12 +12,4 @@ export const ICAL_TO_RANGE_WEEKDAY = {
   SA: 6,
 } as const;
 
-export const RANGE_TO_ICAL_WEEKDAY = [
-  'SU',
-  'MO',
-  'TU',
-  'WE',
-  'TH',
-  'FR',
-  'SA',
-] as const;
+export const RANGE_TO_ICAL_WEEKDAY = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'] as const;

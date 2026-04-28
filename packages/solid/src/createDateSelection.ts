@@ -25,21 +25,15 @@ export function createDateSelection(
     selection,
     onDateClick: (date: string) => {
       const current = resolvedConfig();
-      current.onSelectionChange(
-        updateDateSelection(selection(), { type: 'click', date }, current),
-      );
+      current.onSelectionChange(updateDateSelection(selection(), { type: 'click', date }, current));
     },
     onDateHover: (date: string) => {
       const current = resolvedConfig();
-      current.onSelectionChange(
-        updateDateSelection(selection(), { type: 'hover', date }, current),
-      );
+      current.onSelectionChange(updateDateSelection(selection(), { type: 'hover', date }, current));
     },
     clear: () => {
       const current = resolvedConfig();
-      current.onSelectionChange(
-        updateDateSelection(selection(), { type: 'clear' }, current),
-      );
+      current.onSelectionChange(updateDateSelection(selection(), { type: 'clear' }, current));
     },
   };
 }

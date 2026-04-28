@@ -14,10 +14,7 @@ interface ExpandOptions {
   dtstartIsUTC?: boolean;
 }
 
-function getDateParts(
-  date: Date,
-  useUTC: boolean,
-): { year: number; month: number; day: number } {
+function getDateParts(date: Date, useUTC: boolean): { year: number; month: number; day: number } {
   if (useUTC) {
     return {
       year: date.getUTCFullYear(),
@@ -65,11 +62,7 @@ function formatDtstart(
   { dtstartIsDate = false, dtstartIsUTC = false }: ExpandOptions = {},
 ): string {
   const dateParts = getDateParts(date, dtstartIsUTC);
-  const formattedDate = formatDateParts(
-    dateParts.year,
-    dateParts.month,
-    dateParts.day,
-  );
+  const formattedDate = formatDateParts(dateParts.year, dateParts.month, dateParts.day);
 
   if (dtstartIsDate) {
     return formattedDate;
@@ -78,9 +71,7 @@ function formatDtstart(
   const timeParts = getTimeParts(date, dtstartIsUTC);
   const formattedTime = `${pad(timeParts.hour)}${pad(timeParts.minute)}${pad(timeParts.second)}`;
 
-  return dtstartIsUTC
-    ? `${formattedDate}T${formattedTime}Z`
-    : `${formattedDate}T${formattedTime}`;
+  return dtstartIsUTC ? `${formattedDate}T${formattedTime}Z` : `${formattedDate}T${formattedTime}`;
 }
 
 function getSearchWindow(window: ParseWindow): ParseWindow {
@@ -101,9 +92,7 @@ export function expandRRuleToExplicitDates(
   window: ParseWindow,
   options?: ExpandOptions,
 ): string[] {
-  const rule = rrulestr(
-    `DTSTART:${formatDtstart(dtstart, options)}\nRRULE:${rruleString}`,
-  );
+  const rule = rrulestr(`DTSTART:${formatDtstart(dtstart, options)}\nRRULE:${rruleString}`);
   const searchWindow = getSearchWindow(window);
   const windowFrom = formatExpandedDate(window.from);
   const windowTo = formatExpandedDate(window.to);

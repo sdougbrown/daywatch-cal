@@ -20,8 +20,6 @@ describe('createRangeCheck', () => {
     expect(rangeCheck.isInRange(datetime)).toEqual(
       evaluator.isInRange(datetime, range) ? [range] : [],
     );
-    expect(rangeCheck.getOccurrences(from, to)).toEqual(
-      evaluator.expand(range, from, to),
-    );
+    expect(rangeCheck.getOccurrences(from, to)).toEqual(evaluator.expand(range, from, to));
   });
 });

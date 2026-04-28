@@ -1,11 +1,7 @@
 import type { DateRange } from '@daywatch/cal';
 import ICAL from 'ical.js';
 
-import {
-  ALL_WEEKDAYS,
-  ICAL_TO_RANGE_WEEKDAY,
-  RANGE_TO_ICAL_WEEKDAY,
-} from './constants.js';
+import { ALL_WEEKDAYS, ICAL_TO_RANGE_WEEKDAY, RANGE_TO_ICAL_WEEKDAY } from './constants.js';
 import { pad } from './utils.js';
 
 type Recur = InstanceType<typeof ICAL.Recur>;
@@ -13,12 +9,7 @@ type Time = InstanceType<typeof ICAL.Time>;
 
 type DateRangeRuleFields = Pick<
   DateRange,
-  | 'fromDate'
-  | 'toDate'
-  | 'fixedBetween'
-  | 'everyWeekday'
-  | 'everyDate'
-  | 'everyMonth'
+  'fromDate' | 'toDate' | 'fixedBetween' | 'everyWeekday' | 'everyDate' | 'everyMonth'
 >;
 
 export interface MapRRuleSuccess {
@@ -86,17 +77,12 @@ function getWindowFields(
 
   return {
     fromDate: formatTimeAsDate(dtstart),
-    toDate: rule.until
-      ? formatTimeAsDate(rule.until)
-      : getCountEndDate(rule, dtstart),
+    toDate: rule.until ? formatTimeAsDate(rule.until) : getCountEndDate(rule, dtstart),
     fixedBetween: true,
   };
 }
 
-export function mapRRuleToDateRangeFields(
-  rule: Recur,
-  dtstart: Time,
-): MapRRuleResult {
+export function mapRRuleToDateRangeFields(rule: Recur, dtstart: Time): MapRRuleResult {
   const baseFields = getWindowFields(rule, dtstart);
 
   if (rule.interval > 1 && rule.freq !== 'DAILY') {
@@ -146,8 +132,7 @@ export function mapRRuleToDateRangeFields(
         : [RANGE_TO_ICAL_WEEKDAY[dtstart.dayOfWeek() % 7]];
 
       const everyWeekday = byDay.map(
-        (day) =>
-          ICAL_TO_RANGE_WEEKDAY[day as keyof typeof ICAL_TO_RANGE_WEEKDAY],
+        (day) => ICAL_TO_RANGE_WEEKDAY[day as keyof typeof ICAL_TO_RANGE_WEEKDAY],
       );
       if (everyWeekday.some((day) => day === undefined)) {
         return {
@@ -176,9 +161,7 @@ export function mapRRuleToDateRangeFields(
         };
       }
 
-      const everyDate = rule.parts.BYMONTHDAY?.length
-        ? [...rule.parts.BYMONTHDAY]
-        : [dtstart.day];
+      const everyDate = rule.parts.BYMONTHDAY?.length ? [...rule.parts.BYMONTHDAY] : [dtstart.day];
 
       return {
         supported: true,
@@ -198,9 +181,7 @@ export function mapRRuleToDateRangeFields(
         };
       }
 
-      const everyMonth = rule.parts.BYMONTH?.length
-        ? [...rule.parts.BYMONTH]
-        : [dtstart.month];
+      const everyMonth = rule.parts.BYMONTH?.length ? [...rule.parts.BYMONTH] : [dtstart.month];
 
       return {
         supported: true,
@@ -268,9 +249,7 @@ export function buildRRuleFromDateRange(range: DateRange): Recur | null {
   } else if (range.everyWeekday?.length) {
     data = {
       freq: 'WEEKLY',
-      byday: [...range.everyWeekday]
-        .sort((a, b) => a - b)
-        .map((day) => RANGE_TO_ICAL_WEEKDAY[day]),
+      byday: [...range.everyWeekday].sort((a, b) => a - b).map((day) => RANGE_TO_ICAL_WEEKDAY[day]),
     };
   }
 

@@ -7,9 +7,7 @@ export interface CreateYearGridResult {
   months: Accessor<YearGridModel['months']>;
 }
 
-export function createYearGrid(
-  config: MaybeAccessor<YearGridModelConfig>,
-): CreateYearGridResult {
+export function createYearGrid(config: MaybeAccessor<YearGridModelConfig>): CreateYearGridResult {
   const resolvedConfig = toAccessor(config);
   const model = createMemo(() => buildYearGridModel(resolvedConfig()));
 

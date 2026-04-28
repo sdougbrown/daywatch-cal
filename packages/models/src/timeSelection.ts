@@ -1,9 +1,4 @@
-import {
-  formatTime,
-  minutesToTime,
-  parseTime,
-  timeToMinutes,
-} from '@daywatch/cal';
+import { formatTime, minutesToTime, parseTime, timeToMinutes } from '@daywatch/cal';
 
 export interface TimeSelection {
   /** YYYY-MM-DD */
@@ -34,10 +29,7 @@ export type TimeSelectionAction =
   | { type: 'hover'; time: string }
   | { type: 'clear' };
 
-function buildSelection(
-  selection: TimeSelection,
-  next: TimeSelection,
-): TimeSelection {
+function buildSelection(selection: TimeSelection, next: TimeSelection): TimeSelection {
   if (
     selection.date === next.date &&
     selection.startTime === next.startTime &&
@@ -59,15 +51,8 @@ function clearSelection(selection: TimeSelection): TimeSelection {
   });
 }
 
-function clampTime(
-  time: string,
-  dayStartMinutes: number,
-  dayEndMinutes: number,
-): string {
-  const clamped = Math.min(
-    Math.max(timeToMinutes(time), dayStartMinutes),
-    dayEndMinutes,
-  );
+function clampTime(time: string, dayStartMinutes: number, dayEndMinutes: number): string {
+  const clamped = Math.min(Math.max(timeToMinutes(time), dayStartMinutes), dayEndMinutes);
   return minutesToTime(clamped);
 }
 
@@ -136,10 +121,7 @@ export function updateTimeSelection(
     }
 
     endMinutes = Math.min(Math.max(endMinutes, dayStartMinutes), dayEndMinutes);
-    startMinutes = Math.min(
-      Math.max(startMinutes, dayStartMinutes),
-      dayEndMinutes,
-    );
+    startMinutes = Math.min(Math.max(startMinutes, dayStartMinutes), dayEndMinutes);
 
     return buildSelection(selection, {
       date: selection.date,

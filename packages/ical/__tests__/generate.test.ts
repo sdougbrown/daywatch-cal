@@ -26,9 +26,7 @@ describe('generateICS', () => {
     expect(calendar.name).toBe('vcalendar');
     expect(calendar.getFirstPropertyValue('version')).toBe('2.0');
     expect(calendar.getFirstPropertyValue('prodid')).toBe(DEFAULT_PRODID);
-    expect(calendar.getFirstPropertyValue('x-wr-calname')).toBe(
-      'Work Calendar',
-    );
+    expect(calendar.getFirstPropertyValue('x-wr-calname')).toBe('Work Calendar');
   });
 
   it('exports single events, spans, RRULEs, timezones, and EXDATE values', () => {
@@ -75,18 +73,12 @@ describe('generateICS', () => {
     expect(calendar.getAllSubcomponents('vevent')).toHaveLength(4);
 
     const holiday = byUid(calendar, 'holiday');
-    expect(holiday.getFirstProperty('dtstart')?.toICALString()).toBe(
-      'DTSTART;VALUE=DATE:20260321',
-    );
+    expect(holiday.getFirstProperty('dtstart')?.toICALString()).toBe('DTSTART;VALUE=DATE:20260321');
     expect(holiday.getFirstProperty('dtend')).toBeNull();
 
     const trip = byUid(calendar, 'trip');
-    expect(trip.getFirstProperty('dtstart')?.toICALString()).toBe(
-      'DTSTART;VALUE=DATE:20260324',
-    );
-    expect(trip.getFirstProperty('dtend')?.toICALString()).toBe(
-      'DTEND;VALUE=DATE:20260327',
-    );
+    expect(trip.getFirstProperty('dtstart')?.toICALString()).toBe('DTSTART;VALUE=DATE:20260324');
+    expect(trip.getFirstProperty('dtend')?.toICALString()).toBe('DTEND;VALUE=DATE:20260327');
 
     const weeklyClass = byUid(calendar, 'weekly-class');
     expect(weeklyClass.getFirstProperty('dtstart')?.toICALString()).toBe(
@@ -107,9 +99,7 @@ describe('generateICS', () => {
     ]);
 
     const paydays = byUid(calendar, 'paydays');
-    expect(paydays.getFirstProperty('dtstart')?.toICALString()).toBe(
-      'DTSTART;VALUE=DATE:20260101',
-    );
+    expect(paydays.getFirstProperty('dtstart')?.toICALString()).toBe('DTSTART;VALUE=DATE:20260101');
     expect(paydays.getFirstProperty('rrule')?.toICALString()).toBe(
       'RRULE:FREQ=MONTHLY;BYMONTHDAY=1,15;UNTIL=20260315',
     );

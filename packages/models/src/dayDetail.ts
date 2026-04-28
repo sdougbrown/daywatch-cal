@@ -41,12 +41,8 @@ export function buildDayDetailModel(
   }
 
   timeSlots.sort((a, b) => {
-    const aMin =
-      parseInt(a.startTime.split(':')[0]) * 60 +
-      parseInt(a.startTime.split(':')[1]);
-    const bMin =
-      parseInt(b.startTime.split(':')[0]) * 60 +
-      parseInt(b.startTime.split(':')[1]);
+    const aMin = parseInt(a.startTime.split(':')[0]) * 60 + parseInt(a.startTime.split(':')[1]);
+    const bMin = parseInt(b.startTime.split(':')[0]) * 60 + parseInt(b.startTime.split(':')[1]);
     return aMin - bMin;
   });
 

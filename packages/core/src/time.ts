@@ -3,9 +3,7 @@
  * Uses Intl.DateTimeFormat for timezone conversion — no external dependencies.
  */
 
-const TWO_DIGITS = Array.from({ length: 100 }, (_, index) =>
-  String(index).padStart(2, '0'),
-);
+const TWO_DIGITS = Array.from({ length: 100 }, (_, index) => String(index).padStart(2, '0'));
 const dateTimePartsFormatterCache = new Map<string, Intl.DateTimeFormat>();
 const zonedDateTimePartsCache = new Map<string, ZonedDateTimeParts>();
 const timezoneOffsetCache = new Map<string, number>();
@@ -21,9 +19,7 @@ interface ZonedDateTimeParts {
 }
 
 function parseTwoDigits(value: string, start: number): number {
-  return (
-    (value.charCodeAt(start) - 48) * 10 + (value.charCodeAt(start + 1) - 48)
-  );
+  return (value.charCodeAt(start) - 48) * 10 + (value.charCodeAt(start + 1) - 48);
 }
 
 function getDateTimePartsFormatter(timezone: string): Intl.DateTimeFormat {
@@ -44,10 +40,7 @@ function getDateTimePartsFormatter(timezone: string): Intl.DateTimeFormat {
   return formatter;
 }
 
-function getZonedDateTimeParts(
-  date: Date,
-  timezone: string,
-): ZonedDateTimeParts {
+function getZonedDateTimeParts(date: Date, timezone: string): ZonedDateTimeParts {
   const cacheKey = `${timezone}|${date.getTime()}`;
   const cached = zonedDateTimePartsCache.get(cacheKey);
   if (cached) {
@@ -201,10 +194,7 @@ export function formatDateInTimezone(date: Date, timezone: string): string {
 /**
  * Get the hour and minute of a Date in a specific timezone.
  */
-export function getTimeInTimezone(
-  date: Date,
-  timezone: string,
-): { hour: number; minute: number } {
+export function getTimeInTimezone(date: Date, timezone: string): { hour: number; minute: number } {
   const parts = getZonedDateTimeParts(date, timezone);
   return { hour: parts.hour, minute: parts.minute };
 }
@@ -283,11 +273,7 @@ function getTimezoneOffset(date: Date, timezone: string): number {
  * Build a Date object from a date string and time string in a given timezone.
  * If timezone is null/undefined (floating), uses local time.
  */
-export function buildDate(
-  dateStr: string,
-  time: string | null,
-  timezone?: string | null,
-): Date {
+export function buildDate(dateStr: string, time: string | null, timezone?: string | null): Date {
   const { year, month, day } = parseDate(dateStr);
 
   if (!time) {

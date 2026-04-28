@@ -5,9 +5,7 @@ import type { CalendarEvent } from '@daywatch/cal';
 
 export interface UseCalendarEventsConfig extends CalendarEventsModelConfig {}
 
-export function useCalendarEvents(
-  config: UseCalendarEventsConfig,
-): CalendarEvent[] {
+export function useCalendarEvents(config: UseCalendarEventsConfig): CalendarEvent[] {
   const { ranges, importedEvents, from, to, userTimezone } = config;
 
   return useMemo(() => {

@@ -107,21 +107,14 @@ export function DatePicker({
       </div>
 
       {months.map((month) => (
-        <div
-          key={`${month.year}-${month.month}`}
-          className="neo-datepicker__month"
-        >
+        <div key={`${month.year}-${month.month}`} className="neo-datepicker__month">
           {numberOfMonths > 1 ? <h3>{month.label}</h3> : null}
 
           <table className="neo-datepicker__grid">
             <thead>
               <tr>
                 {weekdayLabels.map((label) => (
-                  <th
-                    key={label}
-                    className="neo-datepicker__weekday"
-                    scope="col"
-                  >
+                  <th key={label} className="neo-datepicker__weekday" scope="col">
                     {label}
                   </th>
                 ))}
@@ -133,11 +126,8 @@ export function DatePicker({
                 <tr key={`${month.label}-week-${weekIndex}`}>
                   {week.days.map((day) => {
                     const blocked = isDateBlocked(day.date);
-                    const selected =
-                      day.date === selection.start ||
-                      day.date === selection.end;
-                    const preview =
-                      !selection.end && day.date === selection.preview;
+                    const selected = day.date === selection.start || day.date === selection.end;
+                    const preview = !selection.end && day.date === selection.preview;
                     const inRange =
                       selection.start && rangeEnd
                         ? isDateBetween(day.date, selection.start, rangeEnd)
@@ -150,9 +140,7 @@ export function DatePicker({
                           className="neo-datepicker__day"
                           data-blocked={blocked ? '' : undefined}
                           data-in-range={inRange ? '' : undefined}
-                          data-outside-month={
-                            !day.isCurrentMonth ? '' : undefined
-                          }
+                          data-outside-month={!day.isCurrentMonth ? '' : undefined}
                           data-preview={preview ? '' : undefined}
                           data-selected={selected ? '' : undefined}
                           data-today={day.isToday ? '' : undefined}

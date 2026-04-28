@@ -1,15 +1,7 @@
 // Example - copy and adapt. Unstyled by default. Target data-* attributes and class names with your own CSS.
 import { For, createMemo } from 'solid-js';
-import {
-  createFreeSlots,
-  createTimeline,
-  createTimeSelection,
-} from '@daywatch/cal-solid';
-import type {
-  CalendarEvent,
-  DateRange,
-  TimeSelection,
-} from './shared/types.js';
+import { createFreeSlots, createTimeline, createTimeSelection } from '@daywatch/cal-solid';
+import type { CalendarEvent, DateRange, TimeSelection } from './shared/types.js';
 
 export interface TimePickerProps {
   selection: TimeSelection;
@@ -38,9 +30,7 @@ function isTimeInFreeSlots(
   time: string,
   freeSlots: { startTime: string; endTime: string }[],
 ): boolean {
-  return freeSlots.some(
-    (slot) => time >= slot.startTime && time < slot.endTime,
-  );
+  return freeSlots.some((slot) => time >= slot.startTime && time < slot.endTime);
 }
 
 export function TimePicker(props: TimePickerProps) {
@@ -50,9 +40,7 @@ export function TimePicker(props: TimePickerProps) {
   const minDuration = () => props.minDuration ?? 30;
   const dayStart = createMemo(() => hourToTime(startHour()));
   const dayEnd = createMemo(() => hourToTime(endHour()));
-  const showAvailability = createMemo(() =>
-    Boolean(props.availabilityRanges?.length),
-  );
+  const showAvailability = createMemo(() => Boolean(props.availabilityRanges?.length));
 
   // Timeline data stays separate from interaction state: slots come from createTimeline.
   const timeline = createTimeline(() => ({
@@ -84,8 +72,7 @@ export function TimePicker(props: TimePickerProps) {
   }));
 
   const rangeEnd = createMemo(
-    () =>
-      timeSelection.selection().endTime ?? timeSelection.selection().preview,
+    () => timeSelection.selection().endTime ?? timeSelection.selection().preview,
   );
   const fallbackBoundary = createMemo(() => hourToTime(endHour()));
 
@@ -93,14 +80,12 @@ export function TimePicker(props: TimePickerProps) {
     <div class="neo-timepicker">
       <For each={timeline.slots()}>
         {(slot, index) => {
-          const nextBoundary = () =>
-            timeline.slots()[index() + 1]?.time ?? fallbackBoundary();
+          const nextBoundary = () => timeline.slots()[index() + 1]?.time ?? fallbackBoundary();
           const selected = () =>
             slot.time === timeSelection.selection().startTime ||
             nextBoundary() === timeSelection.selection().endTime;
           const preview = () =>
-            !timeSelection.selection().endTime &&
-            slot.time === timeSelection.selection().preview;
+            !timeSelection.selection().endTime && slot.time === timeSelection.selection().preview;
           const inRange = () =>
             Boolean(
               timeSelection.selection().startTime &&
@@ -112,8 +97,7 @@ export function TimePicker(props: TimePickerProps) {
               ),
             );
           const occupied = () => slot.events.length > 0;
-          const free = () =>
-            showAvailability() && isTimeInFreeSlots(slot.time, freeSlots());
+          const free = () => showAvailability() && isTimeInFreeSlots(slot.time, freeSlots());
 
           return (
             <button
@@ -130,9 +114,7 @@ export function TimePicker(props: TimePickerProps) {
             >
               <span class="neo-timepicker__label">{slot.time}</span>
               <span class="neo-timepicker__events">
-                {occupied()
-                  ? slot.events.map(({ event }) => event.title).join(', ')
-                  : 'Available'}
+                {occupied() ? slot.events.map(({ event }) => event.title).join(', ') : 'Available'}
               </span>
             </button>
           );

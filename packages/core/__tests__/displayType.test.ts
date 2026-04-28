@@ -148,11 +148,7 @@ describe('displayType pass-through', () => {
       };
 
       const evaluator = new RangeEvaluator();
-      const occurrences = evaluator.expand(
-        range,
-        new Date(2026, 2, 1),
-        new Date(2026, 2, 31),
-      );
+      const occurrences = evaluator.expand(range, new Date(2026, 2, 1), new Date(2026, 2, 31));
 
       expect(occurrences).toHaveLength(1);
       expect(occurrences[0].displayType).toBe('chip');
@@ -167,11 +163,7 @@ describe('displayType pass-through', () => {
       };
 
       const evaluator = new RangeEvaluator();
-      const occurrences = evaluator.expand(
-        range,
-        new Date(2026, 2, 1),
-        new Date(2026, 2, 31),
-      );
+      const occurrences = evaluator.expand(range, new Date(2026, 2, 1), new Date(2026, 2, 31));
 
       expect(occurrences).toHaveLength(1);
       expect(occurrences[0].displayType).toBe('fill');
@@ -185,11 +177,7 @@ describe('displayType pass-through', () => {
       };
 
       const evaluator = new RangeEvaluator();
-      const occurrences = evaluator.expand(
-        range,
-        new Date(2026, 2, 1),
-        new Date(2026, 2, 31),
-      );
+      const occurrences = evaluator.expand(range, new Date(2026, 2, 1), new Date(2026, 2, 31));
 
       expect(occurrences).toHaveLength(1);
       expect(occurrences[0].displayType).toBeUndefined();

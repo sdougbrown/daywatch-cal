@@ -37,21 +37,15 @@ export function createTimeSelection(
     selection,
     onTimeClick: (time: string) => {
       const current = resolvedConfig();
-      current.onSelectionChange(
-        updateTimeSelection(selection(), { type: 'click', time }, current),
-      );
+      current.onSelectionChange(updateTimeSelection(selection(), { type: 'click', time }, current));
     },
     onTimeHover: (time: string) => {
       const current = resolvedConfig();
-      current.onSelectionChange(
-        updateTimeSelection(selection(), { type: 'hover', time }, current),
-      );
+      current.onSelectionChange(updateTimeSelection(selection(), { type: 'hover', time }, current));
     },
     clear: () => {
       const current = resolvedConfig();
-      current.onSelectionChange(
-        updateTimeSelection(selection(), { type: 'clear' }, current),
-      );
+      current.onSelectionChange(updateTimeSelection(selection(), { type: 'clear' }, current));
     },
   };
 }

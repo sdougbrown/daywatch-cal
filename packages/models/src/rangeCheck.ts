@@ -8,10 +8,7 @@ export interface RangeCheck {
   getOccurrences: (from: Date, to: Date) => Occurrence[];
 }
 
-export function createRangeCheck(
-  ranges: DateRange[],
-  userTimezone?: string,
-): RangeCheck {
+export function createRangeCheck(ranges: DateRange[], userTimezone?: string): RangeCheck {
   const evaluator = new RangeEvaluator(userTimezone);
 
   return {

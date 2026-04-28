@@ -2,11 +2,7 @@ import type { DateRange } from '@daywatch/cal';
 
 import { CalendarSession } from '../src/state.js';
 
-function makeRange(
-  id: string,
-  label: string,
-  overrides: Partial<DateRange> = {},
-): DateRange {
+function makeRange(id: string, label: string, overrides: Partial<DateRange> = {}): DateRange {
   return {
     id,
     label,
@@ -23,10 +19,7 @@ describe('CalendarSession', () => {
     session.loadCalendar('personal', [makeRange('gym', 'Gym')], 'ics');
 
     expect(session.calendars.size).toBe(2);
-    expect(session.getAllRanges().map((range) => range.id)).toEqual([
-      'meeting',
-      'gym',
-    ]);
+    expect(session.getAllRanges().map((range) => range.id)).toEqual(['meeting', 'gym']);
   });
 
   it('getAllRanges filters by calendar id', () => {
@@ -35,9 +28,7 @@ describe('CalendarSession', () => {
     session.loadCalendar('work', [makeRange('meeting', 'Meeting')], 'ranges');
     session.loadCalendar('personal', [makeRange('gym', 'Gym')], 'ics');
 
-    expect(session.getAllRanges(['personal'])).toEqual([
-      makeRange('gym', 'Gym'),
-    ]);
+    expect(session.getAllRanges(['personal'])).toEqual([makeRange('gym', 'Gym')]);
     expect(session.getAllRanges(['missing'])).toEqual([]);
   });
 
@@ -68,14 +59,8 @@ describe('CalendarSession', () => {
           { calendarId: 'bob', range: makeRange('shared', 'Shared Sync') },
         ],
       ],
-      [
-        'solo-a',
-        [{ calendarId: 'alice', range: makeRange('solo-a', 'Alice Solo') }],
-      ],
-      [
-        'solo-b',
-        [{ calendarId: 'bob', range: makeRange('solo-b', 'Bob Solo') }],
-      ],
+      ['solo-a', [{ calendarId: 'alice', range: makeRange('solo-a', 'Alice Solo') }]],
+      ['solo-b', [{ calendarId: 'bob', range: makeRange('solo-b', 'Bob Solo') }]],
     ]);
   });
 
@@ -88,9 +73,7 @@ describe('CalendarSession', () => {
         makeRange('planning', 'Planning'),
         makeRange('retro', 'Planning', { dates: ['2026-03-27'] }),
         makeRange('focus', 'Focus'),
-        ...Array.from({ length: 31 }, (_, index) =>
-          makeRange(`label-${index}`, `Label ${index}`),
-        ),
+        ...Array.from({ length: 31 }, (_, index) => makeRange(`label-${index}`, `Label ${index}`)),
       ],
       'ranges',
     );
@@ -130,9 +113,7 @@ describe('CalendarSession', () => {
     expect(session.findRangeCalendar('gym')).toBe('personal');
     expect(session.findRangeCalendar('missing')).toBeUndefined();
 
-    expect(
-      session.updateRange('meeting', { startTime: '10:00', endTime: '11:00' }),
-    ).toBe(true);
+    expect(session.updateRange('meeting', { startTime: '10:00', endTime: '11:00' })).toBe(true);
     expect(session.getAllRanges(['work'])).toEqual([
       makeRange('meeting', 'Meeting', {
         startTime: '10:00',

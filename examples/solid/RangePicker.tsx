@@ -56,8 +56,7 @@ function emptyTimeSelection(date: string): TimeSelection {
 
 export function RangePicker(props: RangePickerProps) {
   const today = getTodayDateString();
-  const [dateSelection, setDateSelection] =
-    createSignal<DateSelection>(emptyDateSelection());
+  const [dateSelection, setDateSelection] = createSignal<DateSelection>(emptyDateSelection());
   const activeDate = createMemo(() => dateSelection().start ?? today);
   const [timeSelection, setTimeSelection] = createSignal<TimeSelection>(
     emptyTimeSelection(activeDate()),

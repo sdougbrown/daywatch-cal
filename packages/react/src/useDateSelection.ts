@@ -16,9 +16,7 @@ export interface UseDateSelectionResult {
   clear: () => void;
 }
 
-export function useDateSelection(
-  config: UseDateSelectionConfig,
-): UseDateSelectionResult {
+export function useDateSelection(config: UseDateSelectionConfig): UseDateSelectionResult {
   const onDateClick = useCallback(
     (date: string) => {
       config.onSelectionChange(
@@ -38,9 +36,7 @@ export function useDateSelection(
   );
 
   const clear = useCallback(() => {
-    config.onSelectionChange(
-      updateDateSelection(config.selection, { type: 'clear' }, config),
-    );
+    config.onSelectionChange(updateDateSelection(config.selection, { type: 'clear' }, config));
   }, [config]);
 
   return {

@@ -5,18 +5,8 @@ import type { ScheduleScore } from '@daywatch/cal';
 
 export interface UseScheduleScoreConfig extends ScheduleScoreModelConfig {}
 
-export function useScheduleScore(
-  config: UseScheduleScoreConfig,
-): ScheduleScore {
-  const {
-    ranges,
-    from,
-    to,
-    focusBlockMinutes,
-    dayStart,
-    dayEnd,
-    userTimezone,
-  } = config;
+export function useScheduleScore(config: UseScheduleScoreConfig): ScheduleScore {
+  const { ranges, from, to, focusBlockMinutes, dayStart, dayEnd, userTimezone } = config;
 
   return useMemo(
     () =>

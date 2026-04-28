@@ -128,9 +128,7 @@ describe('isBlockingEvent', () => {
   });
 
   it('includes transparent events when requested', () => {
-    expect(
-      isBlockingEvent(transparentAllDay, { includeTransparent: true }),
-    ).toBe(true);
+    expect(isBlockingEvent(transparentAllDay, { includeTransparent: true })).toBe(true);
   });
 
   it('includes tentative events by default', () => {
@@ -138,9 +136,7 @@ describe('isBlockingEvent', () => {
   });
 
   it('excludes tentative events when includeTentative is false', () => {
-    expect(isBlockingEvent(tentativeEvent, { includeTentative: false })).toBe(
-      false,
-    );
+    expect(isBlockingEvent(tentativeEvent, { includeTentative: false })).toBe(false);
   });
 
   it('keeps out of office events as blocking', () => {
@@ -152,9 +148,7 @@ describe('isBlockingEvent', () => {
   });
 
   it('returns false for cancelled events', () => {
-    expect(isBlockingEvent({ ...acceptedTimed, status: 'cancelled' })).toBe(
-      false,
-    );
+    expect(isBlockingEvent({ ...acceptedTimed, status: 'cancelled' })).toBe(false);
   });
 });
 
@@ -228,10 +222,7 @@ describe('gcalEventsToDateRanges', () => {
     ]);
 
     expect(ranges).toHaveLength(2);
-    expect(ranges.map((range) => range.id)).toEqual([
-      acceptedTimed.id,
-      tentativeEvent.id,
-    ]);
+    expect(ranges.map((range) => range.id)).toEqual([acceptedTimed.id, tentativeEvent.id]);
   });
 
   it('returns an empty array for empty input', () => {
@@ -239,11 +230,7 @@ describe('gcalEventsToDateRanges', () => {
   });
 
   it('returns an empty array when all events are excluded', () => {
-    const ranges = gcalEventsToDateRanges([
-      workingLocation,
-      transparentAllDay,
-      declinedEvent,
-    ]);
+    const ranges = gcalEventsToDateRanges([workingLocation, transparentAllDay, declinedEvent]);
 
     expect(ranges).toEqual([]);
   });

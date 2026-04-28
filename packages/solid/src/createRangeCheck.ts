@@ -9,9 +9,7 @@ export interface CreateRangeCheckConfig {
   userTimezone?: string;
 }
 
-export function createRangeCheck(
-  config: MaybeAccessor<CreateRangeCheckConfig>,
-): RangeCheck {
+export function createRangeCheck(config: MaybeAccessor<CreateRangeCheckConfig>): RangeCheck {
   const resolvedConfig = toAccessor(config);
   const rangeCheck = createMemo(() => {
     const current = resolvedConfig();
@@ -20,7 +18,6 @@ export function createRangeCheck(
 
   return {
     isInRange: (datetime: Date) => rangeCheck().isInRange(datetime),
-    getOccurrences: (from: Date, to: Date) =>
-      rangeCheck().getOccurrences(from, to),
+    getOccurrences: (from: Date, to: Date) => rangeCheck().getOccurrences(from, to),
   };
 }

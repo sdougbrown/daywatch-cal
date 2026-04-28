@@ -21,22 +21,14 @@ function normalizeRange(range: DateRange): DateRange {
     ...range,
     dates: range.dates ? [...range.dates].sort() : undefined,
     exceptDates: range.exceptDates ? [...range.exceptDates].sort() : undefined,
-    everyDate: range.everyDate
-      ? [...range.everyDate].sort((a, b) => a - b)
-      : undefined,
-    everyWeekday: range.everyWeekday
-      ? [...range.everyWeekday].sort((a, b) => a - b)
-      : undefined,
-    everyMonth: range.everyMonth
-      ? [...range.everyMonth].sort((a, b) => a - b)
-      : undefined,
+    everyDate: range.everyDate ? [...range.everyDate].sort((a, b) => a - b) : undefined,
+    everyWeekday: range.everyWeekday ? [...range.everyWeekday].sort((a, b) => a - b) : undefined,
+    everyMonth: range.everyMonth ? [...range.everyMonth].sort((a, b) => a - b) : undefined,
   };
 }
 
 function normalizeRanges(ranges: DateRange[]): DateRange[] {
-  return [...ranges]
-    .map(normalizeRange)
-    .sort((a, b) => a.id.localeCompare(b.id));
+  return [...ranges].map(normalizeRange).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 describe('parse/generate roundtrip', () => {
@@ -49,13 +41,8 @@ describe('parse/generate roundtrip', () => {
       ...parseICS(loadFixture('google-export.ics'), window),
     ];
 
-    const roundTripped = parseICS(
-      generateICS(sourceRanges, { calendarName: 'Roundtrip' }),
-      window,
-    );
+    const roundTripped = parseICS(generateICS(sourceRanges, { calendarName: 'Roundtrip' }), window);
 
-    expect(normalizeRanges(roundTripped)).toEqual(
-      normalizeRanges(sourceRanges),
-    );
+    expect(normalizeRanges(roundTripped)).toEqual(normalizeRanges(sourceRanges));
   });
 });

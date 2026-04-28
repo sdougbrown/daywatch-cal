@@ -69,10 +69,7 @@ function createLoadedSession(): CalendarSession {
 }
 
 function loadIcsFixture(name: string): string {
-  return readFileSync(
-    new URL(`../../ical/__tests__/fixtures/${name}`, import.meta.url),
-    'utf8',
-  );
+  return readFileSync(new URL(`../../ical/__tests__/fixtures/${name}`, import.meta.url), 'utf8');
 }
 
 describe('handleToolCall', () => {
@@ -106,12 +103,7 @@ describe('handleToolCall', () => {
         to: '2026-06-30',
       },
       detected_data_window: null,
-      sample_labels: [
-        'Daily Standup',
-        'Code Review',
-        'Holiday',
-        'Sprint Planning',
-      ],
+      sample_labels: ['Daily Standup', 'Code Review', 'Holiday', 'Sprint Planning'],
       has_more_labels: false,
     });
   });
@@ -1177,9 +1169,7 @@ describe('handleToolCall', () => {
     });
 
     expect(
-      parseJsonContent<{ changes_applied: number; total_ranges: number }>(
-        applyResult,
-      ),
+      parseJsonContent<{ changes_applied: number; total_ranges: number }>(applyResult),
     ).toEqual({
       changes_applied: 1,
       total_ranges: 4,
@@ -1190,11 +1180,7 @@ describe('handleToolCall', () => {
       to: '2026-03-26',
     });
 
-    expect(
-      parseJsonContent<{ conflicts: unknown[]; total: number }>(
-        conflictsResult,
-      ),
-    ).toEqual({
+    expect(parseJsonContent<{ conflicts: unknown[]; total: number }>(conflictsResult)).toEqual({
       conflicts: [],
       total: 0,
     });
@@ -1296,9 +1282,7 @@ describe('handleToolCall', () => {
     });
 
     expect(missingRange.isError).toBe(true);
-    expect(getTextContent(missingRange)).toContain(
-      'Range "missing" was not found',
-    );
+    expect(getTextContent(missingRange)).toContain('Range "missing" was not found');
 
     const invalidLoad = await handleToolCall(session, 'load_calendar', {
       source: 'unknown',

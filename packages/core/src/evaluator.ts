@@ -1,11 +1,4 @@
-import type {
-  DateRange,
-  Occurrence,
-  TimeSlot,
-  SpanInfo,
-  Conflict,
-  FreeSlot,
-} from './types.js';
+import type { DateRange, Occurrence, TimeSlot, SpanInfo, Conflict, FreeSlot } from './types.js';
 import {
   parseDate,
   getDayOfWeek,
@@ -55,8 +48,7 @@ export class RangeEvaluator {
   private compiledRanges = new WeakMap<DateRange, CompiledRange>();
 
   constructor(userTimezone?: string) {
-    this.userTimezone =
-      userTimezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    this.userTimezone = userTimezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   }
 
   /**
@@ -139,26 +131,18 @@ export class RangeEvaluator {
         });
       }
     } else if (range.startTime) {
-      const resolvedStart = this.resolveTime(
-        dateStr,
-        range.startTime,
-        range.timezone,
-      );
+      const resolvedStart = this.resolveTime(dateStr, range.startTime, range.timezone);
       if (resolvedStart === null) return slots; // DST gap
 
       if (range.repeatEvery) {
         const endBoundary = range.endTime
-          ? (this.resolveTime(dateStr, range.endTime, range.timezone) ??
-            '24:00')
+          ? (this.resolveTime(dateStr, range.endTime, range.timezone) ?? '24:00')
           : '24:00';
         const endMinutes = timeToMinutes(endBoundary);
         let currentMinutes = timeToMinutes(resolvedStart);
 
         while (currentMinutes < endMinutes) {
-          const startTime = formatTime(
-            Math.floor(currentMinutes / 60),
-            currentMinutes % 60,
-          );
+          const startTime = formatTime(Math.floor(currentMinutes / 60), currentMinutes % 60);
           let endTime: string | null = null;
           let duration: number | null = range.duration ?? null;
           if (duration) {
@@ -201,9 +185,7 @@ export class RangeEvaluator {
     }
 
     // Sort by start time
-    slots.sort(
-      (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
-    );
+    slots.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
 
     return slots;
   }
@@ -241,9 +223,7 @@ export class RangeEvaluator {
       }
     }
 
-    entries.sort(
-      (a, b) => a.startMinutes - b.startMinutes || a.endMinutes - b.endMinutes,
-    );
+    entries.sort((a, b) => a.startMinutes - b.startMinutes || a.endMinutes - b.endMinutes);
     return entries;
   }
 
@@ -268,9 +248,7 @@ export class RangeEvaluator {
     const slots = this.getTimeSlots(dateStr, range);
     for (const slot of slots) {
       const slotStart = timeToMinutes(slot.startTime);
-      const slotEnd = slot.endTime
-        ? timeToMinutes(slot.endTime)
-        : slotStart + (slot.duration ?? 0);
+      const slotEnd = slot.endTime ? timeToMinutes(slot.endTime) : slotStart + (slot.duration ?? 0);
 
       if (currentMinutes >= slotStart && currentMinutes < slotEnd) {
         return true;
@@ -318,9 +296,7 @@ export class RangeEvaluator {
             rangeId: range.id,
             label: range.label,
             allDay: false,
-            ...(range.displayType !== undefined
-              ? { displayType: range.displayType }
-              : {}),
+            ...(range.displayType !== undefined ? { displayType: range.displayType } : {}),
           });
         }
       } else {
@@ -331,9 +307,7 @@ export class RangeEvaluator {
           rangeId: range.id,
           label: range.label,
           allDay: true,
-          ...(range.displayType !== undefined
-            ? { displayType: range.displayType }
-            : {}),
+          ...(range.displayType !== undefined ? { displayType: range.displayType } : {}),
         });
       }
     }
@@ -522,9 +496,7 @@ export class RangeEvaluator {
       results.push({
         rangeId: span.rangeId,
         label: span.label,
-        ...(span.displayType !== undefined
-          ? { displayType: span.displayType }
-          : {}),
+        ...(span.displayType !== undefined ? { displayType: span.displayType } : {}),
         startDate: span.startDate,
         endDate: span.endDate,
         length: span.days.length,
@@ -550,10 +522,7 @@ export class RangeEvaluator {
    */
   findConflicts(ranges: DateRange[], date: string): Conflict[] {
     const slots = this.getTimedEntriesForDay(ranges, date)
-      .filter(
-        (entry) =>
-          entry.slot.endTime !== null && entry.endMinutes > entry.startMinutes,
-      )
+      .filter((entry) => entry.slot.endTime !== null && entry.endMinutes > entry.startMinutes)
       .map((entry) => ({
         rangeId: entry.slot.rangeId,
         label: entry.slot.label,
@@ -581,20 +550,14 @@ export class RangeEvaluator {
         if (seen.has(pairKey)) continue;
         seen.add(pairKey);
 
-        const overlapStart = Math.max(
-          slots[i].startMinutes,
-          slots[j].startMinutes,
-        );
+        const overlapStart = Math.max(slots[i].startMinutes, slots[j].startMinutes);
         const overlapEnd = Math.min(slots[i].endMinutes, slots[j].endMinutes);
 
         conflicts.push({
           rangeA: { id: slots[i].rangeId, label: slots[i].label },
           rangeB: { id: slots[j].rangeId, label: slots[j].label },
           date,
-          overlapStart: formatTime(
-            Math.floor(overlapStart / 60),
-            overlapStart % 60,
-          ),
+          overlapStart: formatTime(Math.floor(overlapStart / 60), overlapStart % 60),
           overlapEnd: formatTime(Math.floor(overlapEnd / 60), overlapEnd % 60),
         });
       }
@@ -658,10 +621,7 @@ export class RangeEvaluator {
     const merged: [number, number][] = [];
     for (const interval of occupied) {
       if (merged.length > 0 && interval[0] <= merged[merged.length - 1][1]) {
-        merged[merged.length - 1][1] = Math.max(
-          merged[merged.length - 1][1],
-          interval[1],
-        );
+        merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], interval[1]);
       } else {
         merged.push([interval[0], interval[1]]);
       }
@@ -759,10 +719,7 @@ export class RangeEvaluator {
 
     if (compiled.exceptBetween) {
       for (const [from, to] of compiled.exceptBetween) {
-        if (
-          compareDates(dateStr, from) >= 0 &&
-          compareDates(dateStr, to) <= 0
-        ) {
+        if (compareDates(dateStr, from) >= 0 && compareDates(dateStr, to) <= 0) {
           return true;
         }
       }
@@ -773,22 +730,16 @@ export class RangeEvaluator {
 
   private isDateInBounds(dateStr: string, range: DateRange): boolean {
     if (range.fixedBetween) {
-      if (range.fromDate && compareDates(dateStr, range.fromDate) < 0)
-        return false;
+      if (range.fromDate && compareDates(dateStr, range.fromDate) < 0) return false;
       if (range.toDate && compareDates(dateStr, range.toDate) > 0) return false;
     } else {
-      if (range.fromDate && compareDates(dateStr, range.fromDate) < 0)
-        return false;
+      if (range.fromDate && compareDates(dateStr, range.fromDate) < 0) return false;
       if (range.toDate && compareDates(dateStr, range.toDate) > 0) return false;
     }
     return true;
   }
 
-  private getCandidateDays(
-    range: DateRange,
-    fromStr: string,
-    toStr: string,
-  ): string[] {
+  private getCandidateDays(range: DateRange, fromStr: string, toStr: string): string[] {
     const compiled = this.getCompiledRange(range);
 
     // Determine the effective window
@@ -809,9 +760,7 @@ export class RangeEvaluator {
     // Explicit dates — just filter to the window
     if (compiled.dates) {
       return compiled.dates.filter(
-        (d) =>
-          compareDates(d, effectiveFrom) >= 0 &&
-          compareDates(d, effectiveTo) <= 0,
+        (d) => compareDates(d, effectiveFrom) >= 0 && compareDates(d, effectiveTo) <= 0,
       );
     }
 
@@ -824,27 +773,15 @@ export class RangeEvaluator {
     }
 
     if (compiled.dateLookup) {
-      return this.generateCandidateDaysByDayOfMonth(
-        effectiveFrom,
-        effectiveTo,
-        compiled,
-      );
+      return this.generateCandidateDaysByDayOfMonth(effectiveFrom, effectiveTo, compiled);
     }
 
     if (compiled.weekdayLookup) {
-      return this.generateCandidateDaysByWeekday(
-        effectiveFrom,
-        effectiveTo,
-        compiled,
-      );
+      return this.generateCandidateDaysByWeekday(effectiveFrom, effectiveTo, compiled);
     }
 
     if (compiled.monthLookup) {
-      return this.generateCandidateDaysByMonth(
-        effectiveFrom,
-        effectiveTo,
-        compiled,
-      );
+      return this.generateCandidateDaysByMonth(effectiveFrom, effectiveTo, compiled);
     }
 
     // Fallback for any recurrence shape not handled above
@@ -863,35 +800,31 @@ export class RangeEvaluator {
   ): string[] {
     const results: string[] = [];
 
-    this.forEachMonthInRange(
-      fromStr,
-      toStr,
-      (year, month, startDay, endDay) => {
-        if (compiled.monthLookup && !compiled.monthLookup[month + 1]) {
-          return;
+    this.forEachMonthInRange(fromStr, toStr, (year, month, startDay, endDay) => {
+      if (compiled.monthLookup && !compiled.monthLookup[month + 1]) {
+        return;
+      }
+
+      const maxDay = daysInMonth(year, month);
+
+      for (let day = startDay; day <= endDay; day++) {
+        if (!compiled.dateLookup![day] || day > maxDay) {
+          continue;
         }
 
-        const maxDay = daysInMonth(year, month);
-
-        for (let day = startDay; day <= endDay; day++) {
-          if (!compiled.dateLookup![day] || day > maxDay) {
-            continue;
-          }
-
-          if (
-            compiled.weekdayLookup &&
-            !compiled.weekdayLookup[new Date(year, month, day).getDay()]
-          ) {
-            continue;
-          }
-
-          const dateStr = formatDate(new Date(year, month, day));
-          if (!this.isDateExcluded(dateStr, compiled)) {
-            results.push(dateStr);
-          }
+        if (
+          compiled.weekdayLookup &&
+          !compiled.weekdayLookup[new Date(year, month, day).getDay()]
+        ) {
+          continue;
         }
-      },
-    );
+
+        const dateStr = formatDate(new Date(year, month, day));
+        if (!this.isDateExcluded(dateStr, compiled)) {
+          results.push(dateStr);
+        }
+      }
+    });
 
     return results;
   }
@@ -903,33 +836,29 @@ export class RangeEvaluator {
   ): string[] {
     const results: string[] = [];
 
-    this.forEachMonthInRange(
-      fromStr,
-      toStr,
-      (year, month, startDay, endDay) => {
-        if (compiled.monthLookup && !compiled.monthLookup[month + 1]) {
-          return;
+    this.forEachMonthInRange(fromStr, toStr, (year, month, startDay, endDay) => {
+      if (compiled.monthLookup && !compiled.monthLookup[month + 1]) {
+        return;
+      }
+
+      const firstWeekday = new Date(year, month, 1).getDay();
+
+      for (let weekday = 0; weekday < 7; weekday++) {
+        if (!compiled.weekdayLookup![weekday]) continue;
+
+        let day = 1 + ((weekday - firstWeekday + 7) % 7);
+        if (day < startDay) {
+          day += Math.ceil((startDay - day) / 7) * 7;
         }
 
-        const firstWeekday = new Date(year, month, 1).getDay();
-
-        for (let weekday = 0; weekday < 7; weekday++) {
-          if (!compiled.weekdayLookup![weekday]) continue;
-
-          let day = 1 + ((weekday - firstWeekday + 7) % 7);
-          if (day < startDay) {
-            day += Math.ceil((startDay - day) / 7) * 7;
-          }
-
-          for (; day <= endDay; day += 7) {
-            const dateStr = formatDate(new Date(year, month, day));
-            if (!this.isDateExcluded(dateStr, compiled)) {
-              results.push(dateStr);
-            }
+        for (; day <= endDay; day += 7) {
+          const dateStr = formatDate(new Date(year, month, day));
+          if (!this.isDateExcluded(dateStr, compiled)) {
+            results.push(dateStr);
           }
         }
-      },
-    );
+      }
+    });
 
     results.sort(compareDates);
     return results;
@@ -942,30 +871,26 @@ export class RangeEvaluator {
   ): string[] {
     const results: string[] = [];
 
-    this.forEachMonthInRange(
-      fromStr,
-      toStr,
-      (year, month, startDay, endDay) => {
-        if (!compiled.monthLookup![month + 1]) {
-          return;
-        }
+    this.forEachMonthInRange(fromStr, toStr, (year, month, startDay, endDay) => {
+      if (!compiled.monthLookup![month + 1]) {
+        return;
+      }
 
-        const monthFrom = formatDate(new Date(year, month, startDay));
-        const monthTo = formatDate(new Date(year, month, endDay));
-        const days = dateRange(monthFrom, monthTo);
+      const monthFrom = formatDate(new Date(year, month, startDay));
+      const monthTo = formatDate(new Date(year, month, endDay));
+      const days = dateRange(monthFrom, monthTo);
 
-        if (!compiled.exceptDatesSet && !compiled.exceptBetween) {
-          results.push(...days);
-          return;
-        }
+      if (!compiled.exceptDatesSet && !compiled.exceptBetween) {
+        results.push(...days);
+        return;
+      }
 
-        for (const day of days) {
-          if (!this.isDateExcluded(day, compiled)) {
-            results.push(day);
-          }
+      for (const day of days) {
+        if (!this.isDateExcluded(day, compiled)) {
+          results.push(day);
         }
-      },
-    );
+      }
+    });
 
     return results;
   }
@@ -973,12 +898,7 @@ export class RangeEvaluator {
   private forEachMonthInRange(
     fromStr: string,
     toStr: string,
-    visit: (
-      year: number,
-      month: number,
-      startDay: number,
-      endDay: number,
-    ) => void,
+    visit: (year: number, month: number, startDay: number, endDay: number) => void,
   ): void {
     const from = parseDate(fromStr);
     const to = parseDate(toStr);
@@ -987,12 +907,8 @@ export class RangeEvaluator {
     let month = from.month;
 
     while (year < to.year || (year === to.year && month <= to.month)) {
-      const startDay =
-        year === from.year && month === from.month ? from.day : 1;
-      const endDay =
-        year === to.year && month === to.month
-          ? to.day
-          : daysInMonth(year, month);
+      const startDay = year === from.year && month === from.month ? from.day : 1;
+      const endDay = year === to.year && month === to.month ? to.day : daysInMonth(year, month);
 
       visit(year, month, startDay, endDay);
 
@@ -1023,20 +939,10 @@ export class RangeEvaluator {
       ...(range.exceptBetween && range.exceptBetween.length > 0
         ? { exceptBetween: range.exceptBetween }
         : {}),
-      ...(range.everyWeekday
-        ? { weekdayLookup: buildLookup(7, range.everyWeekday) }
-        : {}),
-      ...(range.everyDate
-        ? { dateLookup: buildLookup(32, range.everyDate) }
-        : {}),
-      ...(range.everyMonth
-        ? { monthLookup: buildLookup(13, range.everyMonth) }
-        : {}),
-      hasRecurrence: !!(
-        range.everyWeekday ||
-        range.everyDate ||
-        range.everyMonth
-      ),
+      ...(range.everyWeekday ? { weekdayLookup: buildLookup(7, range.everyWeekday) } : {}),
+      ...(range.everyDate ? { dateLookup: buildLookup(32, range.everyDate) } : {}),
+      ...(range.everyMonth ? { monthLookup: buildLookup(13, range.everyMonth) } : {}),
+      hasRecurrence: !!(range.everyWeekday || range.everyDate || range.everyMonth),
       hasTimeFields: !!(range.everyHour || range.startTime),
     };
 
@@ -1049,11 +955,7 @@ export class RangeEvaluator {
    * Returns null if the time doesn't exist (DST spring-forward gap).
    * Returns the time unchanged if the range has no timezone (floating).
    */
-  private resolveTime(
-    dateStr: string,
-    time: string,
-    timezone?: string | null,
-  ): string | null {
+  private resolveTime(dateStr: string, time: string, timezone?: string | null): string | null {
     if (!timezone) {
       return time; // Floating — no conversion
     }

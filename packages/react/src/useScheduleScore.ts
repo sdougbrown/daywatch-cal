@@ -9,18 +9,8 @@ export interface UseScheduleScoreConfig extends ScheduleScoreModelConfig {}
  * Compute a ScheduleScore for a set of ranges across a date window.
  * Re-computes when inputs change.
  */
-export function useScheduleScore(
-  config: UseScheduleScoreConfig,
-): ScheduleScore {
-  const {
-    ranges,
-    from,
-    to,
-    focusBlockMinutes,
-    dayStart,
-    dayEnd,
-    userTimezone,
-  } = config;
+export function useScheduleScore(config: UseScheduleScoreConfig): ScheduleScore {
+  const { ranges, from, to, focusBlockMinutes, dayStart, dayEnd, userTimezone } = config;
 
   return useMemo(
     () =>

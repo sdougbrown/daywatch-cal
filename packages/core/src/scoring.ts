@@ -92,8 +92,7 @@ export function scoreSchedule(
     totalContextSwitches += switches;
   }
 
-  const avgContextSwitches =
-    days.length > 0 ? totalContextSwitches / days.length : 0;
+  const avgContextSwitches = days.length > 0 ? totalContextSwitches / days.length : 0;
 
   return {
     conflicts: totalConflicts,

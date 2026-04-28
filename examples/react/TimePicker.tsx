@@ -1,15 +1,7 @@
 // Example - copy and adapt. Unstyled by default. Target data-* attributes and class names with your own CSS.
 import { useMemo } from 'react';
-import {
-  useFreeSlots,
-  useTimeline,
-  useTimeSelection,
-} from '@daywatch/cal-react';
-import type {
-  CalendarEvent,
-  DateRange,
-  TimeSelection,
-} from './shared/types.js';
+import { useFreeSlots, useTimeline, useTimeSelection } from '@daywatch/cal-react';
+import type { CalendarEvent, DateRange, TimeSelection } from './shared/types.js';
 
 export interface TimePickerProps {
   selection: TimeSelection;
@@ -38,9 +30,7 @@ function isTimeInFreeSlots(
   time: string,
   freeSlots: { startTime: string; endTime: string }[],
 ): boolean {
-  return freeSlots.some(
-    (slot) => time >= slot.startTime && time < slot.endTime,
-  );
+  return freeSlots.some((slot) => time >= slot.startTime && time < slot.endTime);
 }
 
 export function TimePicker({
@@ -100,17 +90,14 @@ export function TimePicker({
       {slots.map((slot, index) => {
         const nextBoundary = slots[index + 1]?.time ?? fallbackBoundary;
         const selected =
-          slot.time === currentSelection.startTime ||
-          nextBoundary === currentSelection.endTime;
-        const preview =
-          !currentSelection.endTime && slot.time === currentSelection.preview;
+          slot.time === currentSelection.startTime || nextBoundary === currentSelection.endTime;
+        const preview = !currentSelection.endTime && slot.time === currentSelection.preview;
         const inRange =
           currentSelection.startTime && rangeEnd
             ? isTimeBetween(slot.time, currentSelection.startTime, rangeEnd)
             : false;
         const occupied = slot.events.length > 0;
-        const free =
-          showAvailability && isTimeInFreeSlots(slot.time, freeSlots);
+        const free = showAvailability && isTimeInFreeSlots(slot.time, freeSlots);
 
         return (
           <button
@@ -128,9 +115,7 @@ export function TimePicker({
           >
             <span className="neo-timepicker__label">{slot.time}</span>
             <span className="neo-timepicker__events">
-              {occupied
-                ? slot.events.map(({ event }) => event.title).join(', ')
-                : 'Available'}
+              {occupied ? slot.events.map(({ event }) => event.title).join(', ') : 'Available'}
             </span>
           </button>
         );

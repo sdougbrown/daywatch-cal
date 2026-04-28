@@ -22,11 +22,7 @@ function formatDateParts(year: number, month: number, day: number): string {
 }
 
 function formatDate(date: Date): string {
-  return formatDateParts(
-    date.getUTCFullYear(),
-    date.getUTCMonth() + 1,
-    date.getUTCDate(),
-  );
+  return formatDateParts(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
 }
 
 function formatTime(date: Date): string {
@@ -40,11 +36,7 @@ function addDays(date: string, offset: number): string {
   return formatDate(next);
 }
 
-function addMinutes(
-  date: string,
-  time: string,
-  minutes: number,
-): { date: string; time: string } {
+function addMinutes(date: string, time: string, minutes: number): { date: string; time: string } {
   const { year, month, day } = parseDate(date);
   const [hour, minute] = time.split(':').map(Number);
   const next = new Date(Date.UTC(year, month - 1, day, hour, minute));
@@ -57,11 +49,7 @@ function addMinutes(
 }
 
 function hasRecurrence(range: DateRange): boolean {
-  return Boolean(
-    range.everyWeekday?.length ||
-    range.everyDate?.length ||
-    range.everyMonth?.length,
-  );
+  return Boolean(range.everyWeekday?.length || range.everyDate?.length || range.everyMonth?.length);
 }
 
 function getAnchorDate(range: DateRange): string | null {
@@ -134,29 +122,20 @@ function addEventEnd(
 ): void {
   if (!range.startTime) {
     if (!hasRecurrence(range) && range.fromDate && range.toDate) {
-      component.addProperty(
-        createDateProperty('dtend', addDays(range.toDate, 1), null),
-      );
+      component.addProperty(createDateProperty('dtend', addDays(range.toDate, 1), null));
     }
     return;
   }
 
-  if (
-    hasRecurrence(range) ||
-    (range.dates?.length === 1 && !range.fromDate && !range.toDate)
-  ) {
+  if (hasRecurrence(range) || (range.dates?.length === 1 && !range.fromDate && !range.toDate)) {
     if (range.endTime) {
-      component.addProperty(
-        createDateProperty('dtend', anchorDate, range.endTime, range.timezone),
-      );
+      component.addProperty(createDateProperty('dtend', anchorDate, range.endTime, range.timezone));
       return;
     }
 
     if (range.duration) {
       const end = addMinutes(anchorDate, range.startTime, range.duration);
-      component.addProperty(
-        createDateProperty('dtend', end.date, end.time, range.timezone),
-      );
+      component.addProperty(createDateProperty('dtend', end.date, end.time, range.timezone));
     }
     return;
   }
@@ -164,29 +143,19 @@ function addEventEnd(
   if (range.toDate) {
     if (range.endTime) {
       component.addProperty(
-        createDateProperty(
-          'dtend',
-          range.toDate,
-          range.endTime,
-          range.timezone,
-        ),
+        createDateProperty('dtend', range.toDate, range.endTime, range.timezone),
       );
       return;
     }
 
     if (range.duration) {
       const end = addMinutes(range.toDate, range.startTime, range.duration);
-      component.addProperty(
-        createDateProperty('dtend', end.date, end.time, range.timezone),
-      );
+      component.addProperty(createDateProperty('dtend', end.date, end.time, range.timezone));
     }
   }
 }
 
-function addExceptDates(
-  component: InstanceType<typeof ICAL.Component>,
-  range: DateRange,
-): void {
+function addExceptDates(component: InstanceType<typeof ICAL.Component>, range: DateRange): void {
   if (!range.exceptDates?.length) {
     return;
   }
@@ -198,9 +167,7 @@ function addExceptDates(
   } else {
     const startTime = range.startTime;
     property.setValues(
-      range.exceptDates.map((date) =>
-        createTime(date, startTime, range.timezone),
-      ),
+      range.exceptDates.map((date) => createTime(date, startTime, range.timezone)),
     );
     if (range.timezone && range.timezone !== 'UTC') {
       property.setParameter('tzid', range.timezone);
@@ -210,15 +177,11 @@ function addExceptDates(
   component.addProperty(property);
 }
 
-function buildEvent(
-  range: DateRange,
-): InstanceType<typeof ICAL.Component> | null {
+function buildEvent(range: DateRange): InstanceType<typeof ICAL.Component> | null {
   const recurrence = hasRecurrence(range);
   const anchorDate = getAnchorDate(range);
   if (!anchorDate) {
-    console.warn(
-      `Skipping DateRange ${range.id}: export requires a single anchor date`,
-    );
+    console.warn(`Skipping DateRange ${range.id}: export requires a single anchor date`);
     return null;
   }
 
@@ -246,21 +209,14 @@ function buildEvent(
   }
 
   component.addProperty(
-    createDateProperty(
-      'dtstart',
-      anchorDate,
-      range.startTime ?? null,
-      range.timezone,
-    ),
+    createDateProperty('dtstart', anchorDate, range.startTime ?? null, range.timezone),
   );
   addEventEnd(component, range, anchorDate);
 
   if (recurrence) {
     const rule = buildRRuleFromDateRange(range);
     if (!rule) {
-      console.warn(
-        `Skipping DateRange ${range.id}: recurrence pattern cannot be exported`,
-      );
+      console.warn(`Skipping DateRange ${range.id}: recurrence pattern cannot be exported`);
       return null;
     }
 
@@ -272,10 +228,7 @@ function buildEvent(
   return component;
 }
 
-export function generateICS(
-  ranges: DateRange[],
-  options: GenerateOptions = {},
-): string {
+export function generateICS(ranges: DateRange[], options: GenerateOptions = {}): string {
   const calendar = new ICAL.Component('vcalendar');
   calendar.addPropertyWithValue('prodid', DEFAULT_PRODID);
   calendar.addPropertyWithValue('version', '2.0');

@@ -16,8 +16,7 @@ export function isBlockingMsftEvent(
   )
     return false;
   if (event.responseStatus?.response === 'declined') return false;
-  if (event.showAs === 'tentative' && options.includeTentative === false)
-    return false;
+  if (event.showAs === 'tentative' && options.includeTentative === false) return false;
   return true;
 }
 
@@ -31,8 +30,7 @@ export function msftEventToDateRange(
 
   if (event.iCalUId) metadata.iCalUId = event.iCalUId;
   if (event.showAs) metadata.showAs = event.showAs;
-  if (event.responseStatus?.response)
-    metadata.responseStatus = event.responseStatus.response;
+  if (event.responseStatus?.response) metadata.responseStatus = event.responseStatus.response;
   if (event.seriesMasterId) metadata.seriesMasterId = event.seriesMasterId;
   if (event.webLink) metadata.webLink = event.webLink;
 

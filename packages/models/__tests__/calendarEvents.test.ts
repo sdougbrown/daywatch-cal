@@ -25,10 +25,7 @@ describe('buildCalendarEvents', () => {
     const to = new Date('2026-03-24T00:00:00.000Z');
 
     const evaluator = new RangeEvaluator();
-    const expectedNativeEvents = expandToEvents(
-      range,
-      evaluator.expand(range, from, to),
-    );
+    const expectedNativeEvents = expandToEvents(range, evaluator.expand(range, from, to));
 
     const events = buildCalendarEvents({
       ranges: [range],

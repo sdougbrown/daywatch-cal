@@ -31,10 +31,7 @@ export class YearGrid {
     return months;
   }
 
-  private generateMonth(
-    month: number,
-    activityByDate: Map<string, string[]>,
-  ): YearMonth {
+  private generateMonth(month: number, activityByDate: Map<string, string[]>): YearMonth {
     const label = this.formatMonthLabel(month);
     const totalDays = daysInMonth(this.year, month);
     const days: YearDay[] = [];

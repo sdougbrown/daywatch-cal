@@ -116,15 +116,10 @@ describe('findConflicts', () => {
       endTime: '11:30',
     });
 
-    const conflicts = evaluator.findConflicts(
-      [rangeA, rangeB, rangeC],
-      '2026-03-23',
-    );
+    const conflicts = evaluator.findConflicts([rangeA, rangeB, rangeC], '2026-03-23');
     expect(conflicts).toHaveLength(3);
 
-    const pairIds = conflicts.map((c) =>
-      [c.rangeA.id, c.rangeB.id].sort().join('-'),
-    );
+    const pairIds = conflicts.map((c) => [c.rangeA.id, c.rangeB.id].sort().join('-'));
     expect(pairIds).toContain('a-b');
     expect(pairIds).toContain('a-c');
     expect(pairIds).toContain('b-c');
@@ -147,17 +142,11 @@ describe('findConflicts', () => {
     });
 
     // Check Monday — only rangeA is present
-    const conflictsMonday = evaluator.findConflicts(
-      [rangeA, rangeB],
-      '2026-03-23',
-    );
+    const conflictsMonday = evaluator.findConflicts([rangeA, rangeB], '2026-03-23');
     expect(conflictsMonday).toHaveLength(0);
 
     // Check Tuesday — only rangeB is present
-    const conflictsTuesday = evaluator.findConflicts(
-      [rangeA, rangeB],
-      '2026-03-24',
-    );
+    const conflictsTuesday = evaluator.findConflicts([rangeA, rangeB], '2026-03-24');
     expect(conflictsTuesday).toHaveLength(0);
   });
 

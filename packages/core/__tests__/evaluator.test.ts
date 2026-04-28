@@ -267,9 +267,7 @@ describe('RangeEvaluator', () => {
         duration: 60,
       });
       const metadata = {
-        attendees: [
-          { email: 'alice@example.com', role: 'required', status: 'accepted' },
-        ],
+        attendees: [{ email: 'alice@example.com', role: 'required', status: 'accepted' }],
         organizer: { email: 'organizer@example.com', name: 'Organizer' },
         location: 'Room 500',
       };
@@ -401,9 +399,7 @@ describe('RangeEvaluator', () => {
       expect(occurrences).toHaveLength(28);
       expect(occurrences[0].date).toBe('2026-02-01');
       expect(occurrences.at(-1)?.date).toBe('2026-02-28');
-      expect(occurrences.every((o) => o.date.startsWith('2026-02-'))).toBe(
-        true,
-      );
+      expect(occurrences.every((o) => o.date.startsWith('2026-02-'))).toBe(true);
     });
 
     it('expands weekday + month recurrence over a broad window', () => {

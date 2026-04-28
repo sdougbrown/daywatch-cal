@@ -20,12 +20,7 @@ function day(dateStr: string): Date {
 describe('scoreSchedule', () => {
   describe('empty schedule', () => {
     it('returns 0 conflicts, full free time, max focus blocks for single day', () => {
-      const score = scoreSchedule(
-        evaluator,
-        [],
-        day('2026-03-23'),
-        day('2026-03-23'),
-      );
+      const score = scoreSchedule(evaluator, [], day('2026-03-23'), day('2026-03-23'));
       expect(score.conflicts).toBe(0);
       // 09:00-17:00 = 480 minutes free
       expect(score.freeMinutes).toBe(480);
@@ -36,12 +31,7 @@ describe('scoreSchedule', () => {
     });
 
     it('returns full free time across multi-day window', () => {
-      const score = scoreSchedule(
-        evaluator,
-        [],
-        day('2026-03-23'),
-        day('2026-03-25'),
-      );
+      const score = scoreSchedule(evaluator, [], day('2026-03-23'), day('2026-03-25'));
       // 3 days * 480 min
       expect(score.freeMinutes).toBe(1440);
       expect(score.focusBlocks).toBe(3);
@@ -340,12 +330,7 @@ describe('scoreSchedule', () => {
         endTime: '10:00',
       });
 
-      const score = scoreSchedule(
-        evaluator,
-        [range],
-        day('2026-03-23'),
-        day('2026-03-25'),
-      );
+      const score = scoreSchedule(evaluator, [range], day('2026-03-23'), day('2026-03-25'));
       // Each day: 480 - 60 = 420 free min; 3 days = 1260
       expect(score.freeMinutes).toBe(1260);
     });
@@ -353,16 +338,10 @@ describe('scoreSchedule', () => {
 
   describe('custom dayStart/dayEnd', () => {
     it('uses custom working hours for free time calculation', () => {
-      const score = scoreSchedule(
-        evaluator,
-        [],
-        day('2026-03-23'),
-        day('2026-03-23'),
-        {
-          dayStart: '08:00',
-          dayEnd: '18:00',
-        },
-      );
+      const score = scoreSchedule(evaluator, [], day('2026-03-23'), day('2026-03-23'), {
+        dayStart: '08:00',
+        dayEnd: '18:00',
+      });
       // 10 hours = 600 minutes free
       expect(score.freeMinutes).toBe(600);
       expect(score.focusBlocks).toBe(1);
@@ -378,16 +357,10 @@ describe('scoreSchedule', () => {
         endTime: '10:00',
       });
 
-      const score = scoreSchedule(
-        evaluator,
-        [range],
-        day('2026-03-23'),
-        day('2026-03-23'),
-        {
-          dayStart: '09:00',
-          dayEnd: '17:00',
-        },
-      );
+      const score = scoreSchedule(evaluator, [range], day('2026-03-23'), day('2026-03-23'), {
+        dayStart: '09:00',
+        dayEnd: '17:00',
+      });
       // Only 09:00-10:00 counts as occupied (clipped from 07:00-10:00)
       expect(score.freeMinutes).toBe(420); // 480 - 60
     });
@@ -402,12 +375,7 @@ describe('scoreSchedule', () => {
         endTime: '07:00',
       });
 
-      const score = scoreSchedule(
-        evaluator,
-        [range],
-        day('2026-03-23'),
-        day('2026-03-23'),
-      );
+      const score = scoreSchedule(evaluator, [range], day('2026-03-23'), day('2026-03-23'));
       // Range is entirely outside 09:00-17:00
       expect(score.freeMinutes).toBe(480);
       expect(score.focusBlocks).toBe(1);
@@ -423,12 +391,7 @@ describe('scoreSchedule', () => {
         // No startTime/endTime → all-day
       });
 
-      const score = scoreSchedule(
-        evaluator,
-        [range],
-        day('2026-03-23'),
-        day('2026-03-23'),
-      );
+      const score = scoreSchedule(evaluator, [range], day('2026-03-23'), day('2026-03-23'));
       // All-day ranges produce no time slots, so no impact on scoring
       expect(score.conflicts).toBe(0);
       expect(score.freeMinutes).toBe(480);

@@ -43,9 +43,7 @@ function isDateBetween(date: string, start: string, end: string): boolean {
 
 export function DatePicker(props: DatePickerProps) {
   const today = getTodayDateString();
-  const [focusDate, setFocusDate] = createSignal(
-    props.selection.start ?? today,
-  );
+  const [focusDate, setFocusDate] = createSignal(props.selection.start ?? today);
 
   createEffect(() => {
     if (props.selection.start) {
@@ -53,9 +51,7 @@ export function DatePicker(props: DatePickerProps) {
     }
   });
 
-  const weekdayLabels = createMemo(() =>
-    getWeekdayLabels(props.weekStartsOn ?? 0, props.locale),
-  );
+  const weekdayLabels = createMemo(() => getWeekdayLabels(props.weekStartsOn ?? 0, props.locale));
 
   const isDateBlocked = createMemo(() => {
     if (!props.blockedRanges?.length) {
@@ -86,9 +82,7 @@ export function DatePicker(props: DatePickerProps) {
     isDateSelectable: (date) => !isDateBlocked()(date),
   }));
 
-  const rangeEnd = createMemo(
-    () => props.selection.end ?? props.selection.preview,
-  );
+  const rangeEnd = createMemo(() => props.selection.end ?? props.selection.preview);
 
   return (
     <div class="neo-datepicker">
@@ -130,26 +124,17 @@ export function DatePicker(props: DatePickerProps) {
                             <button
                               type="button"
                               class="neo-datepicker__day"
-                              data-blocked={
-                                isDateBlocked()(day.date) ? '' : undefined
-                              }
+                              data-blocked={isDateBlocked()(day.date) ? '' : undefined}
                               data-in-range={
                                 props.selection.start &&
                                 rangeEnd() &&
-                                isDateBetween(
-                                  day.date,
-                                  props.selection.start,
-                                  rangeEnd(),
-                                )
+                                isDateBetween(day.date, props.selection.start, rangeEnd())
                                   ? ''
                                   : undefined
                               }
-                              data-outside-month={
-                                !day.isCurrentMonth ? '' : undefined
-                              }
+                              data-outside-month={!day.isCurrentMonth ? '' : undefined}
                               data-preview={
-                                !props.selection.end &&
-                                day.date === props.selection.preview
+                                !props.selection.end && day.date === props.selection.preview
                                   ? ''
                                   : undefined
                               }
@@ -168,12 +153,8 @@ export function DatePicker(props: DatePickerProps) {
 
                                 dateSelection.onDateClick(day.date);
                               }}
-                              onFocus={() =>
-                                dateSelection.onDateHover(day.date)
-                              }
-                              onMouseEnter={() =>
-                                dateSelection.onDateHover(day.date)
-                              }
+                              onFocus={() => dateSelection.onDateHover(day.date)}
+                              onMouseEnter={() => dateSelection.onDateHover(day.date)}
                             >
                               {day.dayOfMonth}
                             </button>

@@ -170,9 +170,7 @@ describe('isBlockingMsftEvent', () => {
   });
 
   it('includes working elsewhere events when requested', () => {
-    expect(isBlockingMsftEvent(workingElsewhere, { includeFree: true })).toBe(
-      true,
-    );
+    expect(isBlockingMsftEvent(workingElsewhere, { includeFree: true })).toBe(true);
   });
 
   it('includes tentative events by default', () => {
@@ -180,9 +178,7 @@ describe('isBlockingMsftEvent', () => {
   });
 
   it('excludes tentative events when includeTentative is false', () => {
-    expect(
-      isBlockingMsftEvent(tentativeEvent, { includeTentative: false }),
-    ).toBe(false);
+    expect(isBlockingMsftEvent(tentativeEvent, { includeTentative: false })).toBe(false);
   });
 
   it('returns false for declined events', () => {
@@ -198,9 +194,7 @@ describe('isBlockingMsftEvent', () => {
   });
 
   it('treats missing showAs conservatively as blocking', () => {
-    expect(isBlockingMsftEvent({ ...normalMeeting, showAs: undefined })).toBe(
-      true,
-    );
+    expect(isBlockingMsftEvent({ ...normalMeeting, showAs: undefined })).toBe(true);
   });
 });
 

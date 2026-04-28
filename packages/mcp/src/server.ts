@@ -147,8 +147,7 @@ export const TOOLS: Tool[] = [
         },
         timezone: {
           type: 'string',
-          description:
-            'Optional IANA timezone to use for the session evaluator.',
+          description: 'Optional IANA timezone to use for the session evaluator.',
         },
         window_from: {
           type: 'string',
@@ -181,8 +180,7 @@ export const TOOLS: Tool[] = [
         },
         timezone: {
           type: 'string',
-          description:
-            'Optional IANA timezone to use for the session evaluator.',
+          description: 'Optional IANA timezone to use for the session evaluator.',
         },
         window_from: {
           type: 'string',
@@ -200,8 +198,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'find_conflicts',
-    description:
-      'Find timed conflicts across loaded calendars within a date window.',
+    description: 'Find timed conflicts across loaded calendars within a date window.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -228,8 +225,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'find_free_slots',
-    description:
-      'Find free time slots on a specific day within working-hour bounds.',
+    description: 'Find free time slots on a specific day within working-hour bounds.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -243,13 +239,11 @@ export const TOOLS: Tool[] = [
         },
         day_start: {
           type: 'string',
-          description:
-            'Start of the day window, in HH:mm format. Defaults to 09:00.',
+          description: 'Start of the day window, in HH:mm format. Defaults to 09:00.',
         },
         day_end: {
           type: 'string',
-          description:
-            'End of the day window, in HH:mm format. Defaults to 17:00.',
+          description: 'End of the day window, in HH:mm format. Defaults to 17:00.',
         },
         calendars: {
           type: 'array',
@@ -279,13 +273,11 @@ export const TOOLS: Tool[] = [
         },
         from: {
           type: 'string',
-          description:
-            'Optional ISO date filter for the start of the search window.',
+          description: 'Optional ISO date filter for the start of the search window.',
         },
         to: {
           type: 'string',
-          description:
-            'Optional ISO date filter for the end of the search window.',
+          description: 'Optional ISO date filter for the end of the search window.',
         },
         limit: {
           type: 'number',
@@ -296,16 +288,14 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'find_common_availability',
-    description:
-      'Find free time slots across specific calendars over a date range.',
+    description: 'Find free time slots across specific calendars over a date range.',
     inputSchema: {
       type: 'object',
       properties: {
         calendars: {
           type: 'array',
           items: { type: 'string' },
-          description:
-            'Which calendar ids to check. Must include at least two calendars.',
+          description: 'Which calendar ids to check. Must include at least two calendars.',
         },
         from: {
           type: 'string',
@@ -321,13 +311,11 @@ export const TOOLS: Tool[] = [
         },
         day_start: {
           type: 'string',
-          description:
-            'Start of the day window, in HH:mm format. Defaults to 09:00.',
+          description: 'Start of the day window, in HH:mm format. Defaults to 09:00.',
         },
         day_end: {
           type: 'string',
-          description:
-            'End of the day window, in HH:mm format. Defaults to 17:00.',
+          description: 'End of the day window, in HH:mm format. Defaults to 17:00.',
         },
         limit: {
           type: 'number',
@@ -389,8 +377,7 @@ export const TOOLS: Tool[] = [
         },
         focus_block_minutes: {
           type: 'number',
-          description:
-            'Minimum uninterrupted free block counted as focus time. Defaults to 60.',
+          description: 'Minimum uninterrupted free block counted as focus time. Defaults to 60.',
         },
         day_start: {
           type: 'string',
@@ -434,8 +421,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'expand_range',
-    description:
-      'Expand one stored DateRange into its concrete occurrences within a date window.',
+    description: 'Expand one stored DateRange into its concrete occurrences within a date window.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -471,8 +457,7 @@ export const TOOLS: Tool[] = [
         changes: {
           type: 'array',
           items: PROPOSED_CHANGE_SCHEMA,
-          description:
-            'Proposed change set to evaluate against the current session.',
+          description: 'Proposed change set to evaluate against the current session.',
         },
         from: {
           type: 'string',
@@ -597,10 +582,7 @@ function requireString(args: Record<string, unknown>, key: string): string {
   return value;
 }
 
-function optionalString(
-  args: Record<string, unknown>,
-  key: string,
-): string | undefined {
+function optionalString(args: Record<string, unknown>, key: string): string | undefined {
   const value = args[key];
   if (value === undefined) {
     return undefined;
@@ -613,11 +595,7 @@ function optionalString(
   return value;
 }
 
-function optionalNumber(
-  args: Record<string, unknown>,
-  key: string,
-  fallback: number,
-): number {
+function optionalNumber(args: Record<string, unknown>, key: string, fallback: number): number {
   const value = args[key];
   if (value === undefined) {
     return fallback;
@@ -639,10 +617,7 @@ function optionalLimit(args: Record<string, unknown>, fallback = 50): number {
   return value;
 }
 
-function optionalStringArray(
-  args: Record<string, unknown>,
-  key: string,
-): string[] | undefined {
+function optionalStringArray(args: Record<string, unknown>, key: string): string[] | undefined {
   const value = args[key];
   if (value === undefined) {
     return undefined;
@@ -655,10 +630,7 @@ function optionalStringArray(
   return value;
 }
 
-function requireStringArray(
-  args: Record<string, unknown>,
-  key: string,
-): string[] {
+function requireStringArray(args: Record<string, unknown>, key: string): string[] {
   const value = optionalStringArray(args, key);
   if (!value || value.length === 0) {
     throw new Error(`"${key}" must be a non-empty array of strings.`);
@@ -679,9 +651,7 @@ function cloneRange(range: DateRange): DateRange {
   return structuredClone(range);
 }
 
-function parseProposedChangeUpdates(
-  value: unknown,
-): ProposedChangeUpdates | undefined {
+function parseProposedChangeUpdates(value: unknown): ProposedChangeUpdates | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -724,9 +694,7 @@ function parseProposedChanges(args: Record<string, unknown>): ProposedChange[] {
     const reason = requireString(record, 'reason');
 
     if (action !== 'move' && action !== 'add' && action !== 'remove') {
-      throw new Error(
-        `changes[${index}].action must be "move", "add", or "remove".`,
-      );
+      throw new Error(`changes[${index}].action must be "move", "add", or "remove".`);
     }
 
     return {
@@ -762,11 +730,7 @@ function formatWindow(window: { from: Date; to: Date }): {
   };
 }
 
-function truncateArray<T>(
-  items: T[],
-  key: string,
-  limit: number,
-): Record<string, unknown> {
+function truncateArray<T>(items: T[], key: string, limit: number): Record<string, unknown> {
   const truncated = items.length > limit;
 
   return {
@@ -792,36 +756,23 @@ function collectUniqueLabels(
   };
 }
 
-function requireLoadedCalendars(
-  session: CalendarSession,
-  calendarIds: string[],
-): string[] {
+function requireLoadedCalendars(session: CalendarSession, calendarIds: string[]): string[] {
   const uniqueIds = [...new Set(calendarIds)];
 
   if (uniqueIds.length === 0) {
     throw new Error('"calendars" must include at least one calendar id.');
   }
 
-  const missing = uniqueIds.filter(
-    (calendarId) => !session.calendars.has(calendarId),
-  );
+  const missing = uniqueIds.filter((calendarId) => !session.calendars.has(calendarId));
   if (missing.length > 0) {
-    throw new Error(
-      `Unknown calendar id${missing.length === 1 ? '' : 's'}: ${missing.join(', ')}`,
-    );
+    throw new Error(`Unknown calendar id${missing.length === 1 ? '' : 's'}: ${missing.join(', ')}`);
   }
 
   return uniqueIds;
 }
 
-function getMetadataRecord(
-  range: DateRange,
-): Record<string, unknown> | undefined {
-  if (
-    !range.metadata ||
-    typeof range.metadata !== 'object' ||
-    Array.isArray(range.metadata)
-  ) {
+function getMetadataRecord(range: DateRange): Record<string, unknown> | undefined {
+  if (!range.metadata || typeof range.metadata !== 'object' || Array.isArray(range.metadata)) {
     return undefined;
   }
 
@@ -874,9 +825,7 @@ function readOrganizer(value: unknown): OrganizerInfo | undefined {
 
   return {
     email: record.email,
-    ...(typeof record.name === 'string' && record.name.trim() !== ''
-      ? { name: record.name }
-      : {}),
+    ...(typeof record.name === 'string' && record.name.trim() !== '' ? { name: record.name } : {}),
   };
 }
 
@@ -932,11 +881,7 @@ function buildRecurrenceSummary(range: DateRange): string | undefined {
   return undefined;
 }
 
-function rangeOverlapsDateFilter(
-  range: DateRange,
-  from?: string,
-  to?: string,
-): boolean {
+function rangeOverlapsDateFilter(range: DateRange, from?: string, to?: string): boolean {
   if (!from && !to) {
     return true;
   }
@@ -1000,15 +945,11 @@ function buildDayDetail(
       isStart: !previousInRange,
       isEnd: !nextInRange,
       isContinuation: previousInRange && nextInRange,
-      ...(range.displayType !== undefined
-        ? { displayType: range.displayType }
-        : {}),
+      ...(range.displayType !== undefined ? { displayType: range.displayType } : {}),
     });
   }
 
-  timeSlots.sort((left, right) =>
-    left.startTime.localeCompare(right.startTime),
-  );
+  timeSlots.sort((left, right) => left.startTime.localeCompare(right.startTime));
 
   return { timeSlots, allDayRanges };
 }
@@ -1039,15 +980,11 @@ function buildSharedEvents(
     organizer?: OrganizerInfo;
   }> = [];
 
-  for (const [id, entries] of session.groupRangesByIdAcrossCalendars(
-    calendarIds,
-  )) {
+  for (const [id, entries] of session.groupRangesByIdAcrossCalendars(calendarIds)) {
     const filteredEntries = entries.filter((entry) =>
       rangeOverlapsDateFilter(entry.range, from, to),
     );
-    const distinctCalendars = [
-      ...new Set(filteredEntries.map((entry) => entry.calendarId)),
-    ].sort();
+    const distinctCalendars = [...new Set(filteredEntries.map((entry) => entry.calendarId))].sort();
 
     if (distinctCalendars.length < 2) {
       continue;
@@ -1062,9 +999,7 @@ function buildSharedEvents(
     sharedEvents.push({
       id,
       label: representative.label,
-      ...(representative.startTime
-        ? { startTime: representative.startTime }
-        : {}),
+      ...(representative.startTime ? { startTime: representative.startTime } : {}),
       ...(representative.endTime ? { endTime: representative.endTime } : {}),
       ...(recurrenceSummary ? { recurrence_summary: recurrenceSummary } : {}),
       found_in_calendars: distinctCalendars,
@@ -1074,8 +1009,7 @@ function buildSharedEvents(
   }
 
   sharedEvents.sort(
-    (left, right) =>
-      left.label.localeCompare(right.label) || left.id.localeCompare(right.id),
+    (left, right) => left.label.localeCompare(right.label) || left.id.localeCompare(right.id),
   );
 
   return sharedEvents;
@@ -1107,10 +1041,7 @@ function buildCommonAvailability(
   );
 }
 
-function findRangeById(
-  ranges: DateRange[],
-  rangeId: string,
-): DateRange | undefined {
+function findRangeById(ranges: DateRange[], rangeId: string): DateRange | undefined {
   return ranges.find((range) => range.id === rangeId);
 }
 
@@ -1147,14 +1078,9 @@ function applyDateUpdate(range: DateRange, date: string): DateRange {
   };
 }
 
-function applyMoveToRange(
-  range: DateRange,
-  updates?: ProposedChangeUpdates,
-): DateRange {
+function applyMoveToRange(range: DateRange, updates?: ProposedChangeUpdates): DateRange {
   if (!updates) {
-    throw new Error(
-      `Move change for range "${range.id}" is missing "updates".`,
-    );
+    throw new Error(`Move change for range "${range.id}" is missing "updates".`);
   }
 
   let nextRange = cloneRange(range);
@@ -1183,13 +1109,9 @@ function applyChangesToRanges(
           throw new Error('Move changes require "range_id".');
         }
 
-        const index = nextRanges.findIndex(
-          (range) => range.id === change.range_id,
-        );
+        const index = nextRanges.findIndex((range) => range.id === change.range_id);
         if (index === -1) {
-          throw new Error(
-            `Range "${change.range_id}" was not found in the current session.`,
-          );
+          throw new Error(`Range "${change.range_id}" was not found in the current session.`);
         }
 
         nextRanges[index] = applyMoveToRange(nextRanges[index], change.updates);
@@ -1212,13 +1134,9 @@ function applyChangesToRanges(
           throw new Error('Remove changes require "range_id".');
         }
 
-        const filteredRanges = nextRanges.filter(
-          (range) => range.id !== change.range_id,
-        );
+        const filteredRanges = nextRanges.filter((range) => range.id !== change.range_id);
         if (filteredRanges.length === nextRanges.length) {
-          throw new Error(
-            `Range "${change.range_id}" was not found in the current session.`,
-          );
+          throw new Error(`Range "${change.range_id}" was not found in the current session.`);
         }
 
         nextRanges = filteredRanges;
@@ -1231,9 +1149,7 @@ function applyChangesToRanges(
   return { ranges: nextRanges, changesApplied };
 }
 
-function getRangeDateWindow(
-  range: DateRange,
-): { from: string; to: string } | undefined {
+function getRangeDateWindow(range: DateRange): { from: string; to: string } | undefined {
   if (range.dates?.length) {
     const sortedDates = [...range.dates].sort();
     return {
@@ -1282,9 +1198,7 @@ function getDefaultSuggestionWindow(
 
     const range = findRangeById(currentRanges, change.range_id);
     if (!range) {
-      throw new Error(
-        `Range "${change.range_id}" was not found in the current session.`,
-      );
+      throw new Error(`Range "${change.range_id}" was not found in the current session.`);
     }
 
     const originalWindow = getRangeDateWindow(range);
@@ -1293,9 +1207,7 @@ function getDefaultSuggestionWindow(
     }
 
     if (change.action === 'move') {
-      const movedWindow = getRangeDateWindow(
-        applyMoveToRange(range, change.updates),
-      );
+      const movedWindow = getRangeDateWindow(applyMoveToRange(range, change.updates));
       if (movedWindow) {
         windows.push(movedWindow);
       }
@@ -1332,10 +1244,7 @@ function summarizeSchedule(
   };
 }
 
-function applyChangesToSession(
-  session: CalendarSession,
-  changes: ProposedChange[],
-): number {
+function applyChangesToSession(session: CalendarSession, changes: ProposedChange[]): number {
   let changesApplied = 0;
 
   for (const change of changes) {
@@ -1347,25 +1256,15 @@ function applyChangesToSession(
 
         const calendarId = session.findRangeCalendar(change.range_id);
         if (!calendarId) {
-          throw new Error(
-            `Range "${change.range_id}" was not found in the current session.`,
-          );
+          throw new Error(`Range "${change.range_id}" was not found in the current session.`);
         }
 
-        const range = findRangeById(
-          session.getAllRanges([calendarId]),
-          change.range_id,
-        );
+        const range = findRangeById(session.getAllRanges([calendarId]), change.range_id);
         if (!range) {
-          throw new Error(
-            `Range "${change.range_id}" was not found in the current session.`,
-          );
+          throw new Error(`Range "${change.range_id}" was not found in the current session.`);
         }
 
-        session.updateRange(
-          change.range_id,
-          applyMoveToRange(range, change.updates),
-        );
+        session.updateRange(change.range_id, applyMoveToRange(range, change.updates));
         changesApplied += 1;
         break;
       }
@@ -1375,13 +1274,8 @@ function applyChangesToSession(
           throw new Error('Add changes require "new_range".');
         }
 
-        const firstCalendarId = session.calendars.keys().next().value as
-          | string
-          | undefined;
-        session.addRange(
-          firstCalendarId ?? 'proposals',
-          cloneRange(change.new_range),
-        );
+        const firstCalendarId = session.calendars.keys().next().value as string | undefined;
+        session.addRange(firstCalendarId ?? 'proposals', cloneRange(change.new_range));
         changesApplied += 1;
         break;
       }
@@ -1392,9 +1286,7 @@ function applyChangesToSession(
         }
 
         if (!session.removeRange(change.range_id)) {
-          throw new Error(
-            `Range "${change.range_id}" was not found in the current session.`,
-          );
+          throw new Error(`Range "${change.range_id}" was not found in the current session.`);
         }
 
         changesApplied += 1;
@@ -1415,10 +1307,7 @@ function applyTimezone(session: CalendarSession, timezone?: string): void {
   session.evaluator = new RangeEvaluator(timezone);
 }
 
-function getRanges(
-  session: CalendarSession,
-  args: Record<string, unknown>,
-): DateRange[] {
+function getRanges(session: CalendarSession, args: Record<string, unknown>): DateRange[] {
   return session.getAllRanges(optionalStringArray(args, 'calendars'));
 }
 
@@ -1438,10 +1327,7 @@ interface IcsLoadResult {
   detectedWindow: { from: Date; to: Date } | null;
 }
 
-function loadIcsData(
-  icsText: string,
-  requestedWindow: { from: Date; to: Date },
-): IcsLoadResult {
+function loadIcsData(icsText: string, requestedWindow: { from: Date; to: Date }): IcsLoadResult {
   const detectedWindow = detectDataWindow(icsText);
   let ranges = parseICS(icsText, requestedWindow);
   let effectiveWindow = requestedWindow;
@@ -1499,21 +1385,12 @@ export async function handleToolCall(
         const windowFrom = optionalString(args, 'window_from');
         const windowTo = optionalString(args, 'window_to');
 
-        if (
-          source !== 'ics' &&
-          source !== 'ranges' &&
-          source !== 'gcal' &&
-          source !== 'msft'
-        ) {
-          throw new Error(
-            '"source" must be "ics", "ranges", "gcal", or "msft".',
-          );
+        if (source !== 'ics' && source !== 'ranges' && source !== 'gcal' && source !== 'msft') {
+          throw new Error('"source" must be "ics", "ranges", "gcal", or "msft".');
         }
 
         if ((windowFrom && !windowTo) || (!windowFrom && windowTo)) {
-          throw new Error(
-            '"window_from" and "window_to" must be provided together.',
-          );
+          throw new Error('"window_from" and "window_to" must be provided together.');
         }
 
         applyTimezone(session, timezone);
@@ -1543,39 +1420,21 @@ export async function handleToolCall(
         if (source === 'gcal') {
           const parsed = JSON.parse(data) as unknown;
           if (!Array.isArray(parsed)) {
-            throw new Error(
-              'Google Calendar JSON must decode to an array of events.',
-            );
+            throw new Error('Google Calendar JSON must decode to an array of events.');
           }
 
           const ranges = gcalEventsToDateRanges(parsed as GCalEvent[]);
-          return buildLoadResponse(
-            session,
-            ranges,
-            calendarId,
-            'gcal',
-            requestedWindow,
-            null,
-          );
+          return buildLoadResponse(session, ranges, calendarId, 'gcal', requestedWindow, null);
         }
 
         if (source === 'msft') {
           const parsed = JSON.parse(data) as unknown;
           if (!Array.isArray(parsed)) {
-            throw new Error(
-              'Microsoft Graph JSON must decode to an array of events.',
-            );
+            throw new Error('Microsoft Graph JSON must decode to an array of events.');
           }
 
           const ranges = msftEventsToDateRanges(parsed as MsftGraphEvent[]);
-          return buildLoadResponse(
-            session,
-            ranges,
-            calendarId,
-            'msft',
-            requestedWindow,
-            null,
-          );
+          return buildLoadResponse(session, ranges, calendarId, 'msft', requestedWindow, null);
         }
 
         const parsed = JSON.parse(data) as unknown;
@@ -1601,9 +1460,7 @@ export async function handleToolCall(
         const windowTo = optionalString(args, 'window_to');
 
         if ((windowFrom && !windowTo) || (!windowFrom && windowTo)) {
-          throw new Error(
-            '"window_from" and "window_to" must be provided together.',
-          );
+          throw new Error('"window_from" and "window_to" must be provided together.');
         }
 
         applyTimezone(session, timezone);
@@ -1664,12 +1521,7 @@ export async function handleToolCall(
         const from = optionalString(args, 'from');
         const to = optionalString(args, 'to');
         const limit = optionalLimit(args);
-        const sharedEvents = buildSharedEvents(
-          session,
-          calendarsCompared,
-          from,
-          to,
-        );
+        const sharedEvents = buildSharedEvents(session, calendarsCompared, from, to);
 
         return jsonResult({
           ...truncateArray(sharedEvents, 'shared_events', limit),
@@ -1678,31 +1530,20 @@ export async function handleToolCall(
       }
 
       case 'find_common_availability': {
-        const calendars = requireLoadedCalendars(
-          session,
-          requireStringArray(args, 'calendars'),
-        );
+        const calendars = requireLoadedCalendars(session, requireStringArray(args, 'calendars'));
         if (calendars.length < 2) {
-          throw new Error(
-            '"calendars" must include at least two calendar ids.',
-          );
+          throw new Error('"calendars" must include at least two calendar ids.');
         }
 
         const from = requireString(args, 'from');
         const to = requireString(args, 'to');
         const limit = optionalLimit(args, 20);
         const ranges = session.getAllRanges(calendars);
-        const commonSlots = buildCommonAvailability(
-          session.evaluator,
-          ranges,
-          from,
-          to,
-          {
-            minDuration: optionalNumber(args, 'min_duration', 30),
-            dayStart: optionalString(args, 'day_start') ?? '09:00',
-            dayEnd: optionalString(args, 'day_end') ?? '17:00',
-          },
-        );
+        const commonSlots = buildCommonAvailability(session.evaluator, ranges, from, to, {
+          minDuration: optionalNumber(args, 'min_duration', 30),
+          dayStart: optionalString(args, 'day_start') ?? '09:00',
+          dayEnd: optionalString(args, 'day_end') ?? '17:00',
+        });
 
         return jsonResult({
           ...truncateArray(commonSlots, 'common_slots', limit),
@@ -1741,21 +1582,11 @@ export async function handleToolCall(
         const ranges = getRanges(session, args);
 
         return jsonResult(
-          scoreSchedule(
-            session.evaluator,
-            ranges,
-            parseDateArgument(from),
-            parseDateArgument(to),
-            {
-              focusBlockMinutes: optionalNumber(
-                args,
-                'focus_block_minutes',
-                60,
-              ),
-              dayStart: optionalString(args, 'day_start'),
-              dayEnd: optionalString(args, 'day_end'),
-            },
-          ),
+          scoreSchedule(session.evaluator, ranges, parseDateArgument(from), parseDateArgument(to), {
+            focusBlockMinutes: optionalNumber(args, 'focus_block_minutes', 60),
+            dayStart: optionalString(args, 'day_start'),
+            dayEnd: optionalString(args, 'day_end'),
+          }),
         );
       }
 
@@ -1764,11 +1595,7 @@ export async function handleToolCall(
         const ranges = getRanges(session, args);
         const limit = optionalLimit(args);
         const detail = buildDayDetail(session.evaluator, ranges, date);
-        const truncatedTimeSlots = truncateArray(
-          detail.timeSlots,
-          'timeSlots',
-          limit,
-        );
+        const truncatedTimeSlots = truncateArray(detail.timeSlots, 'timeSlots', limit);
 
         return jsonResult({
           ...truncatedTimeSlots,
@@ -1782,14 +1609,10 @@ export async function handleToolCall(
         const from = requireString(args, 'from');
         const to = requireString(args, 'to');
         const limit = optionalLimit(args);
-        const range = session
-          .getAllRanges()
-          .find((candidate) => candidate.id === rangeId);
+        const range = session.getAllRanges().find((candidate) => candidate.id === rangeId);
 
         if (!range) {
-          throw new Error(
-            `Range "${rangeId}" was not found in the current session.`,
-          );
+          throw new Error(`Range "${rangeId}" was not found in the current session.`);
         }
 
         const occurrences = session.evaluator.expand(
@@ -1807,10 +1630,7 @@ export async function handleToolCall(
       case 'suggest_changes': {
         const changes = parseProposedChanges(args);
         const currentRanges = session.getAllRanges();
-        const defaultWindow = getDefaultSuggestionWindow(
-          currentRanges,
-          changes,
-        );
+        const defaultWindow = getDefaultSuggestionWindow(currentRanges, changes);
         const from = optionalString(args, 'from') ?? defaultWindow.from;
         const to = optionalString(args, 'to') ?? defaultWindow.to;
         const preview = applyChangesToRanges(currentRanges, changes);

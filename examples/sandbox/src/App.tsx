@@ -72,8 +72,7 @@ function formatRange(range: DateRange): string {
 
 export function App() {
   const [activeTab, setActiveTab] = useState<DemoTab>('date');
-  const [dateSelection, setDateSelection] =
-    useState<DateSelection>(emptyDateSelection);
+  const [dateSelection, setDateSelection] = useState<DateSelection>(emptyDateSelection);
   const [timeDemoDate, setTimeDemoDate] = useState('2026-04-07');
   const [timeSelection, setTimeSelection] = useState<TimeSelection>(() =>
     emptyTimeSelection('2026-04-07'),
@@ -91,18 +90,14 @@ export function App() {
     to: endOfDay(timeDemoDate),
   });
 
-  const rangeDemoRanges = useMemo(
-    () => [...sampleRanges, ...createdRanges],
-    [createdRanges],
-  );
+  const rangeDemoRanges = useMemo(() => [...sampleRanges, ...createdRanges], [createdRanges]);
 
   return (
     <main className="sandbox">
       <header className="sandbox__header">
         <h1>daywatch-cal sandbox</h1>
         <p>
-          Reference implementations for date selection, time selection, and full
-          range composition.
+          Reference implementations for date selection, time selection, and full range composition.
         </p>
       </header>
 
@@ -131,9 +126,7 @@ export function App() {
             ranges={sampleRanges}
             selection={dateSelection}
           />
-          <pre className="sandbox__debug">
-            {JSON.stringify(dateSelection, null, 2)}
-          </pre>
+          <pre className="sandbox__debug">{JSON.stringify(dateSelection, null, 2)}</pre>
         </section>
       ) : null}
 
@@ -161,9 +154,7 @@ export function App() {
             startHour={8}
             endHour={18}
           />
-          <pre className="sandbox__debug">
-            {JSON.stringify(timeSelection, null, 2)}
-          </pre>
+          <pre className="sandbox__debug">{JSON.stringify(timeSelection, null, 2)}</pre>
         </section>
       ) : null}
 

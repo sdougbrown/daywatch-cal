@@ -44,13 +44,7 @@ export interface MsftGraphEvent {
   type?: 'singleInstance' | 'occurrence' | 'exception' | 'seriesMaster';
   start: { dateTime: string; timeZone: string };
   end: { dateTime: string; timeZone: string };
-  showAs?:
-    | 'free'
-    | 'tentative'
-    | 'busy'
-    | 'oof'
-    | 'workingElsewhere'
-    | 'unknown';
+  showAs?: 'free' | 'tentative' | 'busy' | 'oof' | 'workingElsewhere' | 'unknown';
   responseStatus?: {
     response:
       | 'none'

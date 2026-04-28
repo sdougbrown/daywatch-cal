@@ -18,8 +18,7 @@ export class CalendarSession {
   private nextCalendarNumber: number;
 
   constructor(timezone?: string) {
-    this.timezone =
-      timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    this.timezone = timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
     this.evaluator = new RangeEvaluator(this.timezone);
     this.calendars = new Map();
     this.nextCalendarNumber = 1;
@@ -40,11 +39,7 @@ export class CalendarSession {
     return nextId;
   }
 
-  loadCalendar(
-    id: string,
-    ranges: DateRange[],
-    source: 'ics' | 'ranges' | 'gcal' | 'msft',
-  ): void {
+  loadCalendar(id: string, ranges: DateRange[], source: 'ics' | 'ranges' | 'gcal' | 'msft'): void {
     const calendarId = this.createCalendarId(id);
     this.calendars.set(calendarId, {
       ranges: [...ranges],
@@ -54,9 +49,7 @@ export class CalendarSession {
 
   getAllRanges(calendarIds?: string[]): DateRange[] {
     if (!calendarIds || calendarIds.length === 0) {
-      return [...this.calendars.values()].flatMap(
-        (calendar) => calendar.ranges,
-      );
+      return [...this.calendars.values()].flatMap((calendar) => calendar.ranges);
     }
 
     const selectedIds = new Set(calendarIds);
@@ -92,9 +85,7 @@ export class CalendarSession {
     return entries;
   }
 
-  groupRangesByIdAcrossCalendars(
-    calendarIds?: string[],
-  ): Map<string, CalendarRangeEntry[]> {
+  groupRangesByIdAcrossCalendars(calendarIds?: string[]): Map<string, CalendarRangeEntry[]> {
     const grouped = new Map<string, CalendarRangeEntry[]>();
 
     for (const entry of this.getRangeEntries(calendarIds)) {
@@ -121,9 +112,7 @@ export class CalendarSession {
 
   updateRange(rangeId: string, updates: Partial<DateRange>): boolean {
     for (const calendar of this.calendars.values()) {
-      const rangeIndex = calendar.ranges.findIndex(
-        (range) => range.id === rangeId,
-      );
+      const rangeIndex = calendar.ranges.findIndex((range) => range.id === rangeId);
       if (rangeIndex === -1) {
         continue;
       }

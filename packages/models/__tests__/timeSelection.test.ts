@@ -150,9 +150,7 @@ describe('time selection helpers', () => {
       endTime: null,
       preview: '14:15',
     });
-    expect(
-      updateTimeSelection(inactive, { type: 'hover', time: '14:17' }),
-    ).toBe(inactive);
+    expect(updateTimeSelection(inactive, { type: 'hover', time: '14:17' })).toBe(inactive);
     expect(
       updateTimeSelection(
         {

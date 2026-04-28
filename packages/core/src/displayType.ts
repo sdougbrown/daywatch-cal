@@ -6,10 +6,7 @@ import type { DateRange, ViewFidelity } from './types.js';
  * Otherwise, auto-resolution picks a sensible default based on range characteristics
  * and the current view fidelity.
  */
-export function resolveDisplayType(
-  range: DateRange,
-  fidelity: ViewFidelity,
-): string {
+export function resolveDisplayType(range: DateRange, fidelity: ViewFidelity): string {
   if (range.displayType && range.displayType !== 'auto') {
     return range.displayType;
   }

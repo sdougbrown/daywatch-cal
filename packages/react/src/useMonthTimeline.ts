@@ -3,7 +3,7 @@ import { buildMonthTimelineModel } from '@daywatch/cal-models';
 import type { MonthTimelineModel, MonthTimelineModelConfig } from '@daywatch/cal-models';
 
 export type UseMonthTimelineConfig = MonthTimelineModelConfig;
-export type UseMonthTimelineResult = MonthTimelineModel;
+export interface UseMonthTimelineResult extends MonthTimelineModel {}
 
 /**
  * Computes month-column timeline layout data.
@@ -30,10 +30,12 @@ export function useMonthTimeline(config: UseMonthTimelineConfig): UseMonthTimeli
               endDate,
               ...(numberOfMonths !== undefined ? { numberOfMonths } : {}),
             }
-          : {
-              ...baseConfig,
-              numberOfMonths: numberOfMonths!,
-            },
+          : numberOfMonths !== undefined
+            ? {
+                ...baseConfig,
+                numberOfMonths,
+              }
+            : config,
       );
     },
     [startDate, ranges, numberOfMonths, endDate, locale, userTimezone],

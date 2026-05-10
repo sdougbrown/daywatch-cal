@@ -478,9 +478,11 @@ describe('MonthTimeline', () => {
       );
       expect(continuousSpans.every((span) => span.lane === 0)).toBe(true);
 
-      expect(timeline.spans.find((span) => span.rangeId === 'firstUltrasound')).toMatchObject({
-        displayType: 'dot',
-      });
+      for (const id of ['firstUltrasound', 'glucoseTest', 'birthPrepClass']) {
+        expect(timeline.spans.find((span) => span.rangeId === id)).toMatchObject({
+          displayType: 'dot',
+        });
+      }
     });
 
     it('keeps year-boundary columns correct', () => {

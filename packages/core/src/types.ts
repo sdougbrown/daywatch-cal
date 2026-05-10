@@ -355,6 +355,67 @@ export interface YearDay {
 }
 
 /**
+ * Configuration for MonthTimeline.
+ * Accepts numberOfMonths, endDate, or both (endDate takes precedence).
+ */
+export interface MonthTimelineConfig {
+  /** Window start — normalized internally to the first of the month */
+  startDate: string;
+  /** DateRanges to lay out across the timeline */
+  ranges: DateRange[];
+  /** Number of month columns to show. Required if endDate is not provided. */
+  numberOfMonths?: number;
+  /**
+   * Inclusive end of the window — normalized internally to the last day of this month.
+   * Required if numberOfMonths is not provided.
+   */
+  endDate?: string;
+  /** BCP 47 locale for Intl month label formatting. Default: runtime default */
+  locale?: string;
+  /** IANA timezone for range evaluation */
+  userTimezone?: string;
+}
+
+/**
+ * A single month column in a MonthTimeline.
+ */
+export interface TimelineMonth {
+  /** 0-based column index within the timeline */
+  index: number;
+  /** Month number, 0-11 */
+  month: number;
+  /** Full year */
+  year: number;
+  /** Short label for compact layouts, e.g. "Jan" */
+  label: string;
+  /** Full label, e.g. "January" */
+  fullLabel: string;
+  /** First day of the month, YYYY-MM-DD */
+  startDate: string;
+  /** Last day of the month, YYYY-MM-DD */
+  endDate: string;
+}
+
+/**
+ * A span positioned at month-column granularity, with lane assignment.
+ */
+export interface MonthSpanInfo {
+  rangeId: string;
+  label: string;
+  displayType?: string;
+  /** Column index where this span begins */
+  startMonthIndex: number;
+  /** Column index where this span ends, inclusive */
+  endMonthIndex: number;
+  /** True if the range's actual startDate precedes the timeline window */
+  clippedStart: boolean;
+  /** True if the range's actual endDate extends past the timeline window */
+  clippedEnd: boolean;
+  /** Lane assignment for stacking overlapping spans (0-based, greedy) */
+  lane: number;
+}
+
+/**
  * Score summarising the quality of a schedule across a date window.
  */
 export interface ScheduleScore {

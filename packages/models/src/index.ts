@@ -10,6 +10,7 @@ export { buildSpansModel } from './spans.js';
 export { snapToInterval, updateTimeSelection } from './timeSelection.js';
 export { buildTimelineModel } from './timeline.js';
 export { buildYearGridModel } from './yearGrid.js';
+export { buildMonthTimelineModel } from './monthTimeline.js';
 
 export type { CalendarController, CalendarModel, CalendarModelConfig } from './calendar.js';
 export type { CalendarEventsModelConfig } from './calendarEvents.js';
@@ -23,3 +24,4 @@ export type { SpansModelConfig } from './spans.js';
 export type { TimeSelection, TimeSelectionAction, TimeSelectionConfig } from './timeSelection.js';
 export type { TimelineModel, TimelineModelConfig } from './timeline.js';
 export type { YearGridModel, YearGridModelConfig } from './yearGrid.js';
+export type { MonthTimelineModel, MonthTimelineModelConfig } from './monthTimeline.js';

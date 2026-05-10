@@ -10,3 +10,4 @@ export { useFreeSlots } from './useFreeSlots.js';
 export { useScheduleScore } from './useScheduleScore.js';
 export { useTimeSelection } from './useTimeSelection.js';
 export { useYearGrid } from './useYearGrid.js';
+export { useMonthTimeline } from './useMonthTimeline.js';

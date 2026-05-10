@@ -10,5 +10,7 @@ export { createFreeSlots } from './createFreeSlots.js';
 export { createScheduleScore } from './createScheduleScore.js';
 export { createTimeSelection } from './createTimeSelection.js';
 export { createYearGrid } from './createYearGrid.js';
+export { createMonthTimeline } from './createMonthTimeline.js';
 
 export type { MaybeAccessor } from './utils.js';
+export type { CreateMonthTimelineResult } from './createMonthTimeline.js';

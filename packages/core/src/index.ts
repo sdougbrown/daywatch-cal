@@ -19,6 +19,9 @@ export type {
   YearGridConfig,
   YearMonth,
   YearDay,
+  MonthTimelineConfig,
+  TimelineMonth,
+  MonthSpanInfo,
   Conflict,
   FreeSlot,
   ScheduleScore,
@@ -29,6 +32,7 @@ export { RangeEvaluator } from './evaluator.js';
 export { CalendarGrid } from './grid.js';
 export { TimelineGrid, computeEventPositions } from './timeline.js';
 export { YearGrid } from './yearGrid.js';
+export { MonthTimeline } from './monthTimeline.js';
 
 // Schedule scoring
 export { scoreSchedule } from './scoring.js';

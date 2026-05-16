@@ -1,5 +1,12 @@
 # @daywatch/mcp
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [a459f4b]
+  - @daywatch/cal@0.2.0
+
 ## 0.1.1
 
 ### Initial release

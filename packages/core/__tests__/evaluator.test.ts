@@ -532,5 +532,14 @@ describe('RangeEvaluator', () => {
       expect(slots).toHaveLength(1);
       expect(slots[0].startTime).toBe('10:00'); // 14:00 UTC = 10:00 EDT
     });
+
+    it('returns no slots for same-timezone spring-forward gap times', () => {
+      const range = makeRange({
+        startTime: '02:30',
+        timezone: 'America/New_York',
+      });
+      const slots = evaluator.getTimeSlots('2026-03-08', range);
+      expect(slots).toHaveLength(0);
+    });
   });
 });

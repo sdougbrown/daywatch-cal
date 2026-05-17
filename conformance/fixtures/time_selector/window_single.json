@@ -1,0 +1,23 @@
+{
+  "description": "Window: startTime + endTime, duration computed from difference",
+  "userTimezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "Morning window",
+    "dates": ["2026-03-02"],
+    "startTime": "09:00",
+    "endTime": "12:00"
+  },
+  "timeSlots": [
+    {
+      "date": "2026-03-02",
+      "expected": [
+        {
+          "startTime": "09:00",
+          "endTime": "12:00",
+          "duration": 180
+        }
+      ]
+    }
+  ]
+}

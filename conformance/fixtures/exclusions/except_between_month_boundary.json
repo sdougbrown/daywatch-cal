@@ -1,0 +1,53 @@
+{
+  "description": "exceptBetween spanning month boundary and combined exceptDates+exceptBetween",
+  "userTimezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "Cross-month exclusion",
+    "fromDate": "2026-03-25",
+    "toDate": "2026-04-05",
+    "exceptBetween": [["2026-03-28", "2026-04-03"]],
+    "exceptDates": ["2026-04-04"]
+  },
+  "isDateInRange": [
+    {
+      "date": "2026-03-27",
+      "expected": true
+    },
+    {
+      "date": "2026-03-28",
+      "expected": false
+    },
+    {
+      "date": "2026-03-31",
+      "expected": false
+    },
+    {
+      "date": "2026-04-01",
+      "expected": false
+    },
+    {
+      "date": "2026-04-02",
+      "expected": false
+    },
+    {
+      "date": "2026-04-03",
+      "expected": false
+    },
+    {
+      "date": "2026-04-04",
+      "expected": false
+    },
+    {
+      "date": "2026-04-05",
+      "expected": true
+    }
+  ],
+  "expand": [
+    {
+      "from": "2026-03-25",
+      "to": "2026-04-05",
+      "expectedDates": ["2026-03-25", "2026-03-26", "2026-03-27", "2026-04-05"]
+    }
+  ]
+}

@@ -12,10 +12,12 @@ struct IsDateInRangeAssertion {
     date: String,
     expected: bool,
     #[serde(default)]
+    #[serde(rename = "rangeId")]
     range_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 struct ExpandAssertion {
     from: String,
@@ -24,6 +26,7 @@ struct ExpandAssertion {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 struct TimeSlotExpected {
     start_time: String,
@@ -48,6 +51,7 @@ struct RangeRefExpected {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 struct ConflictExpected {
     range_a: RangeRefExpected,
@@ -67,6 +71,7 @@ struct ConflictAssertion {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 struct FreeSlotExpected {
     date: String,
@@ -76,6 +81,7 @@ struct FreeSlotExpected {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 struct FreeSlotOptions {
     #[serde(default)]
@@ -95,6 +101,7 @@ struct FreeSlotAssertion {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 struct ScoreScheduleExpected {
     conflicts: u32,
@@ -105,6 +112,7 @@ struct ScoreScheduleExpected {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 struct ScoreScheduleOptionsFixture {
     #[serde(default)]
@@ -125,24 +133,31 @@ struct ScoreScheduleAssertion {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 struct Fixture {
     #[allow(dead_code)]
     description: String,
+    #[serde(default)]
     user_timezone: Option<String>,
     range: Option<DateRange>,
     ranges: Option<Vec<DateRange>>,
     #[serde(default)]
+    #[serde(rename = "isDateInRange")]
     is_date_in_range: Option<Vec<IsDateInRangeAssertion>>,
     #[serde(default)]
     expand: Option<Vec<ExpandAssertion>>,
     #[serde(default)]
+    #[serde(rename = "timeSlots")]
     time_slots: Option<Vec<TimeSlotsAssertion>>,
     #[serde(default)]
+    #[serde(rename = "findConflicts")]
     find_conflicts: Option<Vec<ConflictAssertion>>,
     #[serde(default)]
+    #[serde(rename = "findFreeSlots")]
     find_free_slots: Option<Vec<FreeSlotAssertion>>,
     #[serde(default)]
+    #[serde(rename = "scoreSchedule")]
     score_schedule: Option<Vec<ScoreScheduleAssertion>>,
 }
 
@@ -484,7 +499,9 @@ fn walk_fixtures(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
 #[test]
 fn conformance() {
     let fixtures_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("tests")
+        .join("..")
+        .join("..")
+        .join("conformance")
         .join("fixtures");
 
     let mut files = Vec::new();

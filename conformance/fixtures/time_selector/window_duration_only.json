@@ -1,0 +1,23 @@
+{
+  "description": "Window: startTime + duration, endTime computed from start+duration",
+  "userTimezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "Duration window",
+    "dates": ["2026-03-02"],
+    "startTime": "09:00",
+    "duration": 90
+  },
+  "timeSlots": [
+    {
+      "date": "2026-03-02",
+      "expected": [
+        {
+          "startTime": "09:00",
+          "endTime": "10:30",
+          "duration": 90
+        }
+      ]
+    }
+  ]
+}

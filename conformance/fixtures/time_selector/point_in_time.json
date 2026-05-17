@@ -1,0 +1,22 @@
+{
+  "description": "Point-in-time: startTime only, no end/duration/repeatEvery, endTime and duration are null",
+  "userTimezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "Point in time",
+    "dates": ["2026-03-02"],
+    "startTime": "14:30"
+  },
+  "timeSlots": [
+    {
+      "date": "2026-03-02",
+      "expected": [
+        {
+          "startTime": "14:30",
+          "endTime": null,
+          "duration": null
+        }
+      ]
+    }
+  ]
+}

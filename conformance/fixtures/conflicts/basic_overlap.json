@@ -1,0 +1,40 @@
+{
+  "description": "Basic overlapping ranges produce a conflict with correct overlapStart/overlapEnd",
+  "userTimezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "r1",
+      "label": "Standup",
+      "dates": ["2026-04-01"],
+      "startTime": "09:00",
+      "endTime": "09:30"
+    },
+    {
+      "id": "r2",
+      "label": "Sprint Planning",
+      "dates": ["2026-04-01"],
+      "startTime": "09:15",
+      "endTime": "10:15"
+    }
+  ],
+  "findConflicts": [
+    {
+      "date": "2026-04-01",
+      "expected": [
+        {
+          "rangeA": {
+            "id": "r1",
+            "label": "Standup"
+          },
+          "rangeB": {
+            "id": "r2",
+            "label": "Sprint Planning"
+          },
+          "date": "2026-04-01",
+          "overlapStart": "09:15",
+          "overlapEnd": "09:30"
+        }
+      ]
+    }
+  ]
+}

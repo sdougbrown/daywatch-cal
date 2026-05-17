@@ -1,0 +1,28 @@
+{
+  "description": "everyHour with duration generates slots with endTimes",
+  "userTimezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "Hourly with duration",
+    "dates": ["2026-03-02"],
+    "everyHour": [9, 14],
+    "duration": 60
+  },
+  "timeSlots": [
+    {
+      "date": "2026-03-02",
+      "expected": [
+        {
+          "startTime": "09:00",
+          "endTime": "10:00",
+          "duration": 60
+        },
+        {
+          "startTime": "14:00",
+          "endTime": "15:00",
+          "duration": 60
+        }
+      ]
+    }
+  ]
+}

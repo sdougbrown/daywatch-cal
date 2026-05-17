@@ -1,0 +1,31 @@
+{
+  "description": "Occupied block starts before dayStart: clamp to dayStart",
+  "userTimezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "r1",
+      "label": "Early meeting",
+      "dates": ["2026-04-01"],
+      "startTime": "07:00",
+      "endTime": "10:00"
+    }
+  ],
+  "findFreeSlots": [
+    {
+      "date": "2026-04-01",
+      "options": {
+        "dayStart": "09:00",
+        "dayEnd": "17:00",
+        "minDuration": 30
+      },
+      "expected": [
+        {
+          "date": "2026-04-01",
+          "startTime": "10:00",
+          "endTime": "17:00",
+          "duration": 420
+        }
+      ]
+    }
+  ]
+}

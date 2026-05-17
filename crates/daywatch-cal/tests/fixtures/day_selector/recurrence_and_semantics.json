@@ -1,0 +1,42 @@
+{
+  "description": "AND semantics: everyDate[31] skips short months, everyWeekday+everyMonth combined, everyDate+everyWeekday combined",
+  "user_timezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "r1",
+      "label": "31st only",
+      "everyDate": [31],
+      "fromDate": "2026-02-01",
+      "toDate": "2026-04-30"
+    },
+    {
+      "id": "r2",
+      "label": "Mondays in March",
+      "everyWeekday": [1],
+      "everyMonth": [3],
+      "fromDate": "2026-01-01",
+      "toDate": "2026-12-31"
+    },
+    {
+      "id": "r3",
+      "label": "15th when Monday",
+      "everyDate": [15],
+      "everyWeekday": [1],
+      "fromDate": "2026-01-01",
+      "toDate": "2026-12-31"
+    }
+  ],
+  "is_date_in_range": [
+    { "range_id": "r1", "date": "2026-03-31", "expected": true },
+    { "range_id": "r1", "date": "2026-04-30", "expected": false },
+    { "range_id": "r1", "date": "2026-02-28", "expected": false },
+    { "range_id": "r2", "date": "2026-03-02", "expected": true },
+    { "range_id": "r2", "date": "2026-03-09", "expected": true },
+    { "range_id": "r2", "date": "2026-03-16", "expected": true },
+    { "range_id": "r2", "date": "2026-03-23", "expected": true },
+    { "range_id": "r2", "date": "2026-03-30", "expected": true },
+    { "range_id": "r2", "date": "2026-04-13", "expected": false },
+    { "range_id": "r3", "date": "2026-06-15", "expected": true },
+    { "range_id": "r3", "date": "2026-03-15", "expected": false }
+  ]
+}

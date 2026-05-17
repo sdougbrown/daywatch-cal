@@ -1,0 +1,20 @@
+{
+  "description": "everyHour generates slots at specified hours",
+  "user_timezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "Hourly slots",
+    "dates": ["2026-03-02"],
+    "everyHour": [9, 12, 16]
+  },
+  "time_slots": [
+    {
+      "date": "2026-03-02",
+      "expected": [
+        { "start_time": "09:00", "end_time": null, "duration": null },
+        { "start_time": "12:00", "end_time": null, "duration": null },
+        { "start_time": "16:00", "end_time": null, "duration": null }
+      ]
+    }
+  ]
+}

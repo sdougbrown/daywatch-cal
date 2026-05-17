@@ -1,0 +1,21 @@
+{
+  "description": "min_duration exactly met: included (>= semantics)",
+  "user_timezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "r1", "label": "Meeting",
+      "dates": ["2026-04-01"],
+      "startTime": "09:00",
+      "endTime": "10:00"
+    }
+  ],
+  "find_free_slots": [
+    {
+      "date": "2026-04-01",
+      "options": { "day_start": "09:00", "day_end": "17:00", "min_duration": 420 },
+      "expected": [
+        { "date": "2026-04-01", "start_time": "10:00", "end_time": "17:00", "duration": 420 }
+      ]
+    }
+  ]
+}

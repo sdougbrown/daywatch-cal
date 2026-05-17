@@ -1,0 +1,22 @@
+{
+  "description": "Point-in-time slots (zero-length) excluded from conflict detection",
+  "user_timezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "r1", "label": "Point",
+      "dates": ["2026-04-01"],
+      "startTime": "10:00"
+    },
+    {
+      "id": "r2", "label": "Block",
+      "dates": ["2026-04-01"],
+      "startTime": "09:00", "endTime": "12:00"
+    }
+  ],
+  "find_conflicts": [
+    {
+      "date": "2026-04-01",
+      "expected": []
+    }
+  ]
+}

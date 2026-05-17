@@ -1,0 +1,19 @@
+{
+  "description": "CT to ET conversion (both DST): 14:00 CT -> 15:00 ET",
+  "user_timezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "CT event",
+    "dates": ["2026-03-30"],
+    "startTime": "14:00",
+    "timezone": "America/Chicago"
+  },
+  "time_slots": [
+    {
+      "date": "2026-03-30",
+      "expected": [
+        { "start_time": "15:00", "end_time": null, "duration": null }
+      ]
+    }
+  ]
+}

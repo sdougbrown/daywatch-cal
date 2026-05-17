@@ -1,0 +1,19 @@
+{
+  "description": "PT to ET conversion (both DST): 12:30 PT -> 15:30 ET",
+  "user_timezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "PT event",
+    "dates": ["2026-03-30"],
+    "startTime": "12:30",
+    "timezone": "America/Los_Angeles"
+  },
+  "time_slots": [
+    {
+      "date": "2026-03-30",
+      "expected": [
+        { "start_time": "15:30", "end_time": null, "duration": null }
+      ]
+    }
+  ]
+}

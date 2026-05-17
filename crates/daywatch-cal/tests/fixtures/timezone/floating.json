@@ -1,0 +1,18 @@
+{
+  "description": "Floating timezone (null): no conversion, time passes through unchanged",
+  "user_timezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "Floating time",
+    "dates": ["2026-04-01"],
+    "startTime": "09:30"
+  },
+  "time_slots": [
+    {
+      "date": "2026-04-01",
+      "expected": [
+        { "start_time": "09:30", "end_time": null, "duration": null }
+      ]
+    }
+  ]
+}

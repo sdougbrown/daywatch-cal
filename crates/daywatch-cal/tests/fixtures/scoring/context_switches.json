@@ -1,0 +1,36 @@
+{
+  "description": "Context switches: multiple ranges across two days, switches counted per day",
+  "user_timezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "r1", "label": "Task A",
+      "everyWeekday": [1, 2],
+      "fromDate": "2026-03-16",
+      "toDate": "2026-03-17",
+      "everyHour": [9, 14],
+      "duration": 60
+    },
+    {
+      "id": "r2", "label": "Task B",
+      "everyWeekday": [1, 2],
+      "fromDate": "2026-03-16",
+      "toDate": "2026-03-17",
+      "everyHour": [11],
+      "duration": 60
+    }
+  ],
+  "score_schedule": [
+    {
+      "from": "2026-03-16",
+      "to": "2026-03-17",
+      "options": { "day_start": "09:00", "day_end": "17:00" },
+      "expected": {
+        "conflicts": 0,
+        "free_minutes": 600,
+        "focus_blocks": 6,
+        "avg_context_switches": 2.0,
+        "conflict_days": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "description": "Same rangeId: overlapping time slots from the same range are not conflicts",
+  "user_timezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "r1", "label": "Recurring",
+      "dates": ["2026-04-01"],
+      "everyHour": [9, 9],
+      "duration": 60
+    }
+  ],
+  "find_conflicts": [
+    {
+      "date": "2026-04-01",
+      "expected": []
+    }
+  ]
+}

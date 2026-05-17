@@ -1,0 +1,17 @@
+{
+  "description": "DST spring-forward gap: 02:30 ET on 2026-03-08 does not exist, returns no slots",
+  "user_timezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "Spring forward gap",
+    "dates": ["2026-03-08"],
+    "startTime": "02:30",
+    "timezone": "America/New_York"
+  },
+  "time_slots": [
+    {
+      "date": "2026-03-08",
+      "expected": []
+    }
+  ]
+}

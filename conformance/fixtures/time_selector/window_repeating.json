@@ -1,0 +1,30 @@
+{
+  "description": "Window: startTime + repeatEvery creates multiple slots",
+  "userTimezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "Repeating window",
+    "dates": ["2026-03-02"],
+    "startTime": "09:00",
+    "endTime": "11:00",
+    "repeatEvery": 60,
+    "duration": 30
+  },
+  "timeSlots": [
+    {
+      "date": "2026-03-02",
+      "expected": [
+        {
+          "startTime": "09:00",
+          "endTime": "09:30",
+          "duration": 30
+        },
+        {
+          "startTime": "10:00",
+          "endTime": "10:30",
+          "duration": 30
+        }
+      ]
+    }
+  ]
+}

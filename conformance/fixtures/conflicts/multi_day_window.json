@@ -1,0 +1,48 @@
+{
+  "description": "Multi-day window with conflicts on some days but not others",
+  "userTimezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "r1",
+      "label": "Morning",
+      "everyWeekday": [1, 2, 3, 4, 5],
+      "fromDate": "2026-04-01",
+      "toDate": "2026-04-10",
+      "startTime": "09:00",
+      "endTime": "12:00"
+    },
+    {
+      "id": "r2",
+      "label": "Midday",
+      "everyWeekday": [1, 2, 3, 4, 5],
+      "fromDate": "2026-04-01",
+      "toDate": "2026-04-10",
+      "startTime": "11:00",
+      "endTime": "13:00"
+    }
+  ],
+  "findConflicts": [
+    {
+      "date": "2026-04-01",
+      "expected": [
+        {
+          "rangeA": {
+            "id": "r1",
+            "label": "Morning"
+          },
+          "rangeB": {
+            "id": "r2",
+            "label": "Midday"
+          },
+          "date": "2026-04-01",
+          "overlapStart": "11:00",
+          "overlapEnd": "12:00"
+        }
+      ]
+    },
+    {
+      "date": "2026-04-04",
+      "expected": []
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "description": "No conflicts: two ranges on same day but not overlapping",
+  "userTimezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "r1",
+      "label": "Morning",
+      "dates": ["2026-03-10"],
+      "startTime": "09:00",
+      "endTime": "11:00"
+    },
+    {
+      "id": "r2",
+      "label": "Afternoon",
+      "dates": ["2026-03-10"],
+      "startTime": "13:00",
+      "endTime": "15:00"
+    }
+  ],
+  "scoreSchedule": [
+    {
+      "from": "2026-03-10",
+      "to": "2026-03-10",
+      "options": {
+        "focusBlockMinutes": 60,
+        "dayStart": "09:00",
+        "dayEnd": "17:00"
+      },
+      "expected": {
+        "conflicts": 0,
+        "freeMinutes": 240,
+        "focusBlocks": 2,
+        "avgContextSwitches": 1,
+        "conflictDays": 0
+      }
+    }
+  ]
+}

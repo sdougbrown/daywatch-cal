@@ -1,0 +1,23 @@
+{
+  "description": "UTC to ET conversion (DST active): 10:00 UTC -> 06:00 ET",
+  "userTimezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "UTC event",
+    "dates": ["2026-04-01"],
+    "startTime": "10:00",
+    "timezone": "UTC"
+  },
+  "timeSlots": [
+    {
+      "date": "2026-04-01",
+      "expected": [
+        {
+          "startTime": "06:00",
+          "endTime": null,
+          "duration": null
+        }
+      ]
+    }
+  ]
+}

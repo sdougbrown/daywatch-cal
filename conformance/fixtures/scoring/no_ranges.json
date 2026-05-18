@@ -1,0 +1,22 @@
+{
+  "description": "No ranges: all zeros for conflicts, full working time free",
+  "userTimezone": "America/New_York",
+  "ranges": [],
+  "scoreSchedule": [
+    {
+      "from": "2026-03-01",
+      "to": "2026-03-03",
+      "options": {
+        "dayStart": "09:00",
+        "dayEnd": "17:00"
+      },
+      "expected": {
+        "conflicts": 0,
+        "freeMinutes": 1440,
+        "focusBlocks": 3,
+        "avgContextSwitches": 0,
+        "conflictDays": 0
+      }
+    }
+  ]
+}

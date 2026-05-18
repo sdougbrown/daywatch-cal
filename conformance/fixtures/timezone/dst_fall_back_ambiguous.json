@@ -1,0 +1,23 @@
+{
+  "description": "DST fall-back ambiguous: 01:30 ET on 2026-11-01 exists twice, picks earliest (EDT version)",
+  "userTimezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "Fall back ambiguous",
+    "dates": ["2026-11-01"],
+    "startTime": "01:30",
+    "timezone": "America/New_York"
+  },
+  "timeSlots": [
+    {
+      "date": "2026-11-01",
+      "expected": [
+        {
+          "startTime": "01:30",
+          "endTime": null,
+          "duration": null
+        }
+      ]
+    }
+  ]
+}

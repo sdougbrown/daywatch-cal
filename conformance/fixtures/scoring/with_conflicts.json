@@ -1,0 +1,37 @@
+{
+  "description": "With conflicts: overlapping ranges on same day",
+  "userTimezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "r1",
+      "label": "Meeting A",
+      "dates": ["2026-03-12"],
+      "startTime": "10:00",
+      "endTime": "12:00"
+    },
+    {
+      "id": "r2",
+      "label": "Meeting B",
+      "dates": ["2026-03-12"],
+      "startTime": "11:00",
+      "endTime": "13:00"
+    }
+  ],
+  "scoreSchedule": [
+    {
+      "from": "2026-03-12",
+      "to": "2026-03-12",
+      "options": {
+        "dayStart": "09:00",
+        "dayEnd": "17:00"
+      },
+      "expected": {
+        "conflicts": 1,
+        "freeMinutes": 300,
+        "focusBlocks": 2,
+        "avgContextSwitches": 1,
+        "conflictDays": 1
+      }
+    }
+  ]
+}

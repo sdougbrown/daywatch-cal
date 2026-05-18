@@ -210,8 +210,6 @@ export function convertTime(
   fromTimezone: string,
   toTimezone: string,
 ): string | null {
-  if (fromTimezone === toTimezone) return time;
-
   const cacheKey = `${dateStr}|${time}|${fromTimezone}|${toTimezone}`;
   if (timeConversionCache.has(cacheKey)) {
     return timeConversionCache.get(cacheKey)!;

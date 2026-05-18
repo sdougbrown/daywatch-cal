@@ -1,0 +1,36 @@
+name: Parity
+
+on:
+  push:
+    paths:
+      - 'packages/core/src/**'
+      - 'crates/daywatch-cal/src/**'
+      - '.github/workflows/parity.yml'
+  pull_request:
+    paths:
+      - 'packages/core/src/**'
+      - 'crates/daywatch-cal/src/**'
+      - '.github/workflows/parity.yml'
+
+jobs:
+  js-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable Corepack
+        run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+      - run: yarn install --immutable
+      - run: yarn workspace @daywatch/cal test
+        env:
+          NODE_OPTIONS: '--experimental-vm-modules'
+
+  rust-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p daywatch-cal

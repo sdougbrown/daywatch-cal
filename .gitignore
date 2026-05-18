@@ -10,3 +10,6 @@ dist/
 .turbo/
 .vite/
 .watchman-cookie-*
+
+# Rust build artifacts
+target/

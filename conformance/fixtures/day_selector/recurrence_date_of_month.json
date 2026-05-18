@@ -1,0 +1,36 @@
+{
+  "description": "Recurrence by day-of-month (1st and 15th) for March 2026",
+  "userTimezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "1st and 15th",
+    "everyDate": [1, 15],
+    "fromDate": "2026-03-01",
+    "toDate": "2026-03-31"
+  },
+  "isDateInRange": [
+    {
+      "date": "2026-03-01",
+      "expected": true
+    },
+    {
+      "date": "2026-03-15",
+      "expected": true
+    },
+    {
+      "date": "2026-03-02",
+      "expected": false
+    },
+    {
+      "date": "2026-03-16",
+      "expected": false
+    }
+  ],
+  "expand": [
+    {
+      "from": "2026-03-01",
+      "to": "2026-03-31",
+      "expectedDates": ["2026-03-01", "2026-03-15"]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "description": "Focus block exact match: gap exactly equals focus_block_minutes counts as a block",
+  "userTimezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "r1",
+      "label": "Meeting",
+      "dates": ["2026-03-13"],
+      "startTime": "09:00",
+      "endTime": "12:00"
+    },
+    {
+      "id": "r2",
+      "label": "Another meeting",
+      "dates": ["2026-03-13"],
+      "startTime": "14:00",
+      "endTime": "17:00"
+    }
+  ],
+  "scoreSchedule": [
+    {
+      "from": "2026-03-13",
+      "to": "2026-03-13",
+      "options": {
+        "focusBlockMinutes": 120,
+        "dayStart": "09:00",
+        "dayEnd": "17:00"
+      },
+      "expected": {
+        "conflicts": 0,
+        "freeMinutes": 120,
+        "focusBlocks": 1,
+        "avgContextSwitches": 1,
+        "conflictDays": 0
+      }
+    }
+  ]
+}

@@ -147,7 +147,39 @@ export class RangeEvaluator {
       const resolvedStart = this.resolveTime(dateStr, range.startTime, range.timezone);
       if (resolvedStart === null) return slots; // DST gap
 
-      if (range.repeatEvery) {
+      const compiled = this.getCompiledRange(range);
+      const isContinuousSpan =
+        !range.repeatEvery &&
+        !compiled.hasRecurrence &&
+        !compiled.datesSet &&
+        range.fromDate != null &&
+        range.toDate != null &&
+        range.fromDate !== range.toDate &&
+        range.duration != null &&
+        timeToMinutes(resolvedStart) + range.duration > 1440;
+
+      if (isContinuousSpan) {
+        // One continuous block from fromDate@startTime to toDate@endTime —
+        // e.g. a multi-day on-call shift. Interior days are fully occupied;
+        // the first and last days are partial. Applying the boundary times
+        // to every day (the single-block branch below) would collapse the
+        // span to a zero-width point per day and hide every overlap.
+        const startTime = dateStr === range.fromDate ? resolvedStart : '00:00';
+        const endTime =
+          dateStr === range.toDate
+            ? range.endTime
+              ? (this.resolveTime(dateStr, range.endTime, range.timezone) ?? '24:00')
+              : '24:00'
+            : '24:00';
+
+        slots.push({
+          startTime,
+          endTime,
+          duration: timeToMinutes(endTime) - timeToMinutes(startTime),
+          rangeId: range.id,
+          label: range.label,
+        });
+      } else if (range.repeatEvery) {
         const endBoundary = range.endTime
           ? (this.resolveTime(dateStr, range.endTime, range.timezone) ?? '24:00')
           : '24:00';

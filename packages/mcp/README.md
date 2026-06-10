@@ -24,6 +24,45 @@ npx @daywatch/mcp
 
 Your MCP client will start the process and communicate over stdin/stdout.
 
+## Standalone binary (no Node required)
+
+If you don't have Node.js — or just want a single self-contained executable — download a prebuilt binary instead of using `npx`. Each [GitHub Release](https://github.com/sdougbrown/daywatch-cal/releases) ships one binary per platform plus a `sha256sums.txt` to verify against:
+
+| Platform | Asset |
+| --- | --- |
+| macOS (Apple Silicon) | `daywatch-mcp-darwin-arm64` |
+| macOS (Intel) | `daywatch-mcp-darwin-x64` |
+| Linux (x64) | `daywatch-mcp-linux-x64` |
+| Linux (arm64) | `daywatch-mcp-linux-arm64` |
+| Windows (x64) | `daywatch-mcp-windows-x64.exe` |
+
+These embed the Bun runtime and all dependencies — no Node, no `npx`, no global install.
+
+**macOS / Linux:**
+
+```bash
+chmod +x ./daywatch-mcp-darwin-arm64
+# macOS only: clear the download quarantine so Gatekeeper allows it
+xattr -d com.apple.quarantine ./daywatch-mcp-darwin-arm64 2>/dev/null || true
+```
+
+Then point your client's `command` at the binary path with no `args`:
+
+```json
+{
+  "mcpServers": {
+    "daywatch-cal": {
+      "command": "/absolute/path/to/daywatch-mcp-darwin-arm64",
+      "args": []
+    }
+  }
+}
+```
+
+**Windows:** use the full path to `daywatch-mcp-windows-x64.exe`. SmartScreen may warn once ("unknown publisher") — choose **More info → Run anyway**.
+
+> Enterprise-managed machines with locked Gatekeeper / SmartScreen policy may block unsigned binaries outright. On those, use the `npx` configuration below — it inherits Node's trust. The same binaries are what the daywatch Claude Code plugin downloads on first launch, so the plugin and a direct Claude Desktop config consume identical release assets.
+
 ## Configuration
 
 ### Claude Desktop

@@ -1,0 +1,203 @@
+name: Release MCP Binaries
+
+# Builds self-contained @daywatch/mcp binaries (one per OS/arch, no Node
+# runtime required) and attaches them to a GitHub Release. Consumed by the
+# `daywatch` Claude Code plugin's run.sh, which downloads the matching asset
+# on first launch.
+#
+# Trigger by pushing a tag like `mcp-v0.1.2`, or run manually via the
+# Actions tab (workflow_dispatch) — by default the manual run derives the
+# tag from packages/mcp/package.json.
+#
+# Structure: test → build (one job per target, on its native OS) → release.
+# Each target builds on its own runner so a single failure can't leave a
+# partial set, and the release job only runs if every target succeeded.
+
+on:
+  push:
+    tags:
+      - 'mcp-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. mcp-v0.1.2). Defaults to mcp-v<package version>.'
+        required: false
+
+concurrency:
+  group: release-mcp-binaries-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Gate the release on the same checks CI runs, so a tag can't ship a
+  # binary built from code that doesn't build or pass tests.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build workspace
+        run: yarn turbo run build
+
+      - name: Test
+        run: yarn test
+        env:
+          NODE_OPTIONS: '--experimental-vm-modules'
+
+  build:
+    needs: test
+    strategy:
+      # Run every target even if one fails, so all failures surface at once.
+      # The release job's `needs: build` still blocks a partial release.
+      fail-fast: false
+      matrix:
+        include:
+          # darwin builds run on macOS — bun's darwin cross-compilation from
+          # a Linux host is unreliable (and produces an unsigned binary, which
+          # macOS SIGKILLs on Apple Silicon). Building on macOS lets bun
+          # ad-hoc-sign it, which is sufficient for JIT to run. linux/windows
+          # have no such constraint, so they cross-build on Linux.
+          - target: darwin-arm64
+            os: macos-latest
+            ext: ''
+          - target: darwin-x64
+            os: macos-latest
+            ext: ''
+          - target: linux-x64
+            os: ubuntu-latest
+            ext: ''
+          - target: linux-arm64
+            os: ubuntu-latest
+            ext: ''
+          - target: windows-x64
+            os: ubuntu-latest
+            ext: '.exe'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build workspace
+        run: yarn turbo run build
+
+      - name: Compile binary (${{ matrix.target }})
+        run: |
+          set -euo pipefail
+          mkdir -p dist-bin
+          bun build --compile --target="bun-${{ matrix.target }}" \
+            packages/mcp/src/index.ts \
+            --outfile "dist-bin/daywatch-mcp-${{ matrix.target }}${{ matrix.ext }}"
+
+      - name: Smoke-test the binary (native targets only)
+        # A binary built for this runner's own OS/arch can be executed here;
+        # confirm it speaks MCP over stdio before we ship it.
+        if: ${{ (matrix.os == 'macos-latest' && matrix.target == 'darwin-arm64') || (matrix.os == 'ubuntu-latest' && matrix.target == 'linux-x64') }}
+        run: |
+          set -euo pipefail
+          # Capture the whole initialize response — the server exits on stdin
+          # EOF, so the output is bounded. Do NOT pipe through `head`: closing
+          # the read end mid-stream can SIGPIPE the binary, which under
+          # pipefail fails the step even on a successful response. stderr is
+          # left attached so an exec/linker failure surfaces in the log.
+          response="$(printf '%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}' \
+            | "./dist-bin/daywatch-mcp-${{ matrix.target }}")"
+          echo "${response:0:200}"
+          echo "$response" | grep -q '"serverInfo"' || { echo "binary did not respond to initialize" >&2; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: daywatch-mcp-${{ matrix.target }}${{ matrix.ext }}
+          path: dist-bin/daywatch-mcp-${{ matrix.target }}${{ matrix.ext }}
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    # Only the release job needs write; test/build run with default read-only.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Collect binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-bin
+          pattern: daywatch-mcp-*
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          set -euo pipefail
+          ( cd dist-bin && sha256sum daywatch-mcp-* > sha256sums.txt )
+          ls -lh dist-bin
+          cat dist-bin/sha256sums.txt
+
+      - name: Resolve release tag
+        id: tag
+        # Read trigger inputs through env, never interpolated into the script
+        # body — keeps an attacker-influenced dispatch input out of the shell.
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          elif [ "$REF_TYPE" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            VERSION="$(node -p "require('./packages/mcp/package.json').version")"
+            TAG="mcp-v${VERSION}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $TAG"
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # Re-running a release for the same tag replaces that tag's assets
+            # in place (idempotent rebuild); it never touches other releases.
+            echo "Release $TAG exists — uploading assets (clobber)."
+            gh release upload "$TAG" dist-bin/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            echo "Creating release $TAG."
+            gh release create "$TAG" dist-bin/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "daywatch-mcp $TAG" \
+              --notes "Self-contained \`@daywatch/mcp\` binaries — no Node runtime required. Consumed by the \`daywatch\` Claude Code plugin's run.sh, which downloads the matching OS/arch asset on first launch. Verify with sha256sums.txt."
+          fi

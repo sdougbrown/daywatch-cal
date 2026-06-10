@@ -63,15 +63,25 @@ jobs:
       matrix:
         include:
           # darwin builds run on macOS — bun's darwin cross-compilation from
-          # a Linux host is unreliable, so build each family on its own OS.
+          # a Linux host is unreliable (and produces an unsigned binary, which
+          # macOS SIGKILLs on Apple Silicon). Building on macOS lets bun
+          # ad-hoc-sign it, which is sufficient for JIT to run. linux/windows
+          # have no such constraint, so they cross-build on Linux.
           - target: darwin-arm64
             os: macos-latest
+            ext: ''
           - target: darwin-x64
             os: macos-latest
+            ext: ''
           - target: linux-x64
             os: ubuntu-latest
+            ext: ''
           - target: linux-arm64
             os: ubuntu-latest
+            ext: ''
+          - target: windows-x64
+            os: ubuntu-latest
+            ext: '.exe'
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -100,7 +110,7 @@ jobs:
           mkdir -p dist-bin
           bun build --compile --target="bun-${{ matrix.target }}" \
             packages/mcp/src/index.ts \
-            --outfile "dist-bin/daywatch-mcp-${{ matrix.target }}"
+            --outfile "dist-bin/daywatch-mcp-${{ matrix.target }}${{ matrix.ext }}"
 
       - name: Smoke-test the binary (native targets only)
         # A binary built for this runner's own OS/arch can be executed here;
@@ -121,8 +131,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: daywatch-mcp-${{ matrix.target }}
-          path: dist-bin/daywatch-mcp-${{ matrix.target }}
+          name: daywatch-mcp-${{ matrix.target }}${{ matrix.ext }}
+          path: dist-bin/daywatch-mcp-${{ matrix.target }}${{ matrix.ext }}
           if-no-files-found: error
           retention-days: 1
 

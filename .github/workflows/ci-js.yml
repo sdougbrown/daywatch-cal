@@ -12,13 +12,11 @@ on:
       - '.github/workflows/ci-js.yml'
   pull_request:
     branches: [main]
-    paths:
-      - 'packages/**'
-      - 'examples/**'
-      - 'conformance/**'
-      - 'package.json'
-      - 'yarn.lock'
-      - '.github/workflows/ci-js.yml'
+    # No path filter on PRs: these jobs are required status checks, and a
+    # path-filtered required check never reports on a PR that doesn't touch
+    # those paths — GitHub then blocks the PR forever at "Expected — waiting
+    # for status". Running them on every PR (incl. docs/CI-only) keeps them
+    # reportable. The push filter above still spares unrelated main pushes.
 
 jobs:
   lint:

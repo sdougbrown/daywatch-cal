@@ -1,5 +1,11 @@
 # @daywatch/cal-rules
 
+## 0.1.3
+
+### Patch Changes
+
+- d88fdcb: `addMinutes("23:00", 120)` previously returned `null`, silently dropping end times that crossed midnight. Downstream, `endTime` became `null`, causing broken conflict detection, free-slot finding, and scoring.
+
 ## 0.1.2
 
 ### Patch Changes

@@ -23,9 +23,6 @@ on:
         description: 'Release tag (e.g. mcp-v0.1.2). Defaults to mcp-v<package version>.'
         required: false
 
-permissions:
-  contents: write
-
 concurrency:
   group: release-mcp-binaries-${{ github.ref }}
   cancel-in-progress: false
@@ -111,11 +108,16 @@ jobs:
         if: ${{ (matrix.os == 'macos-latest' && matrix.target == 'darwin-arm64') || (matrix.os == 'ubuntu-latest' && matrix.target == 'linux-x64') }}
         run: |
           set -euo pipefail
-          out="$(printf '%s\n' \
+          # Capture the whole initialize response — the server exits on stdin
+          # EOF, so the output is bounded. Do NOT pipe through `head`: closing
+          # the read end mid-stream can SIGPIPE the binary, which under
+          # pipefail fails the step even on a successful response. stderr is
+          # left attached so an exec/linker failure surfaces in the log.
+          response="$(printf '%s\n' \
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}' \
-            | "./dist-bin/daywatch-mcp-${{ matrix.target }}" 2>/dev/null | head -c 200)"
-          echo "$out"
-          echo "$out" | grep -q '"serverInfo"' || { echo "binary did not respond to initialize" >&2; exit 1; }
+            | "./dist-bin/daywatch-mcp-${{ matrix.target }}")"
+          echo "${response:0:200}"
+          echo "$response" | grep -q '"serverInfo"' || { echo "binary did not respond to initialize" >&2; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
@@ -127,6 +129,9 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    # Only the release job needs write; test/build run with default read-only.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -150,10 +155,16 @@ jobs:
 
       - name: Resolve release tag
         id: tag
+        # Read trigger inputs through env, never interpolated into the script
+        # body — keeps an attacker-influenced dispatch input out of the shell.
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          REF_TYPE: ${{ github.ref_type }}
         run: |
-          if [ -n "${{ github.event.inputs.tag }}" ]; then
-            TAG="${{ github.event.inputs.tag }}"
-          elif [ "${{ github.ref_type }}" = "tag" ]; then
+          set -euo pipefail
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          elif [ "$REF_TYPE" = "tag" ]; then
             TAG="${GITHUB_REF_NAME}"
           else
             VERSION="$(node -p "require('./packages/mcp/package.json').version")"
@@ -165,9 +176,9 @@ jobs:
       - name: Create or update release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
-          TAG="${{ steps.tag.outputs.tag }}"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             # Re-running a release for the same tag replaces that tag's assets
             # in place (idempotent rebuild); it never touches other releases.

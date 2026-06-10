@@ -48,6 +48,7 @@ LOADING DATA:
 - File on disk → load_calendar_file (pass the path — never read .ics files into conversation yourself)
 - Google Calendar → load_calendar with source "gcal" and the raw JSON array from gcal_list_events. Auto-filters transparent, declined, working-location events.
 - Microsoft Outlook / Office 365 → load_calendar with source "msft" and the raw JSON array from Microsoft Graph. Auto-filters free, workingElsewhere, declined, cancelled events. Maps Windows timezones to IANA.
+- Always feed gcal/msft data through its native source. Do NOT pre-flatten it to "ranges" yourself — you lose the transparency/declined filtering and the per-event timezone reconciliation, both of which silently corrupt scoring (wrong busy/free, events at the wrong wall-clock hour).
 - Raw .ics text or pasted data → load_calendar with source "ics"
 - Pre-built DateRange JSON → load_calendar with source "ranges"
 - Data persists for the session — load once, query many times.
@@ -85,7 +86,8 @@ LARGE CALENDARS:
 - Use window_from/window_to to limit the parse range when you know the relevant period.
 - Query narrow date ranges (1–2 weeks) rather than broad multi-month windows.
 - Use day_detail for single-day deep dives.
-- find_conflicts, find_free_slots, day_detail, and expand_range accept a limit parameter.`;
+- find_conflicts, find_free_slots, day_detail, and expand_range accept a limit parameter.
+- If a source list_events result is too big to read back into context, that is a reason to SLICE it (by date window, at the source — e.g. jq on the saved payload), NOT a reason to flatten it to ranges. Slice, then load the trimmed result with its native source ("gcal"/"msft"). load_calendar's input tolerance is separate from your context limit — a large native payload loads fine.`;
 
 const PROPOSED_CHANGE_SCHEMA = {
   type: 'object',
@@ -139,7 +141,7 @@ export const TOOLS: Tool[] = [
         data: {
           type: 'string',
           description:
-            'For source "ics": raw .ics calendar text. For source "ranges": JSON DateRange array (example: [{"id":"mtg1","label":"Team Sync","fromDate":"2026-03-30","toDate":"2026-03-30","startTime":"09:00","endTime":"10:00"}]). NOTE: use fromDate/toDate/startTime/endTime — NOT start/end. For source "gcal": JSON array from Google Calendar MCP gcal_list_events — events are auto-filtered (declined, transparent, working-location excluded) and converted to DateRange format. For source "msft": JSON array from Microsoft Graph Calendar API list events endpoint — events are auto-filtered (free, workingElsewhere, declined, cancelled, seriesMaster excluded) and Windows timezones are mapped to IANA.',
+            'For source "ics": raw .ics calendar text. For source "ranges": JSON DateRange array (example: [{"id":"mtg1","label":"Team Sync","fromDate":"2026-03-30","toDate":"2026-03-30","startTime":"09:00","endTime":"10:00"}]). NOTE: use fromDate/toDate/startTime/endTime — NOT start/end. For source "gcal": JSON array from Google Calendar MCP gcal_list_events — events are auto-filtered (declined, transparent, working-location excluded) and converted to DateRange format. For source "msft": JSON array from Microsoft Graph Calendar API list events endpoint — events are auto-filtered (free, workingElsewhere, declined, cancelled, seriesMaster excluded) and Windows timezones are mapped to IANA. IMPORTANT: pass gcal/msft events through their native source — do NOT hand-convert them to "ranges" yourself. Flattening drops the transparency/declined filtering and the per-event timezone reconciliation this tool does for you (events stored in a different tz than their UTC offset will land at the wrong wall-clock time). If the upstream list_events payload is too large to bring into context, slice it by date window at the source (e.g. jq on the saved result) and feed that native gcal/msft JSON — keep start/end/timeZone, eventType, transparency, and attendee responseStatus; only the heavy fields (description, htmlLink, conferenceData) are safe to strip.',
         },
         id: {
           type: 'string',

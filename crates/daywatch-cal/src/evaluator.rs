@@ -376,7 +376,7 @@ impl RangeEvaluator {
                             ..
                         } => match duration {
                             Some(d) if fd != td && time_to_minutes(&resolved_start) + *d > 1440 => {
-                                Some((fd.clone(), td.clone()))
+                                Some((fd, td))
                             }
                             _ => None,
                         },

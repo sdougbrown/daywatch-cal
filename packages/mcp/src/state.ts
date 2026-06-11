@@ -4,6 +4,11 @@ import { RangeEvaluator } from '@daywatch/cal';
 export interface LoadedCalendar {
   ranges: DateRange[];
   source: 'ics' | 'ranges' | 'gcal' | 'msft';
+  /**
+   * Date window the source data was clipped to at parse time (ics only).
+   * null for gcal/msft/ranges sources, which are loaded without clipping.
+   */
+  effectiveWindow: { from: string; to: string } | null;
 }
 
 export interface CalendarRangeEntry {
@@ -39,11 +44,17 @@ export class CalendarSession {
     return nextId;
   }
 
-  loadCalendar(id: string, ranges: DateRange[], source: 'ics' | 'ranges' | 'gcal' | 'msft'): void {
+  loadCalendar(
+    id: string,
+    ranges: DateRange[],
+    source: 'ics' | 'ranges' | 'gcal' | 'msft',
+    effectiveWindow: { from: string; to: string } | null = null,
+  ): void {
     const calendarId = this.createCalendarId(id);
     this.calendars.set(calendarId, {
       ranges: [...ranges],
       source,
+      effectiveWindow,
     });
   }
 
@@ -150,6 +161,7 @@ export class CalendarSession {
     this.calendars.set(calendarId, {
       ranges: [range],
       source: 'ranges',
+      effectiveWindow: null,
     });
   }
 
@@ -158,6 +170,7 @@ export class CalendarSession {
     rangeCount: number;
     labels: string[];
     has_more_labels: boolean;
+    effective_window: { from: string; to: string } | null;
   }> {
     return [...this.calendars.entries()].map(([id, calendar]) => {
       const labels = [...new Set(calendar.ranges.map((range) => range.label))];
@@ -167,6 +180,7 @@ export class CalendarSession {
         rangeCount: calendar.ranges.length,
         labels: labels.slice(0, 30),
         has_more_labels: labels.length > 30,
+        effective_window: calendar.effectiveWindow,
       };
     });
   }

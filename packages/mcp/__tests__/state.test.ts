@@ -88,7 +88,31 @@ describe('CalendarSession', () => {
           ...Array.from({ length: 28 }, (_, index) => `Label ${index}`),
         ],
         has_more_labels: true,
+        effective_window: null,
       },
+    ]);
+  });
+
+  it('stores the effective parse window when provided', () => {
+    const session = new CalendarSession('UTC');
+
+    session.loadCalendar('school', [makeRange('term', 'Term')], 'ics', {
+      from: '2025-08-01',
+      to: '2026-06-30',
+    });
+    session.loadCalendar('work', [makeRange('meeting', 'Meeting')], 'gcal');
+
+    expect(session.calendars.get('school')?.effectiveWindow).toEqual({
+      from: '2025-08-01',
+      to: '2026-06-30',
+    });
+    expect(session.calendars.get('work')?.effectiveWindow).toBeNull();
+    expect(session.getCalendarSummary()).toEqual([
+      expect.objectContaining({
+        id: 'school',
+        effective_window: { from: '2025-08-01', to: '2026-06-30' },
+      }),
+      expect.objectContaining({ id: 'work', effective_window: null }),
     ]);
   });
 

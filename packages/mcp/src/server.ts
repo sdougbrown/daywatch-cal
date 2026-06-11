@@ -56,6 +56,7 @@ LOADING DATA:
 - The server auto-detects the right time window for historical calendars (e.g. a past school year).
 
 ANALYZING:
+- list_ranges — inventory of what's loaded: range ids, labels, date bounds, recurrence summaries. gcal/msft recurring-event instances are grouped into one row per series. Use this (not your own .ics parsing) to answer "what's in this calendar?"
 - find_conflicts — overlapping events in a date range, with overlap details
 - find_free_slots — open time on a specific day (defaults to 09:00–17:00)
 - find_next_free_slot — first available slot of a given duration
@@ -447,6 +448,51 @@ export const TOOLS: Tool[] = [
     inputSchema: {
       type: 'object',
       properties: {},
+    },
+  },
+  {
+    name: 'list_ranges',
+    description:
+      'List the stored DateRanges across loaded calendars with summary metadata — ids, labels, date bounds, recurrence summaries. Use after load_calendar to see what a calendar contains without expanding occurrences or re-parsing source data. Recurring-event instances from gcal/msft are grouped into one row per series by default (group_by "series"). Each calendar reports its effective_window — for ics sources, ranges with explicit dates may be clipped to that window.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        calendars: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional list of calendar ids to include. Defaults to all loaded calendars.',
+        },
+        label_match: {
+          type: 'string',
+          description: 'Optional case-insensitive regular expression to filter rows by label.',
+        },
+        group_by: {
+          type: 'string',
+          enum: ['series', 'none'],
+          description:
+            'How to group gcal/msft recurring-event instances that share a series id. "series" (default) collapses them into one row with occurrence_count and a representative range_id; "none" returns one row per stored range.',
+        },
+        occurrence_unit: {
+          type: 'string',
+          enum: ['events', 'days'],
+          description:
+            'Unit for occurrence_count. "events" (default) counts individual occurrences — two instances or time slots on the same day count as 2. "days" counts distinct dates touched.',
+        },
+        count_within: {
+          type: 'object',
+          properties: {
+            from: { type: 'string', description: 'Window start as an ISO date (YYYY-MM-DD).' },
+            to: { type: 'string', description: 'Window end as an ISO date (YYYY-MM-DD).' },
+          },
+          required: ['from', 'to'],
+          description:
+            'Optional bounded window (max 2 years). When provided, recurring rows get occurrence_count, first_occurrence, and last_occurrence computed within this window. Does not filter rows. Omit it for a cheap structural listing.',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum rows to return. Defaults to 50.',
+        },
+      },
     },
   },
   {
@@ -906,6 +952,249 @@ function rangeOverlapsDateFilter(range: DateRange, from?: string, to?: string): 
   return true;
 }
 
+interface ListRangeRow {
+  calendar_id: string;
+  range_id: string;
+  label: string;
+  series_id?: string;
+  from_date?: string;
+  to_date?: string | null;
+  unbounded?: boolean;
+  recurrence_summary?: string;
+  start_time?: string;
+  end_time?: string;
+  all_day: boolean;
+  timezone?: string | null;
+  occurrence_count?: number;
+  first_occurrence?: string;
+  last_occurrence?: string;
+  location?: string;
+  status?: string;
+  transparent?: boolean;
+  has_attendees?: boolean;
+  organizer_email?: string;
+}
+
+interface ListRangeEntry {
+  row: ListRangeRow;
+  ranges: DateRange[];
+  isPattern: boolean;
+}
+
+const MAX_COUNT_WINDOW_DAYS = 731;
+const MAX_LABEL_MATCH_LENGTH = 256;
+
+type OccurrenceUnit = 'events' | 'days';
+
+function hasRecurrencePattern(range: DateRange): boolean {
+  return Boolean(
+    range.everyWeekday?.length ||
+      range.everyDate?.length ||
+      range.everyMonth?.length ||
+      range.everyHour?.length,
+  );
+}
+
+function getSeriesId(range: DateRange): string | undefined {
+  const metadata = getMetadataRecord(range);
+  const seriesId = metadata?.recurringEventId ?? metadata?.seriesMasterId;
+  return typeof seriesId === 'string' && seriesId !== '' ? seriesId : undefined;
+}
+
+function buildListRangeRow(calendarId: string, range: DateRange): ListRangeRow {
+  const window = getRangeDateWindow(range);
+  const isPattern = hasRecurrencePattern(range);
+  const unbounded = isPattern && !range.toDate && !range.dates?.length;
+  const recurrenceSummary = buildRecurrenceSummary(range);
+  const metadata = getMetadataRecord(range);
+  const attendees = getRangeAttendees(range);
+  const organizer = getRangeOrganizer(range);
+
+  return {
+    calendar_id: calendarId,
+    range_id: range.id,
+    label: range.label,
+    ...(window?.from ? { from_date: window.from } : {}),
+    ...(unbounded
+      ? { to_date: null, unbounded: true }
+      : window?.to
+        ? { to_date: window.to }
+        : {}),
+    ...(recurrenceSummary ? { recurrence_summary: recurrenceSummary } : {}),
+    ...(range.startTime ? { start_time: range.startTime } : {}),
+    ...(range.endTime ? { end_time: range.endTime } : {}),
+    all_day: !range.startTime && !range.everyHour?.length,
+    ...(range.timezone !== undefined ? { timezone: range.timezone } : {}),
+    ...(range.dates?.length
+      ? { occurrence_count: range.dates.length }
+      : isPattern
+        ? {}
+        : { occurrence_count: 1 }),
+    ...(typeof metadata?.location === 'string' ? { location: metadata.location } : {}),
+    ...(typeof metadata?.status === 'string' ? { status: metadata.status } : {}),
+    ...(metadata?.transparent === true ? { transparent: true } : {}),
+    ...(attendees ? { has_attendees: true } : {}),
+    ...(organizer ? { organizer_email: organizer.email } : {}),
+  };
+}
+
+function countByUnit(occurrenceDates: string[], unit: OccurrenceUnit): number {
+  return unit === 'days' ? new Set(occurrenceDates).size : occurrenceDates.length;
+}
+
+function buildSeriesGroupEntry(
+  calendarId: string,
+  seriesId: string,
+  instances: DateRange[],
+  unit: OccurrenceUnit,
+): ListRangeEntry {
+  const sorted = [...instances].sort((left, right) =>
+    (getRangeDateWindow(left)?.from ?? '').localeCompare(getRangeDateWindow(right)?.from ?? ''),
+  );
+  const representative = sorted[0];
+  const fromDates = sorted
+    .map((range) => getRangeDateWindow(range)?.from)
+    .filter((value): value is string => Boolean(value));
+  const toDates = sorted
+    .map((range) => getRangeDateWindow(range)?.to)
+    .filter((value): value is string => Boolean(value))
+    .sort();
+
+  return {
+    row: {
+      ...buildListRangeRow(calendarId, representative),
+      series_id: seriesId,
+      ...(fromDates.length > 0 ? { from_date: fromDates[0] } : {}),
+      ...(toDates.length > 0 ? { to_date: toDates[toDates.length - 1] } : {}),
+      occurrence_count: unit === 'days' ? countByUnit(fromDates, 'days') : sorted.length,
+    },
+    ranges: sorted,
+    isPattern: false,
+  };
+}
+
+function buildListRangeEntries(
+  session: CalendarSession,
+  calendarIds: string[],
+  options: { labelRegex?: RegExp; groupBy: 'series' | 'none'; unit: OccurrenceUnit },
+): ListRangeEntry[] {
+  const entries: ListRangeEntry[] = [];
+
+  for (const calendarId of calendarIds) {
+    // calendarIds are pre-validated, so the calendar always exists.
+    const calendar = session.calendars.get(calendarId)!;
+
+    const labelRegex = options.labelRegex;
+    const matching = labelRegex
+      ? calendar.ranges.filter((range) => labelRegex.test(range.label))
+      : calendar.ranges;
+
+    const seriesGroups = new Map<string, DateRange[]>();
+
+    for (const range of matching) {
+      const seriesId = options.groupBy === 'series' ? getSeriesId(range) : undefined;
+      if (!seriesId) {
+        entries.push({
+          row: buildListRangeRow(calendarId, range),
+          ranges: [range],
+          isPattern: hasRecurrencePattern(range),
+        });
+        continue;
+      }
+
+      const group = seriesGroups.get(seriesId);
+      if (group) {
+        group.push(range);
+      } else {
+        seriesGroups.set(seriesId, [range]);
+      }
+    }
+
+    for (const [seriesId, instances] of seriesGroups) {
+      entries.push(buildSeriesGroupEntry(calendarId, seriesId, instances, options.unit));
+    }
+  }
+
+  return entries;
+}
+
+function annotateOccurrences(
+  evaluator: RangeEvaluator,
+  entry: ListRangeEntry,
+  from: string,
+  to: string,
+  unit: OccurrenceUnit,
+): ListRangeRow {
+  const withOccurrenceDates = (occurrenceDates: string[]): ListRangeRow => ({
+    ...entry.row,
+    occurrence_count: countByUnit(occurrenceDates, unit),
+    ...(occurrenceDates.length > 0
+      ? {
+          first_occurrence: occurrenceDates[0],
+          last_occurrence: occurrenceDates[occurrenceDates.length - 1],
+        }
+      : {}),
+  });
+
+  if (entry.row.series_id) {
+    const overlapping = entry.ranges.filter((range) => rangeOverlapsDateFilter(range, from, to));
+    return withOccurrenceDates(
+      overlapping
+        .map((range) => getRangeDateWindow(range)?.from)
+        .filter((value): value is string => Boolean(value))
+        .sort(),
+    );
+  }
+
+  const range = entry.ranges[0];
+
+  if (range.dates?.length) {
+    return withOccurrenceDates(
+      range.dates.filter((date) => date >= from && date <= to).sort(),
+    );
+  }
+
+  if (entry.isPattern) {
+    const occurrences = evaluator.expand(range, parseDateArgument(from), parseDateArgument(to));
+    return withOccurrenceDates(occurrences.map((occurrence) => occurrence.date).sort());
+  }
+
+  // Single non-recurring event: one occurrence if its span touches the window.
+  const window = getRangeDateWindow(range);
+  return withOccurrenceDates(
+    window && rangeOverlapsDateFilter(range, from, to) ? [window.from] : [],
+  );
+}
+
+function parseCountWithin(value: unknown): { from: string; to: string } | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const record = requireRecord(value, 'count_within');
+  const from = requireString(record, 'from');
+  const to = requireString(record, 'to');
+  const fromDate = parseDateArgument(from);
+  const toDate = parseDateArgument(to);
+
+  if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+    throw new Error('"count_within" dates must be valid YYYY-MM-DD values.');
+  }
+
+  if (toDate < fromDate) {
+    throw new Error('"count_within.to" must not be before "count_within.from".');
+  }
+
+  const spanDays = Math.round((toDate.getTime() - fromDate.getTime()) / 86_400_000);
+  if (spanDays > MAX_COUNT_WINDOW_DAYS) {
+    throw new Error(
+      `"count_within" must span at most ${MAX_COUNT_WINDOW_DAYS} days. Use a narrower window.`,
+    );
+  }
+
+  return { from, to };
+}
+
 function shiftDay(dateStr: string, delta: number): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const next = new Date(year, month - 1, day + delta);
@@ -1356,7 +1645,9 @@ function buildLoadResponse(
   effectiveWindow: { from: Date; to: Date },
   detectedWindow: { from: Date; to: Date } | null,
 ): CallToolResult {
-  session.loadCalendar(calendarId, ranges, source);
+  // Only ics parsing clips data to a window; other sources load whole.
+  const storedWindow = source === 'ics' ? formatWindow(effectiveWindow) : null;
+  session.loadCalendar(calendarId, ranges, source, storedWindow);
   const labelSummary = collectUniqueLabels(ranges, 20);
 
   return jsonResult({
@@ -1627,6 +1918,88 @@ export async function handleToolCall(
 
       case 'list_calendars': {
         return jsonResult(session.getCalendarSummary());
+      }
+
+      case 'list_ranges': {
+        const requestedCalendars = optionalStringArray(args, 'calendars');
+        const calendarIds = requestedCalendars
+          ? requireLoadedCalendars(session, requestedCalendars)
+          : [...session.calendars.keys()];
+        const labelMatch = optionalString(args, 'label_match');
+        const groupBy = optionalString(args, 'group_by') ?? 'series';
+        const occurrenceUnit = optionalString(args, 'occurrence_unit') ?? 'events';
+        const countWithin = parseCountWithin(args.count_within);
+        const limit = optionalLimit(args);
+
+        if (groupBy !== 'series' && groupBy !== 'none') {
+          throw new Error('"group_by" must be "series" or "none".');
+        }
+
+        if (occurrenceUnit !== 'events' && occurrenceUnit !== 'days') {
+          throw new Error('"occurrence_unit" must be "events" or "days".');
+        }
+
+        let labelRegex: RegExp | undefined;
+        if (labelMatch !== undefined) {
+          if (labelMatch.length > MAX_LABEL_MATCH_LENGTH) {
+            throw new Error(
+              `"label_match" must be at most ${MAX_LABEL_MATCH_LENGTH} characters.`,
+            );
+          }
+
+          try {
+            labelRegex = new RegExp(labelMatch, 'i');
+          } catch {
+            throw new Error(`"label_match" is not a valid regular expression: ${labelMatch}`);
+          }
+        }
+
+        const entries = buildListRangeEntries(session, calendarIds, {
+          labelRegex,
+          groupBy,
+          unit: occurrenceUnit,
+        });
+
+        entries.sort(
+          (left, right) =>
+            (left.row.from_date ?? '9999-12-31').localeCompare(
+              right.row.from_date ?? '9999-12-31',
+            ) ||
+            left.row.label.localeCompare(right.row.label) ||
+            left.row.range_id.localeCompare(right.row.range_id),
+        );
+
+        // Annotate only the returned page — sort order doesn't depend on it.
+        const rows = entries
+          .slice(0, limit)
+          .map((entry) =>
+            countWithin
+              ? annotateOccurrences(
+                  session.evaluator,
+                  entry,
+                  countWithin.from,
+                  countWithin.to,
+                  occurrenceUnit,
+                )
+              : entry.row,
+          );
+
+        return jsonResult({
+          ranges: rows,
+          total: entries.length,
+          ...(entries.length > limit
+            ? {
+                truncated: true,
+                message: `Showing ${limit} of ${entries.length}. Use label_match, calendars, or a higher limit.`,
+              }
+            : {}),
+          timezone: session.timezone,
+          calendars: calendarIds.map((calendarId) => ({
+            id: calendarId,
+            effective_window: session.calendars.get(calendarId)?.effectiveWindow ?? null,
+          })),
+          ...(countWithin ? { count_within: countWithin } : {}),
+        });
       }
 
       case 'suggest_changes': {

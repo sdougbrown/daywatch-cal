@@ -460,7 +460,8 @@ export const TOOLS: Tool[] = [
         calendars: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Optional list of calendar ids to include. Defaults to all loaded calendars.',
+          description:
+            'Optional list of calendar ids to include. Defaults to all loaded calendars.',
         },
         label_match: {
           type: 'string',
@@ -989,9 +990,9 @@ type OccurrenceUnit = 'events' | 'days';
 function hasRecurrencePattern(range: DateRange): boolean {
   return Boolean(
     range.everyWeekday?.length ||
-      range.everyDate?.length ||
-      range.everyMonth?.length ||
-      range.everyHour?.length,
+    range.everyDate?.length ||
+    range.everyMonth?.length ||
+    range.everyHour?.length,
   );
 }
 
@@ -1001,9 +1002,8 @@ function getSeriesId(range: DateRange): string | undefined {
   return typeof seriesId === 'string' && seriesId !== '' ? seriesId : undefined;
 }
 
-function buildListRangeRow(calendarId: string, range: DateRange): ListRangeRow {
+function buildListRangeRow(calendarId: string, range: DateRange, isPattern: boolean): ListRangeRow {
   const window = getRangeDateWindow(range);
-  const isPattern = hasRecurrencePattern(range);
   const unbounded = isPattern && !range.toDate && !range.dates?.length;
   const recurrenceSummary = buildRecurrenceSummary(range);
   const metadata = getMetadataRecord(range);
@@ -1015,11 +1015,7 @@ function buildListRangeRow(calendarId: string, range: DateRange): ListRangeRow {
     range_id: range.id,
     label: range.label,
     ...(window?.from ? { from_date: window.from } : {}),
-    ...(unbounded
-      ? { to_date: null, unbounded: true }
-      : window?.to
-        ? { to_date: window.to }
-        : {}),
+    ...(unbounded ? { to_date: null, unbounded: true } : window?.to ? { to_date: window.to } : {}),
     ...(recurrenceSummary ? { recurrence_summary: recurrenceSummary } : {}),
     ...(range.startTime ? { start_time: range.startTime } : {}),
     ...(range.endTime ? { end_time: range.endTime } : {}),
@@ -1062,7 +1058,7 @@ function buildSeriesGroupEntry(
 
   return {
     row: {
-      ...buildListRangeRow(calendarId, representative),
+      ...buildListRangeRow(calendarId, representative, hasRecurrencePattern(representative)),
       series_id: seriesId,
       ...(fromDates.length > 0 ? { from_date: fromDates[0] } : {}),
       ...(toDates.length > 0 ? { to_date: toDates[toDates.length - 1] } : {}),
@@ -1094,10 +1090,11 @@ function buildListRangeEntries(
     for (const range of matching) {
       const seriesId = options.groupBy === 'series' ? getSeriesId(range) : undefined;
       if (!seriesId) {
+        const isPattern = hasRecurrencePattern(range);
         entries.push({
-          row: buildListRangeRow(calendarId, range),
+          row: buildListRangeRow(calendarId, range, isPattern),
           ranges: [range],
-          isPattern: hasRecurrencePattern(range),
+          isPattern,
         });
         continue;
       }
@@ -1149,9 +1146,7 @@ function annotateOccurrences(
   const range = entry.ranges[0];
 
   if (range.dates?.length) {
-    return withOccurrenceDates(
-      range.dates.filter((date) => date >= from && date <= to).sort(),
-    );
+    return withOccurrenceDates(range.dates.filter((date) => date >= from && date <= to).sort());
   }
 
   if (entry.isPattern) {
@@ -1942,9 +1937,7 @@ export async function handleToolCall(
         let labelRegex: RegExp | undefined;
         if (labelMatch !== undefined) {
           if (labelMatch.length > MAX_LABEL_MATCH_LENGTH) {
-            throw new Error(
-              `"label_match" must be at most ${MAX_LABEL_MATCH_LENGTH} characters.`,
-            );
+            throw new Error(`"label_match" must be at most ${MAX_LABEL_MATCH_LENGTH} characters.`);
           }
 
           try {

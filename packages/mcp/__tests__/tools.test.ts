@@ -359,6 +359,7 @@ describe('handleToolCall', () => {
           rangeCount: number;
           labels: string[];
           has_more_labels: boolean;
+          effective_window: { from: string; to: string } | null;
         }>
       >(result),
     ).toEqual([
@@ -733,7 +734,11 @@ describe('handleToolCall', () => {
 
     it('limits listing to the requested calendars', async () => {
       const session = createLoadedSession();
-      session.loadCalendar('personal', [{ id: 'gym', label: 'Gym', dates: ['2026-03-24'] }], 'ranges');
+      session.loadCalendar(
+        'personal',
+        [{ id: 'gym', label: 'Gym', dates: ['2026-03-24'] }],
+        'ranges',
+      );
 
       const result = await handleToolCall(session, 'list_ranges', { calendars: ['personal'] });
       const body = parseJsonContent<ListRangesResponse>(result);
@@ -1694,6 +1699,7 @@ describe('handleToolCall', () => {
           rangeCount: number;
           labels: string[];
           has_more_labels: boolean;
+          effective_window: { from: string; to: string } | null;
         }>
       >(calendarsResult),
     ).toEqual([

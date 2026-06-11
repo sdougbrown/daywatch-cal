@@ -1,0 +1,31 @@
+{
+  "description": "Span discriminator: a bounded timed range with repeatEvery is a repeating intraday window, not a continuous span — the span path is guarded against repeatEvery so the repetition is preserved on each day of the range.",
+  "userTimezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "Repeating window over a range",
+    "fromDate": "2026-04-01",
+    "toDate": "2026-04-03",
+    "startTime": "09:00",
+    "endTime": "11:00",
+    "repeatEvery": 60,
+    "duration": 30
+  },
+  "timeSlots": [
+    {
+      "date": "2026-04-02",
+      "expected": [
+        {
+          "startTime": "09:00",
+          "endTime": "09:30",
+          "duration": 30
+        },
+        {
+          "startTime": "10:00",
+          "endTime": "10:30",
+          "duration": 30
+        }
+      ]
+    }
+  ]
+}

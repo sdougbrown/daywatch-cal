@@ -58,6 +58,14 @@ export function gcalEventToDateRange(
     return { id: event.id, label, metadata };
   }
 
+  // Set duration (total elapsed minutes) so the evaluator can tell a
+  // continuous multi-day block (e.g. a week-long shift) apart from a daily
+  // time window repeated over a date range — they share the same
+  // fromDate/toDate/startTime/endTime shape and differ only by duration.
+  const startMs = Date.parse(startDateTime);
+  const endMs = Date.parse(endDateTime);
+  const hasDuration = Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs;
+
   return {
     id: event.id,
     label,
@@ -65,6 +73,7 @@ export function gcalEventToDateRange(
     toDate: endDateTime.slice(0, 10),
     startTime: startDateTime.length > 10 ? startDateTime.slice(11, 16) : undefined,
     endTime: endDateTime.length > 10 ? endDateTime.slice(11, 16) : undefined,
+    duration: hasDuration ? Math.round((endMs - startMs) / 60000) : undefined,
     timezone: event.start.timeZone,
     metadata,
   };

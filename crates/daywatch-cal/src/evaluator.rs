@@ -362,7 +362,56 @@ impl RangeEvaluator {
                     None => return slots,
                 };
 
-                if let Some(rep) = repeat_every {
+                // Continuous multi-day span (bounded range, no per-day repeat):
+                // one block from from_date@start_time to to_date@end_time. Interior
+                // days are fully occupied; the first and last days are partial.
+                // Applying the boundary times to every day (the single-block branch
+                // below) would collapse the span to a zero-width point per day and
+                // hide every overlap.
+                let span_bounds = if repeat_every.is_none() {
+                    match &range.day_selector {
+                        DaySelector::Range {
+                            from_date: Some(fd),
+                            to_date: Some(td),
+                            ..
+                        } => match duration {
+                            Some(d) if fd != td && time_to_minutes(&resolved_start) + *d > 1440 => {
+                                Some((fd, td))
+                            }
+                            _ => None,
+                        },
+                        _ => None,
+                    }
+                } else {
+                    None
+                };
+
+                if let Some((fd, td)) = span_bounds {
+                    let start_t = if date == fd.as_str() {
+                        resolved_start.clone()
+                    } else {
+                        "00:00".to_string()
+                    };
+                    let end_t = if date == td.as_str() {
+                        match end_time {
+                            Some(et) => self
+                                .resolve_time(date, et, range.timezone.as_deref())
+                                .unwrap_or_else(|| "24:00".to_string()),
+                            None => "24:00".to_string(),
+                        }
+                    } else {
+                        "24:00".to_string()
+                    };
+                    let dur = time_to_minutes(&end_t) - time_to_minutes(&start_t);
+                    slots.push(TimeSlot {
+                        start_time: start_t,
+                        end_time: Some(end_t),
+                        end_date: None,
+                        duration: Some(dur),
+                        range_id: range.id.clone(),
+                        label: range.label.clone(),
+                    });
+                } else if let Some(rep) = repeat_every {
                     if *rep == 0 {
                         return slots;
                     }

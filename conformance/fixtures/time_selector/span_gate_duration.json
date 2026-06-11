@@ -1,0 +1,25 @@
+{
+  "description": "Span discriminator: a non-recurring bounded timed range whose duration does NOT overflow its first day stays a daily time window (startTime-endTime on each day), not a continuous span. Guards the `startTime + duration > 1440` condition that tells the two apart.",
+  "userTimezone": "America/New_York",
+  "range": {
+    "id": "r1",
+    "label": "Daily window over a range",
+    "fromDate": "2026-04-01",
+    "toDate": "2026-04-03",
+    "startTime": "09:00",
+    "endTime": "10:00",
+    "duration": 60
+  },
+  "timeSlots": [
+    {
+      "date": "2026-04-02",
+      "expected": [
+        {
+          "startTime": "09:00",
+          "endTime": "10:00",
+          "duration": 60
+        }
+      ]
+    }
+  ]
+}

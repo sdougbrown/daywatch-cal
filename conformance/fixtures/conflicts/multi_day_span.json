@@ -1,0 +1,88 @@
+{
+  "description": "A continuous multi-day timed span (fromDate@startTime -> toDate@endTime, no recurrence) occupies the full interior days and the partial boundary days, so it conflicts with meetings inside it. Regression for multi-day spans collapsing to a zero-width point per day.",
+  "userTimezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "shift",
+      "label": "On-call",
+      "fromDate": "2026-04-01",
+      "toDate": "2026-04-04",
+      "startTime": "12:00",
+      "endTime": "12:00",
+      "duration": 4320
+    },
+    {
+      "id": "am1",
+      "label": "FirstAM",
+      "dates": ["2026-04-01"],
+      "startTime": "09:00",
+      "endTime": "10:00"
+    },
+    {
+      "id": "pm1",
+      "label": "FirstPM",
+      "dates": ["2026-04-01"],
+      "startTime": "13:00",
+      "endTime": "14:00"
+    },
+    {
+      "id": "mtg",
+      "label": "Interior",
+      "dates": ["2026-04-02"],
+      "startTime": "09:00",
+      "endTime": "10:00"
+    },
+    {
+      "id": "am4",
+      "label": "LastAM",
+      "dates": ["2026-04-04"],
+      "startTime": "09:00",
+      "endTime": "10:00"
+    },
+    {
+      "id": "pm4",
+      "label": "LastPM",
+      "dates": ["2026-04-04"],
+      "startTime": "13:00",
+      "endTime": "14:00"
+    }
+  ],
+  "findConflicts": [
+    {
+      "date": "2026-04-01",
+      "expected": [
+        {
+          "rangeA": { "id": "shift", "label": "On-call" },
+          "rangeB": { "id": "pm1", "label": "FirstPM" },
+          "date": "2026-04-01",
+          "overlapStart": "13:00",
+          "overlapEnd": "14:00"
+        }
+      ]
+    },
+    {
+      "date": "2026-04-02",
+      "expected": [
+        {
+          "rangeA": { "id": "shift", "label": "On-call" },
+          "rangeB": { "id": "mtg", "label": "Interior" },
+          "date": "2026-04-02",
+          "overlapStart": "09:00",
+          "overlapEnd": "10:00"
+        }
+      ]
+    },
+    {
+      "date": "2026-04-04",
+      "expected": [
+        {
+          "rangeA": { "id": "shift", "label": "On-call" },
+          "rangeB": { "id": "am4", "label": "LastAM" },
+          "date": "2026-04-04",
+          "overlapStart": "09:00",
+          "overlapEnd": "10:00"
+        }
+      ]
+    }
+  ]
+}

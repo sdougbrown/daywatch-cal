@@ -1,4 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import type {
   DateRange,
@@ -236,6 +238,68 @@ describe('handleToolCall', () => {
       const result = await handleToolCall(session, 'load_calendar', {
         source: 'gcal',
         data: JSON.stringify({ events: [] }),
+      });
+
+      expect(result.isError).toBe(true);
+    });
+  });
+
+  describe('load_calendar_file with source gcal', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'dw-file-'));
+    afterAll(() => rmSync(tmp, { recursive: true, force: true }));
+
+    const events: GCalEvent[] = [
+      {
+        id: 'f1',
+        summary: 'On-call',
+        eventType: 'default',
+        start: { dateTime: '2026-07-23T12:00:00-07:00', timeZone: 'America/Los_Angeles' },
+        end: { dateTime: '2026-07-30T12:00:00-07:00', timeZone: 'America/Los_Angeles' },
+        allDay: false,
+        status: 'confirmed',
+        myResponseStatus: 'accepted',
+      },
+    ];
+
+    it('loads a gcal JSON file (bare array) by path', async () => {
+      const session = new CalendarSession();
+      const path = join(tmp, 'bare.json');
+      writeFileSync(path, JSON.stringify(events));
+
+      const result = await handleToolCall(session, 'load_calendar_file', {
+        path,
+        source: 'gcal',
+        id: 'oncall',
+      });
+      const body = parseJsonContent<{ ranges_loaded: number; calendar_id: string }>(result);
+
+      expect(body.ranges_loaded).toBe(1);
+      expect(body.calendar_id).toBe('oncall');
+      expect(session.calendars.get('oncall')?.source).toBe('gcal');
+    });
+
+    it('accepts a raw list_events result object ({events: [...]})', async () => {
+      const session = new CalendarSession();
+      const path = join(tmp, 'wrapped.json');
+      writeFileSync(path, JSON.stringify({ accessRole: 'reader', events }));
+
+      const result = await handleToolCall(session, 'load_calendar_file', {
+        path,
+        source: 'gcal',
+      });
+      const body = parseJsonContent<{ ranges_loaded: number }>(result);
+
+      expect(body.ranges_loaded).toBe(1);
+    });
+
+    it('rejects an unknown source', async () => {
+      const session = new CalendarSession();
+      const path = join(tmp, 'unknown.json');
+      writeFileSync(path, JSON.stringify(events));
+
+      const result = await handleToolCall(session, 'load_calendar_file', {
+        path,
+        source: 'bogus',
       });
 
       expect(result.isError).toBe(true);

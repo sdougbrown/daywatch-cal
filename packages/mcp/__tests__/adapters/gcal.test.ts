@@ -1,3 +1,4 @@
+import { RangeEvaluator } from '@daywatch/cal';
 import type { GCalEvent } from '../../src/adapters/types.js';
 import {
   gcalEventToDateRange,
@@ -160,6 +161,7 @@ describe('gcalEventToDateRange', () => {
     expect(range.toDate).toBe('2026-03-30');
     expect(range.startTime).toBe('12:30');
     expect(range.endTime).toBe('13:00');
+    expect(range.duration).toBe(30);
     expect(range.timezone).toBe('America/Los_Angeles');
     expect(range.label).toBe('Team PR Reviews');
     expect(range.id).toBe('evt_001_20260330T163000Z');
@@ -185,6 +187,32 @@ describe('gcalEventToDateRange', () => {
     expect(range.toDate).toBe('2026-06-27');
     expect(range.startTime).toBe('00:00');
     expect(range.endTime).toBe('00:00');
+    // Duration must be set (and span multiple days) so the evaluator treats
+    // this as a continuous block rather than a midnight-to-midnight daily
+    // window — same shape, told apart by duration.
+    expect(range.duration).toBeGreaterThan(1440);
+  });
+
+  it('produces a span the evaluator flags as occupied on interior days', () => {
+    // Regression: a multi-day timed event (e.g. a week-long on-call shift)
+    // must conflict with a meeting on an interior day. Before the adapter set
+    // `duration`, the evaluator could not distinguish this from a daily window
+    // and collapsed it to a zero-width point per day, missing the overlap.
+    const shiftRange = gcalEventToDateRange(outOfOffice);
+    const meeting = {
+      id: 'mtg',
+      label: 'Interior meeting',
+      dates: ['2026-05-01'],
+      startTime: '09:00',
+      endTime: '10:00',
+    };
+
+    const evaluator = new RangeEvaluator('America/Los_Angeles');
+    const conflicts = evaluator.findConflicts([shiftRange, meeting], '2026-05-01');
+
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].overlapStart).toBe('09:00');
+    expect(conflicts[0].overlapEnd).toBe('10:00');
   });
 
   it('leaves timezone undefined for floating timed events', () => {

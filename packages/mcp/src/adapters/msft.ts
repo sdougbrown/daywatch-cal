@@ -52,6 +52,13 @@ export function msftEventToDateRange(
     };
   }
 
+  // Set duration (total elapsed minutes) so the evaluator can distinguish a
+  // continuous multi-day block from a daily window repeated over a date range
+  // — same fromDate/toDate/startTime/endTime shape, told apart by duration.
+  const startMs = Date.parse(startDt);
+  const endMs = Date.parse(endDt);
+  const hasDuration = Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs;
+
   return {
     id: event.id,
     label,
@@ -59,6 +66,7 @@ export function msftEventToDateRange(
     toDate: endDt.slice(0, 10),
     startTime: startDt.length > 10 ? startDt.slice(11, 16) : undefined,
     endTime: endDt.length > 10 ? endDt.slice(11, 16) : undefined,
+    duration: hasDuration ? Math.round((endMs - startMs) / 60000) : undefined,
     timezone: toIanaTimezone(event.start.timeZone),
     metadata,
   };

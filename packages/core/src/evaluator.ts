@@ -148,6 +148,12 @@ export class RangeEvaluator {
       if (resolvedStart === null) return slots; // DST gap
 
       const compiled = this.getCompiledRange(range);
+      // A continuous multi-day block (fromDate@startTime -> toDate@endTime),
+      // e.g. a week-long on-call shift. Distinguished from a daily time window
+      // repeated over a date range (same fromDate/toDate/startTime/endTime
+      // shape) by `duration`: a span's duration overflows its first day.
+      // Adapters that emit such events MUST set `duration` (the .ics parser
+      // and the gcal/msft adapters do).
       const isContinuousSpan =
         !range.repeatEvery &&
         !compiled.hasRecurrence &&

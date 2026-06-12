@@ -1,4 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import type {
   DateRange,
@@ -239,6 +241,169 @@ describe('handleToolCall', () => {
       });
 
       expect(result.isError).toBe(true);
+    });
+  });
+
+  describe('load_calendar_file with source gcal', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'dw-file-'));
+    afterAll(() => rmSync(tmp, { recursive: true, force: true }));
+
+    const events: GCalEvent[] = [
+      {
+        id: 'f1',
+        summary: 'On-call',
+        eventType: 'default',
+        start: { dateTime: '2026-07-23T12:00:00-07:00', timeZone: 'America/Los_Angeles' },
+        end: { dateTime: '2026-07-30T12:00:00-07:00', timeZone: 'America/Los_Angeles' },
+        allDay: false,
+        status: 'confirmed',
+        myResponseStatus: 'accepted',
+      },
+    ];
+
+    it('loads a gcal JSON file (bare array) by path', async () => {
+      const session = new CalendarSession();
+      const path = join(tmp, 'bare.json');
+      writeFileSync(path, JSON.stringify(events));
+
+      const result = await handleToolCall(session, 'load_calendar_file', {
+        path,
+        source: 'gcal',
+        id: 'oncall',
+      });
+      const body = parseJsonContent<{ ranges_loaded: number; calendar_id: string }>(result);
+
+      expect(body.ranges_loaded).toBe(1);
+      expect(body.calendar_id).toBe('oncall');
+      expect(session.calendars.get('oncall')?.source).toBe('gcal');
+    });
+
+    it('accepts a raw list_events result object ({events: [...]})', async () => {
+      const session = new CalendarSession();
+      const path = join(tmp, 'wrapped.json');
+      writeFileSync(path, JSON.stringify({ accessRole: 'reader', events }));
+
+      const result = await handleToolCall(session, 'load_calendar_file', {
+        path,
+        source: 'gcal',
+      });
+      const body = parseJsonContent<{ ranges_loaded: number }>(result);
+
+      expect(body.ranges_loaded).toBe(1);
+    });
+
+    it('rejects an unknown source', async () => {
+      const session = new CalendarSession();
+      const path = join(tmp, 'unknown.json');
+      writeFileSync(path, JSON.stringify(events));
+
+      const result = await handleToolCall(session, 'load_calendar_file', {
+        path,
+        source: 'bogus',
+      });
+
+      expect(result.isError).toBe(true);
+    });
+
+    it('rejects an invalid JSON file (not an array or object with events)', async () => {
+      const session = new CalendarSession();
+      const path = join(tmp, 'invalid.json');
+      writeFileSync(path, JSON.stringify({ foo: 'bar' }));
+
+      const result = await handleToolCall(session, 'load_calendar_file', {
+        path,
+        source: 'gcal',
+      });
+
+      expect(result.isError).toBe(true);
+      expect(getTextContent(result)).toContain(
+        'Google Calendar JSON must be an array of events, or an object with an "events" array.',
+      );
+    });
+
+    it('rejects a non-existent file path', async () => {
+      const session = new CalendarSession();
+      const result = await handleToolCall(session, 'load_calendar_file', {
+        path: '/nonexistent/path/to/calendar.json',
+        source: 'gcal',
+      });
+
+      expect(result.isError).toBe(true);
+      expect(getTextContent(result)).toContain('ENOENT');
+    });
+  });
+
+  describe('load_calendar_file with source ics (default)', () => {
+    const icsTmp = mkdtempSync(join(tmpdir(), 'dw-file-'));
+    afterAll(() => rmSync(icsTmp, { recursive: true, force: true }));
+
+    it('loads an .ics file by path without a source param', async () => {
+      const session = new CalendarSession('UTC');
+      const path = join(icsTmp, 'events.ics');
+      const icsText = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:default-ics',
+        'SUMMARY:Default ICS Test',
+        'DTSTART;VALUE=DATE:20260410',
+        'DTEND;VALUE=DATE:20260411',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\n');
+      writeFileSync(path, icsText);
+
+      const result = await handleToolCall(session, 'load_calendar_file', {
+        path,
+        id: 'default-ics',
+      });
+      const body = parseJsonContent<{ ranges_loaded: number; calendar_id: string }>(result);
+
+      expect(body.ranges_loaded).toBe(1);
+      expect(body.calendar_id).toBe('default-ics');
+      expect(session.calendars.get('default-ics')?.source).toBe('ics');
+    });
+  });
+
+  describe('load_calendar_file with source msft', () => {
+    const msftTmp = mkdtempSync(join(tmpdir(), 'dw-file-'));
+    afterAll(() => rmSync(msftTmp, { recursive: true, force: true }));
+
+    it('loads a Microsoft Graph JSON file by path', async () => {
+      const session = new CalendarSession('UTC');
+      const path = join(msftTmp, 'msft.json');
+      const msftEvents: MsftGraphEvent[] = [
+        {
+          id: 'msft_file_1',
+          subject: 'File Import Test',
+          isAllDay: false,
+          isCancelled: false,
+          type: 'singleInstance',
+          start: {
+            dateTime: '2026-04-15T10:00:00.0000000',
+            timeZone: 'Pacific Standard Time',
+          },
+          end: {
+            dateTime: '2026-04-15T11:00:00.0000000',
+            timeZone: 'Pacific Standard Time',
+          },
+          showAs: 'busy',
+          responseStatus: { response: 'accepted' },
+        },
+      ];
+      writeFileSync(path, JSON.stringify(msftEvents));
+
+      const result = await handleToolCall(session, 'load_calendar_file', {
+        path,
+        source: 'msft',
+        id: 'msft-file',
+      });
+      const body = parseJsonContent<{ ranges_loaded: number; calendar_id: string }>(result);
+
+      expect(body.ranges_loaded).toBe(1);
+      expect(body.calendar_id).toBe('msft-file');
+      expect(session.calendars.get('msft-file')?.source).toBe('msft');
+      expect(session.calendars.get('msft-file')?.ranges[0]?.label).toBe('File Import Test');
     });
   });
 

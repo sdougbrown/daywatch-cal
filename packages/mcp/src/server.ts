@@ -45,7 +45,7 @@ TYPICAL AGENT WORKFLOW (when both daywatch-cal and a calendar MCP are available)
 Neo-reckoning is the thinking step between reading and writing. The source MCP is the hands.
 
 LOADING DATA:
-- File on disk → load_calendar_file (pass the path — never read .ics files into conversation yourself)
+- File on disk → load_calendar_file (pass the path). Handles .ics (default) and gcal/msft JSON via the "source" param — use it whenever the data is already on disk (e.g. a list_events result too large to pass inline); never read large calendar files into the conversation yourself.
 - Google Calendar → load_calendar with source "gcal" and the raw JSON array from gcal_list_events. Auto-filters transparent, declined, working-location events.
 - Microsoft Outlook / Office 365 → load_calendar with source "msft" and the raw JSON array from Microsoft Graph. Auto-filters free, workingElsewhere, declined, cancelled events. Maps Windows timezones to IANA.
 - Always feed gcal/msft data through its native source. Do NOT pre-flatten it to "ranges" yourself — you lose the transparency/declined filtering and the per-event timezone reconciliation, both of which silently corrupt scoring (wrong busy/free, events at the wrong wall-clock hour).
@@ -88,7 +88,7 @@ LARGE CALENDARS:
 - Query narrow date ranges (1–2 weeks) rather than broad multi-month windows.
 - Use day_detail for single-day deep dives.
 - find_conflicts, find_free_slots, day_detail, and expand_range accept a limit parameter.
-- If a source list_events result is too big to read back into context, that is a reason to SLICE it (by date window, at the source — e.g. jq on the saved payload), NOT a reason to flatten it to ranges. Slice, then load the trimmed result with its native source ("gcal"/"msft"). load_calendar's input tolerance is separate from your context limit — a large native payload loads fine.`;
+- If a source list_events result is too big to read back into context, it has almost always been saved to a file on disk — load it directly with load_calendar_file({path, source: "gcal" | "msft"}), which reads the file itself and never routes the contents through the conversation. It accepts either the raw result object ({events: [...]}) or a bare events array. Do NOT trim, flatten, or hand-convert it to fit inline. Only if the data is *not* on disk and must be inlined should you slice it by date window at the source (e.g. jq) and load with its native source — never "ranges".`;
 
 const PROPOSED_CHANGE_SCHEMA = {
   type: 'object',
@@ -142,7 +142,7 @@ export const TOOLS: Tool[] = [
         data: {
           type: 'string',
           description:
-            'For source "ics": raw .ics calendar text. For source "ranges": JSON DateRange array (example: [{"id":"mtg1","label":"Team Sync","fromDate":"2026-03-30","toDate":"2026-03-30","startTime":"09:00","endTime":"10:00"}]). NOTE: use fromDate/toDate/startTime/endTime — NOT start/end. For source "gcal": JSON array from Google Calendar MCP gcal_list_events — events are auto-filtered (declined, transparent, working-location excluded) and converted to DateRange format. For source "msft": JSON array from Microsoft Graph Calendar API list events endpoint — events are auto-filtered (free, workingElsewhere, declined, cancelled, seriesMaster excluded) and Windows timezones are mapped to IANA. IMPORTANT: pass gcal/msft events through their native source — do NOT hand-convert them to "ranges" yourself. Flattening drops the transparency/declined filtering and the per-event timezone reconciliation this tool does for you (events stored in a different tz than their UTC offset will land at the wrong wall-clock time). If the upstream list_events payload is too large to bring into context, slice it by date window at the source (e.g. jq on the saved result) and feed that native gcal/msft JSON — keep start/end/timeZone, eventType, transparency, and attendee responseStatus; only the heavy fields (description, htmlLink, conferenceData) are safe to strip.',
+            'For source "ics": raw .ics calendar text. For source "ranges": JSON DateRange array (example: [{"id":"mtg1","label":"Team Sync","fromDate":"2026-03-30","toDate":"2026-03-30","startTime":"09:00","endTime":"10:00"}]). NOTE: use fromDate/toDate/startTime/endTime — NOT start/end. For source "gcal": JSON array from Google Calendar MCP gcal_list_events — events are auto-filtered (declined, transparent, working-location excluded) and converted to DateRange format. For source "msft": JSON array from Microsoft Graph Calendar API list events endpoint — events are auto-filtered (free, workingElsewhere, declined, cancelled, seriesMaster excluded) and Windows timezones are mapped to IANA. IMPORTANT: pass gcal/msft events through their native source — do NOT hand-convert them to "ranges" yourself. Flattening drops the transparency/declined filtering and the per-event timezone reconciliation this tool does for you (events stored in a different tz than their UTC offset will land at the wrong wall-clock time). If the upstream list_events payload is too large to bring into context, do NOT pass it through `data` at all — it has usually been saved to a file, so use load_calendar_file({path, source}) which reads it off disk. Only when the data is not on disk and must be inlined: slice it by date window at the source (e.g. jq on the saved result) and feed that native gcal/msft JSON — keep start/end/timeZone, eventType, transparency, and attendee responseStatus; only the heavy fields (description, htmlLink, conferenceData) are safe to strip.',
         },
         id: {
           type: 'string',
@@ -169,13 +169,19 @@ export const TOOLS: Tool[] = [
   {
     name: 'load_calendar_file',
     description:
-      'Load an .ics file from disk by path. Preferred over load_calendar when the user provides a file path — avoids passing large file contents through the conversation.',
+      'Load a calendar file from disk by path — `.ics` text, or Google Calendar / Microsoft Graph JSON (set `source`). Preferred over load_calendar whenever the data is already on disk (e.g. a list_events result too large to pass inline) — it reads the file directly instead of routing the contents through the conversation. gcal/msft JSON may be either a bare array of events or the raw result object with an `events` array.',
     inputSchema: {
       type: 'object',
       properties: {
         path: {
           type: 'string',
-          description: 'Absolute path to the .ics file on disk.',
+          description: 'Absolute path to the calendar file on disk.',
+        },
+        source: {
+          type: 'string',
+          enum: ['ics', 'gcal', 'msft'],
+          description:
+            'File format: "ics" (default) for .ics text, "gcal" for a Google Calendar list_events JSON file, "msft" for a Microsoft Graph events JSON file. gcal/msft are auto-filtered and converted exactly as in load_calendar.',
         },
         id: {
           type: 'string',
@@ -1632,6 +1638,23 @@ function loadIcsData(icsText: string, requestedWindow: { from: Date; to: Date })
   return { ranges, effectiveWindow, detectedWindow };
 }
 
+// Accept either a bare event array or a provider result object that wraps one
+// (e.g. a saved gcal/msft list_events response: `{ events: [...] }`).
+function extractEventsArray(data: string, label: string): unknown[] {
+  const parsed = JSON.parse(data) as unknown;
+  if (Array.isArray(parsed)) {
+    return parsed;
+  }
+  if (
+    parsed !== null &&
+    typeof parsed === 'object' &&
+    Array.isArray((parsed as { events?: unknown }).events)
+  ) {
+    return (parsed as { events: unknown[] }).events;
+  }
+  throw new Error(`${label} JSON must be an array of events, or an object with an "events" array.`);
+}
+
 function buildLoadResponse(
   session: CalendarSession,
   ranges: DateRange[],
@@ -1742,10 +1765,15 @@ export async function handleToolCall(
 
       case 'load_calendar_file': {
         const filePath = requireString(args, 'path');
+        const source = optionalString(args, 'source') ?? 'ics';
         const id = optionalString(args, 'id');
         const timezone = optionalString(args, 'timezone');
         const windowFrom = optionalString(args, 'window_from');
         const windowTo = optionalString(args, 'window_to');
+
+        if (source !== 'ics' && source !== 'gcal' && source !== 'msft') {
+          throw new Error('"source" must be "ics", "gcal", or "msft".');
+        }
 
         if ((windowFrom && !windowTo) || (!windowFrom && windowTo)) {
           throw new Error('"window_from" and "window_to" must be provided together.');
@@ -1763,15 +1791,30 @@ export async function handleToolCall(
             : getParseWindow();
 
         const calendarId = session.createCalendarId(id);
-        const result = loadIcsData(data, requestedWindow);
-        return buildLoadResponse(
-          session,
-          result.ranges,
-          calendarId,
-          'ics',
-          result.effectiveWindow,
-          result.detectedWindow,
+
+        if (source === 'ics') {
+          const result = loadIcsData(data, requestedWindow);
+          return buildLoadResponse(
+            session,
+            result.ranges,
+            calendarId,
+            'ics',
+            result.effectiveWindow,
+            result.detectedWindow,
+          );
+        }
+
+        // gcal/msft: the file is often a raw list_events result object
+        // ({events: [...]}) rather than a bare array — accept either.
+        const events = extractEventsArray(
+          data,
+          source === 'gcal' ? 'Google Calendar' : 'Microsoft Graph',
         );
+        const ranges =
+          source === 'gcal'
+            ? gcalEventsToDateRanges(events as GCalEvent[])
+            : msftEventsToDateRanges(events as MsftGraphEvent[]);
+        return buildLoadResponse(session, ranges, calendarId, source, requestedWindow, null);
       }
 
       case 'find_conflicts': {

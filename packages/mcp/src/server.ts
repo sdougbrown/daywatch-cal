@@ -16,6 +16,7 @@ import {
   type Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 
+import { VERSION } from './_version.js';
 import { gcalEventsToDateRanges } from './adapters/gcal.js';
 import { msftEventsToDateRanges } from './adapters/msft.js';
 import type { GCalEvent, MsftGraphEvent } from './adapters/types.js';
@@ -2080,7 +2081,7 @@ export async function handleToolCall(
 
 export function createServer(session = new CalendarSession()): Server {
   const server = new Server(
-    { name: 'daywatch-mcp', version: '0.1.0' },
+    { name: 'daywatch-mcp', version: VERSION },
     {
       capabilities: {
         tools: {},

@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node scripts/write-version.mjs && tsc",
     "test": "vitest run --config vitest.config.ts --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },

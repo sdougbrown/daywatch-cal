@@ -1719,7 +1719,7 @@ function parseFeedUrl(raw: string): URL {
 
   // webcal:// is how calendar apps advertise .ics feeds; it is plain https.
   if (url.protocol === 'webcal:') {
-    url = new URL(raw.replace(/^webcal:/i, 'https:'));
+    url = new URL(url.href.replace(/^webcal:/, 'https:'));
   }
 
   if (url.protocol !== 'https:' && url.protocol !== 'http:') {

@@ -113,6 +113,59 @@ describe('load_calendar_url', () => {
     expect(requestUrl.href).toBe('https://rota.example.com/feed.ics');
   });
 
+  it('rewrites webcal URLs with surrounding whitespace', async () => {
+    const fetchMock = stubFetch(icsResponse(ICS_TEXT));
+    const session = new CalendarSession('UTC');
+
+    const result = await handleToolCall(session, 'load_calendar_url', {
+      url: ' webcal://rota.example.com/feed.ics ',
+      ...FEED_WINDOW,
+    });
+
+    expect(result.isError).toBeUndefined();
+    expect((fetchMock.mock.calls[0][0] as URL).href).toBe('https://rota.example.com/feed.ics');
+  });
+
+  it('loads a feed using the default parse window when none is given', async () => {
+    const now = new Date();
+    const fmtIcs = (date: Date) =>
+      `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 8);
+    const ics = ICS_TEXT.replace(
+      'DTSTART;VALUE=DATE:20260615',
+      `DTSTART;VALUE=DATE:${fmtIcs(start)}`,
+    ).replace('DTEND;VALUE=DATE:20260622', `DTEND;VALUE=DATE:${fmtIcs(end)}`);
+    stubFetch(icsResponse(ics));
+    const session = new CalendarSession('UTC');
+
+    const result = await handleToolCall(session, 'load_calendar_url', {
+      url: 'https://rota.example.com/feed.ics',
+    });
+
+    expect(result.isError).toBeUndefined();
+    const parsed = parseJsonContent<{
+      ranges_loaded: number;
+      effective_window: { from: string; to: string };
+    }>(result);
+    expect(parsed.ranges_loaded).toBe(1);
+
+    const fmtIso = (date: Date) =>
+      [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0'),
+      ].join('-');
+    // The detected-window fallback only pads the event dates by ±1 month, so an
+    // effective window reaching past today+5mo proves the default (now−1mo …
+    // now+6mo) parse window was applied.
+    expect(parsed.effective_window.from <= fmtIso(now)).toBe(true);
+    expect(
+      parsed.effective_window.to >=
+        fmtIso(new Date(now.getFullYear(), now.getMonth() + 5, now.getDate())),
+    ).toBe(true);
+  });
+
   it('refuses plain http for non-loopback hosts without fetching', async () => {
     const fetchMock = stubFetch();
     const session = new CalendarSession('UTC');

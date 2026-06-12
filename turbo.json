@@ -1,6 +1,9 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
+    "version": {
+      "outputs": ["src/_version.ts"]
+    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]

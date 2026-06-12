@@ -47,6 +47,7 @@ Neo-reckoning is the thinking step between reading and writing. The source MCP i
 
 LOADING DATA:
 - File on disk → load_calendar_file (pass the path). Handles .ics (default) and gcal/msft JSON via the "source" param — use it whenever the data is already on disk (e.g. a list_events result too large to pass inline); never read large calendar files into the conversation yourself.
+- Feed URL (incident.io schedule feeds, published .ics links, webcal) → load_calendar_url with the url. The server fetches it directly — never fetch the feed yourself (curl/WebFetch) and paste it inline.
 - Google Calendar → load_calendar with source "gcal" and the raw JSON array from gcal_list_events. Auto-filters transparent, declined, working-location events.
 - Microsoft Outlook / Office 365 → load_calendar with source "msft" and the raw JSON array from Microsoft Graph. Auto-filters free, workingElsewhere, declined, cancelled events. Maps Windows timezones to IANA.
 - Always feed gcal/msft data through its native source. Do NOT pre-flatten it to "ranges" yourself — you lose the transparency/declined filtering and the per-event timezone reconciliation, both of which silently corrupt scoring (wrong busy/free, events at the wrong wall-clock hour).
@@ -204,6 +205,40 @@ export const TOOLS: Tool[] = [
         },
       },
       required: ['path'],
+    },
+  },
+  {
+    name: 'load_calendar_url',
+    description:
+      'Fetch an .ics calendar feed from a URL and load it into the current session — incident.io schedule feeds, published Google/Outlook .ics links, any https or webcal feed. The server fetches the URL itself: do NOT fetch the feed with curl/WebFetch and paste the text through load_calendar. Plain http is allowed only for localhost. Feed URLs often embed auth tokens; they are redacted from results and errors.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: {
+          type: 'string',
+          description:
+            'The feed URL. https or webcal (plain http is allowed for localhost only). Must return iCalendar (.ics) data.',
+        },
+        id: {
+          type: 'string',
+          description: 'Optional calendar identifier. Defaults to calendar-N.',
+        },
+        timezone: {
+          type: 'string',
+          description: 'Optional IANA timezone to use for the session evaluator.',
+        },
+        window_from: {
+          type: 'string',
+          description:
+            'Optional parse window start date (YYYY-MM-DD). Must be paired with window_to.',
+        },
+        window_to: {
+          type: 'string',
+          description:
+            'Optional parse window end date (YYYY-MM-DD). Must be paired with window_from.',
+        },
+      },
+      required: ['url'],
     },
   },
   {
@@ -1639,6 +1674,238 @@ function loadIcsData(icsText: string, requestedWindow: { from: Date; to: Date })
   return { ranges, effectiveWindow, detectedWindow };
 }
 
+const FEED_FETCH_TIMEOUT_MS = 30_000;
+const MAX_FEED_BYTES = 20 * 1024 * 1024;
+const MAX_FEED_REDIRECTS = 5;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+// Feed URLs often embed auth tokens (incident.io puts one in the path), so
+// anything echoed back to the caller hides long path segments and the query.
+function redactFeedUrl(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return '<invalid url>';
+  }
+
+  const path = url.pathname
+    .split('/')
+    .map((segment) => (segment.length > 16 ? '…' : segment))
+    .join('/');
+
+  return `${url.origin}${path}${url.search ? '?…' : ''}`;
+}
+
+function isLoopbackHost(hostname: string): boolean {
+  // URL#hostname keeps the brackets on IPv6 literals, so '[::1]' is the form
+  // that reaches us; shorthand IPv4 literals (127.1, 0x7f000001) are already
+  // normalized to 127.0.0.1 by the URL parser.
+  return (
+    hostname === 'localhost' ||
+    hostname.endsWith('.localhost') ||
+    hostname === '127.0.0.1' ||
+    hostname === '[::1]'
+  );
+}
+
+function parseFeedUrl(raw: string): URL {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error('"url" is not a valid URL.');
+  }
+
+  // webcal:// is how calendar apps advertise .ics feeds; it is plain https.
+  if (url.protocol === 'webcal:') {
+    url = new URL(raw.replace(/^webcal:/i, 'https:'));
+  }
+
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error(`"url" must be an https or webcal URL. Got "${url.protocol}//".`);
+  }
+
+  if (url.protocol === 'http:' && !isLoopbackHost(url.hostname)) {
+    throw new Error(
+      'Plain http is only allowed for localhost — feed URLs often carry auth tokens. Use https.',
+    );
+  }
+
+  return url;
+}
+
+async function readBodyCapped(response: Response, redactedUrl: string): Promise<string> {
+  if (!response.body) {
+    return '';
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+
+    totalBytes += value.byteLength;
+    if (totalBytes > MAX_FEED_BYTES) {
+      await reader.cancel();
+      throw new Error(
+        `Response from ${redactedUrl} exceeded the ${MAX_FEED_BYTES / 1024 / 1024} MB feed size limit.`,
+      );
+    }
+
+    chunks.push(value);
+  }
+
+  const merged = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder().decode(merged);
+}
+
+function isTimeoutError(error: unknown): boolean {
+  return (
+    error instanceof DOMException && (error.name === 'TimeoutError' || error.name === 'AbortError')
+  );
+}
+
+function describeFetchFailure(error: unknown): string {
+  const cause = (error as { cause?: { code?: string; message?: string } }).cause;
+  return cause?.code ?? cause?.message ?? (error instanceof Error ? error.message : String(error));
+}
+
+async function fetchFeedText(
+  initialUrl: URL,
+): Promise<{ text: string; contentType: string; redactedUrl: string }> {
+  let url = initialUrl;
+  let redirects = 0;
+
+  for (;;) {
+    const redactedUrl = redactFeedUrl(url.href);
+    let response: Response;
+
+    try {
+      response = await fetch(url, {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(FEED_FETCH_TIMEOUT_MS),
+        headers: {
+          'user-agent': `daywatch-mcp/${VERSION}`,
+          accept: 'text/calendar, text/plain;q=0.9, */*;q=0.8',
+        },
+      });
+    } catch (error) {
+      if (isTimeoutError(error)) {
+        throw new Error(
+          `Request to ${redactedUrl} timed out after ${FEED_FETCH_TIMEOUT_MS / 1000}s.`,
+        );
+      }
+
+      throw new Error(`Could not reach ${redactedUrl}: ${describeFetchFailure(error)}`, {
+        cause: error,
+      });
+    }
+
+    // Redirects are followed manually so every hop is re-validated against
+    // the same scheme/host policy as the initial URL — automatic following
+    // would let an allowed URL redirect into disallowed http hosts.
+    if (REDIRECT_STATUSES.has(response.status)) {
+      await response.body?.cancel();
+
+      const location = response.headers.get('location');
+      if (!location) {
+        throw new Error(
+          `Request to ${redactedUrl} redirected (HTTP ${response.status}) without a Location header.`,
+        );
+      }
+
+      redirects += 1;
+      if (redirects > MAX_FEED_REDIRECTS) {
+        throw new Error(`Request to ${redactedUrl} exceeded ${MAX_FEED_REDIRECTS} redirects.`);
+      }
+
+      try {
+        url = parseFeedUrl(new URL(location, url).href);
+      } catch (error) {
+        throw new Error(
+          `Redirect from ${redactedUrl} points to a disallowed URL: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+
+      continue;
+    }
+
+    if (!response.ok) {
+      const authHint =
+        response.status === 401 || response.status === 403
+          ? ' The feed may require a valid auth token in the URL.'
+          : '';
+      throw new Error(`Request to ${redactedUrl} failed with HTTP ${response.status}.${authHint}`);
+    }
+
+    let text: string;
+    try {
+      text = await readBodyCapped(response, redactedUrl);
+    } catch (error) {
+      if (isTimeoutError(error)) {
+        throw new Error(
+          `Request to ${redactedUrl} timed out after ${FEED_FETCH_TIMEOUT_MS / 1000}s.`,
+        );
+      }
+
+      if (error instanceof TypeError) {
+        throw new Error(
+          `Connection failed while downloading from ${redactedUrl}: ${describeFetchFailure(error)}`,
+          { cause: error },
+        );
+      }
+
+      throw error;
+    }
+
+    return {
+      text,
+      contentType: response.headers.get('content-type') ?? '',
+      redactedUrl,
+    };
+  }
+}
+
+// Sniff the body instead of trusting Content-Type — real-world feeds serve
+// text/calendar, text/plain, even application/octet-stream.
+function ensureIcsBody(text: string, contentType: string, redactedUrl: string): string {
+  // No BOM handling needed: TextDecoder in readBodyCapped already strips it.
+  const trimmed = text.trimStart();
+
+  if (trimmed === '') {
+    throw new Error(
+      `Fetched 0 bytes from ${redactedUrl} — the URL returned an empty response. Verify the feed URL (and its token) is correct.`,
+    );
+  }
+
+  if (!trimmed.startsWith('BEGIN:VCALENDAR')) {
+    const head = trimmed.slice(0, 256).toLowerCase();
+    if (head.startsWith('<!doctype') || head.startsWith('<html')) {
+      throw new Error(
+        `${redactedUrl} returned HTML (content-type: ${contentType || 'unknown'}) — likely a login or web page, not an .ics feed. The URL may require authentication.`,
+      );
+    }
+
+    throw new Error(
+      `${redactedUrl} did not return iCalendar data (content-type: ${contentType || 'unknown'}; expected the body to start with BEGIN:VCALENDAR).`,
+    );
+  }
+
+  return trimmed;
+}
+
 // Accept either a bare event array or a provider result object that wraps one
 // (e.g. a saved gcal/msft list_events response: `{ events: [...] }`).
 function extractEventsArray(data: string, label: string): unknown[] {
@@ -1816,6 +2083,45 @@ export async function handleToolCall(
             ? gcalEventsToDateRanges(events as GCalEvent[])
             : msftEventsToDateRanges(events as MsftGraphEvent[]);
         return buildLoadResponse(session, ranges, calendarId, source, requestedWindow, null);
+      }
+
+      case 'load_calendar_url': {
+        const rawUrl = requireString(args, 'url');
+        const id = optionalString(args, 'id');
+        const timezone = optionalString(args, 'timezone');
+        const windowFrom = optionalString(args, 'window_from');
+        const windowTo = optionalString(args, 'window_to');
+
+        if ((windowFrom && !windowTo) || (!windowFrom && windowTo)) {
+          throw new Error('"window_from" and "window_to" must be provided together.');
+        }
+
+        const url = parseFeedUrl(rawUrl);
+
+        applyTimezone(session, timezone);
+
+        const fetched = await fetchFeedText(url);
+        const icsText = ensureIcsBody(fetched.text, fetched.contentType, fetched.redactedUrl);
+
+        const requestedWindow =
+          windowFrom && windowTo
+            ? {
+                from: parseDateArgument(windowFrom),
+                to: parseDateArgument(windowTo),
+              }
+            : getParseWindow();
+
+        const calendarId = session.createCalendarId(id);
+        const result = loadIcsData(icsText, requestedWindow);
+
+        return buildLoadResponse(
+          session,
+          result.ranges,
+          calendarId,
+          'ics',
+          result.effectiveWindow,
+          result.detectedWindow,
+        );
       }
 
       case 'find_conflicts': {

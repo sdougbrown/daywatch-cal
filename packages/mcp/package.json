@@ -16,7 +16,8 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run --config vitest.config.ts --passWithNoTests",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "version": "node scripts/write-version.mjs"
   },
   "dependencies": {
     "@daywatch/cal": "workspace:^",

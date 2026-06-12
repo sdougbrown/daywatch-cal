@@ -138,6 +138,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
+      - name: Version
+        run: yarn turbo run version
+
       - name: Build
         run: yarn turbo run build
 

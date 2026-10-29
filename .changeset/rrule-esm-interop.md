@@ -2,4 +2,4 @@
 '@daywatch/ical': patch
 ---
 
-Fix `rrulestr is not a function` when loading an .ics file whose events carry an `RRULE` with `INTERVAL` > 1: import `rrule`'s default export so the CJS named export resolves under ESM.
+Resolve `rrulestr` through whichever export the runtime provides, so `RRULE`s with `INTERVAL` > 1 load under both Node ESM (named export only on the CJS interop default) and Bun strict resolution (named export on the namespace, including `bun build --compile`).

@@ -1,10 +1,21 @@
-import rrulePkg from 'rrule';
+import * as rrulePkg from 'rrule';
 
 import { compareDates, pad } from './utils.js';
 
-// rrule 2.8.1 ships no `exports` map, so under ESM its CJS entry surfaces
-// `rrulestr` only on the default export, not as a named export.
-const { rrulestr } = rrulePkg;
+// rrule 2.8.1 ships no `exports` map and its types declare no default export,
+// so the two runtimes disagree: Node's CJS interop exposes `rrulestr` only on
+// the namespace's `default`, while Bun's strict resolver (including
+// `bun build --compile`, which loads the package's ESM build) exposes it as a
+// namespace named export. Take whichever one the runtime provides. The access
+// to `default` goes through a helper so Bun's bundler does not warn about the
+// branch it can prove dead.
+const pickDefaultExport = (ns: unknown): unknown => (ns as { default?: unknown }).default;
+const rruleModule =
+  'rrulestr' in rrulePkg
+    ? rrulePkg
+    : (pickDefaultExport(rrulePkg) as { rrulestr: (typeof rrulePkg)['rrulestr'] });
+
+const { rrulestr } = rruleModule;
 
 interface ParseWindow {
   from: Date;

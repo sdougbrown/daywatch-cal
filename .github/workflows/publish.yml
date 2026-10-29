@@ -2,7 +2,10 @@ name: Publish
 
 on:
   workflow_run:
-    workflows: [CI]
+    # Must match the `name:` in ci-js.yml. workflow_run matches on the workflow's
+    # display name, not its filename, so renaming that workflow silently stops
+    # every publish.
+    workflows: [CI (JS)]
     types: [completed]
     branches: [main]
   workflow_dispatch: {}
@@ -14,7 +17,7 @@ concurrency:
 jobs:
   detect-version-changes:
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     outputs:
@@ -40,7 +43,6 @@ jobs:
         id: versions
         env:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-          MANUAL_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           node <<'NODE' >> "$GITHUB_OUTPUT"
           const { execFileSync } = require('node:child_process');
@@ -48,14 +50,6 @@ jobs:
           const path = require('node:path');
 
           const packages = ['core', 'models', 'react', 'preact', 'solid', 'ical', 'mcp'];
-
-          if (process.env.MANUAL_DISPATCH === 'true') {
-            for (const pkg of packages) {
-              console.log(`${pkg}_changed=true`);
-            }
-            console.log('any_changed=true');
-            process.exit(0);
-          }
 
           const head = process.env.HEAD_SHA;
           const before = (() => {

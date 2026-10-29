@@ -1,5 +1,11 @@
 # @daywatch/mcp
 
+## 0.4.1
+
+### Patch Changes
+
+- Republish. `0.1.3` through `0.4.0` were tagged in git but never reached npm: the `Publish` workflow's `workflow_run` trigger matched the display name `CI`, which was renamed to `CI (JS)`, so publishing stopped on 2026-05-16. This release carries all of them.
+
 ## 0.4.0
 
 ### Minor Changes

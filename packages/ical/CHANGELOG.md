@@ -1,5 +1,11 @@
 # @daywatch/ical
 
+## 0.1.5
+
+### Patch Changes
+
+- Republish. `0.1.3` and `0.1.4` were tagged in git but never reached npm: the `Publish` workflow's `workflow_run` trigger matched the display name `CI`, which was renamed to `CI (JS)`, so publishing stopped on 2026-05-16. This release carries both.
+
 ## 0.1.4
 
 ### Patch Changes

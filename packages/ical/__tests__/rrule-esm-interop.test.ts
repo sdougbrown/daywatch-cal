@@ -11,7 +11,7 @@ const distEntry = fileURLToPath(new URL('../dist/index.js', import.meta.url));
 /**
  * Vitest's module transform masks the ESM/CJS named-export interop for `rrule`,
  * so the failure only shows when the built package runs under plain Node ESM
- * (the way @daywatch/mcp loads it). This drives the built artifact in a child
+ * (ECMAScript modules; the CJS interop path @daywatch/mcp loads). This drives the built artifact in a child
  * process to catch that.
  */
 function runNode(script: string): Promise<string> {

@@ -1,7 +1,9 @@
-import * as rrulePkg from 'rrule';
+import rrulePkg from 'rrule';
 
 import { compareDates, pad } from './utils.js';
 
+// rrule 2.8.1 ships no `exports` map, so under ESM its CJS entry surfaces
+// `rrulestr` only on the default export, not as a named export.
 const { rrulestr } = rrulePkg;
 
 interface ParseWindow {

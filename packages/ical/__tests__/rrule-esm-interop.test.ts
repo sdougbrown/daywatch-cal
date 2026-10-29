@@ -15,13 +15,14 @@ const distEntry = fileURLToPath(new URL('../dist/index.js', import.meta.url));
  * process to catch that.
  */
 function runNode(script: string): Promise<string> {
-  return execFileAsync(process.execPath, ['--input-type=module', '-e', script], {
-    cwd: fileURLToPath(new URL('..', import.meta.url)),
-  }).then((result) => result.stdout);
+  return execFileAsync(process.execPath, ['--input-type=module', '-e', script]).then(
+    (result) => result.stdout,
+  );
 }
 
 describe('built package under plain Node ESM', () => {
-  it.skipIf(!existsSync(distEntry))('expands an RRULE with INTERVAL > 1', async () => {
+  it('expands an RRULE with INTERVAL > 1', async () => {
+    expect(existsSync(distEntry), 'build @daywatch/ical first (`yarn build`)').toBe(true);
     const stdout = await runNode(`
         import { parseICS } from ${JSON.stringify(distEntry)};
         const ics = [

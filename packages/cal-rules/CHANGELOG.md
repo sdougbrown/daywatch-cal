@@ -1,5 +1,11 @@
 # @daywatch/cal-rules
 
+## 0.1.4
+
+### Patch Changes
+
+- Republish. `0.1.2` and `0.1.3` were versioned in git but never reached npm: `@daywatch/cal-rules` was missing from the `Publish` workflow's package detection and publish steps, so the workflow could never publish it. This release carries both.
+
 ## 0.1.3
 
 ### Patch Changes

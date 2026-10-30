@@ -10,6 +10,7 @@ on:
       - 'package.json'
       - 'yarn.lock'
       - '.github/workflows/ci-js.yml'
+      - '.github/workflows/publish.yml'
   pull_request:
     branches: [main]
     # No path filter on PRs: these jobs are required status checks, and a

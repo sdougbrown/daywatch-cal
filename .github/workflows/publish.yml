@@ -2,7 +2,10 @@ name: Publish
 
 on:
   workflow_run:
-    workflows: [CI]
+    # Must match the `name:` in ci-js.yml. workflow_run matches on the workflow's
+    # display name, not its filename, so renaming that workflow silently stops
+    # every publish.
+    workflows: [CI (JS)]
     types: [completed]
     branches: [main]
   workflow_dispatch: {}
@@ -14,7 +17,7 @@ concurrency:
 jobs:
   detect-version-changes:
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     outputs:
@@ -24,6 +27,7 @@ jobs:
       react_changed: ${{ steps.versions.outputs.react_changed }}
       preact_changed: ${{ steps.versions.outputs.preact_changed }}
       solid_changed: ${{ steps.versions.outputs.solid_changed }}
+      cal_rules_changed: ${{ steps.versions.outputs.cal_rules_changed }}
       ical_changed: ${{ steps.versions.outputs.ical_changed }}
       mcp_changed: ${{ steps.versions.outputs.mcp_changed }}
     steps:
@@ -40,22 +44,13 @@ jobs:
         id: versions
         env:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-          MANUAL_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           node <<'NODE' >> "$GITHUB_OUTPUT"
           const { execFileSync } = require('node:child_process');
           const fs = require('node:fs');
           const path = require('node:path');
 
-          const packages = ['core', 'models', 'react', 'preact', 'solid', 'ical', 'mcp'];
-
-          if (process.env.MANUAL_DISPATCH === 'true') {
-            for (const pkg of packages) {
-              console.log(`${pkg}_changed=true`);
-            }
-            console.log('any_changed=true');
-            process.exit(0);
-          }
+          const packages = ['core', 'models', 'react', 'preact', 'solid', 'cal-rules', 'ical', 'mcp'];
 
           const head = process.env.HEAD_SHA;
           const before = (() => {
@@ -108,7 +103,9 @@ jobs:
               anyChanged = true;
             }
 
-            console.log(`${pkg}_changed=${changed}`);
+            // GITHUB_OUTPUT keys cannot contain hyphens; map cal-rules to cal_rules.
+            const outputKey = pkg.replace(/-/g, '_');
+            console.log(`${outputKey}_changed=${changed}`);
           }
 
           console.log(`any_changed=${anyChanged}`);
@@ -187,6 +184,16 @@ jobs:
       - name: Publish @daywatch/cal-solid
         if: needs.detect-version-changes.outputs.solid_changed == 'true'
         working-directory: packages/solid
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="latest"
+          if echo "$VERSION" | grep -q "-"; then TAG="alpha"; fi
+          yarn pack -o package.tgz
+          npm publish package.tgz --provenance --access public --tag "$TAG"
+
+      - name: Publish @daywatch/cal-rules
+        if: needs.detect-version-changes.outputs.cal_rules_changed == 'true'
+        working-directory: packages/cal-rules
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TAG="latest"

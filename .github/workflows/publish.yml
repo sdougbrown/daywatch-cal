@@ -103,7 +103,9 @@ jobs:
               anyChanged = true;
             }
 
-            console.log(`${pkg}_changed=${changed}`);
+            // GITHUB_OUTPUT keys cannot contain hyphens; map cal-rules to cal_rules.
+            const outputKey = pkg.replace(/-/g, '_');
+            console.log(`${outputKey}_changed=${changed}`);
           }
 
           console.log(`any_changed=${anyChanged}`);

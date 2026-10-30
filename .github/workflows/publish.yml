@@ -27,6 +27,7 @@ jobs:
       react_changed: ${{ steps.versions.outputs.react_changed }}
       preact_changed: ${{ steps.versions.outputs.preact_changed }}
       solid_changed: ${{ steps.versions.outputs.solid_changed }}
+      cal_rules_changed: ${{ steps.versions.outputs.cal_rules_changed }}
       ical_changed: ${{ steps.versions.outputs.ical_changed }}
       mcp_changed: ${{ steps.versions.outputs.mcp_changed }}
     steps:
@@ -49,7 +50,7 @@ jobs:
           const fs = require('node:fs');
           const path = require('node:path');
 
-          const packages = ['core', 'models', 'react', 'preact', 'solid', 'ical', 'mcp'];
+          const packages = ['core', 'models', 'react', 'preact', 'solid', 'cal-rules', 'ical', 'mcp'];
 
           const head = process.env.HEAD_SHA;
           const before = (() => {
@@ -181,6 +182,16 @@ jobs:
       - name: Publish @daywatch/cal-solid
         if: needs.detect-version-changes.outputs.solid_changed == 'true'
         working-directory: packages/solid
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="latest"
+          if echo "$VERSION" | grep -q "-"; then TAG="alpha"; fi
+          yarn pack -o package.tgz
+          npm publish package.tgz --provenance --access public --tag "$TAG"
+
+      - name: Publish @daywatch/cal-rules
+        if: needs.detect-version-changes.outputs.cal_rules_changed == 'true'
+        working-directory: packages/cal-rules
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TAG="latest"

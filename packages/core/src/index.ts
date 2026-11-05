@@ -58,5 +58,7 @@ export {
   convertTime,
   buildDate,
   addMinutes,
+  formatDateInTimezone,
+  getTimeInTimezone,
 } from './time.js';
 export type { AddMinutesResult } from './time.js';

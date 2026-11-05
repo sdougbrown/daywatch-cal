@@ -1,44 +1,18 @@
-import { formatDate, parseDate } from '@daywatch/cal';
+import {
+  formatDate,
+  formatDateInTimezone,
+  formatTime,
+  getTimeInTimezone,
+  parseDate,
+} from '@daywatch/cal';
 
 import type { DateRange } from '@daywatch/cal';
 
 import type { GCalAdapterOptions, GCalEvent, GCalEventAttendee } from './types.js';
 
-const zonedPartsFormatters = new Map<string, Intl.DateTimeFormat>();
-
-function getZonedPartsFormatter(timeZone: string): Intl.DateTimeFormat {
-  let formatter = zonedPartsFormatters.get(timeZone);
-  if (!formatter) {
-    formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23',
-    });
-    zonedPartsFormatters.set(timeZone, formatter);
-  }
-  return formatter;
-}
-
 interface ZonedFields {
   date: string;
   time?: string;
-}
-
-/** Format an instant's date (YYYY-MM-DD) and time (HH:mm) in a timezone. */
-function zonedFields(date: Date, timeZone: string): ZonedFields {
-  const parts = new Map(
-    getZonedPartsFormatter(timeZone)
-      .formatToParts(date)
-      .map((part) => [part.type, part.value]),
-  );
-  return {
-    date: `${parts.get('year')}-${parts.get('month')}-${parts.get('day')}`,
-    time: `${parts.get('hour')}:${parts.get('minute')}`,
-  };
 }
 
 function hasExplicitOffset(dateTime: string): boolean {
@@ -96,7 +70,9 @@ function resolveZonedFields(dateTime: string, timeZone: string | undefined): Zon
   if (!time || !hasExplicitOffset(dateTime) || !timeZone || Number.isNaN(ms)) {
     return { date: dateTime.slice(0, 10), time };
   }
-  return zonedFields(new Date(ms), timeZone);
+  const date = new Date(ms);
+  const { hour, minute } = getTimeInTimezone(date, timeZone);
+  return { date: formatDateInTimezone(date, timeZone), time: formatTime(hour, minute) };
 }
 
 export function gcalEventToDateRange(

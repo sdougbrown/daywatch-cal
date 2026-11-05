@@ -148,6 +148,35 @@ const workingLocationRaw: GCalEvent = {
   status: 'confirmed',
 };
 
+// Issue #41: the dateTime offset is authoritative — 11:00-06:00 is 17:00Z,
+// which is 10:00 in America/Los_Angeles, not 11:00.
+const offsetZoneMismatch: GCalEvent = {
+  id: 'evt_raw_041a',
+  summary: 'Cross-Zone Sync',
+  eventType: 'default',
+  start: { dateTime: '2026-03-30T11:00:00-06:00', timeZone: 'America/Los_Angeles' },
+  end: { dateTime: '2026-03-30T12:00:00-06:00', timeZone: 'America/Los_Angeles' },
+  status: 'confirmed',
+};
+
+const offsetNoTimeZone: GCalEvent = {
+  id: 'evt_raw_041b',
+  summary: 'Offset-Only Event',
+  eventType: 'default',
+  start: { dateTime: '2026-03-30T11:00:00-06:00' },
+  end: { dateTime: '2026-03-30T12:00:00-06:00' },
+  status: 'confirmed',
+};
+
+const midnightCrossingRaw: GCalEvent = {
+  id: 'evt_raw_041c',
+  summary: 'Late Call into Tokyo Tomorrow',
+  eventType: 'default',
+  start: { dateTime: '2026-03-30T14:00:00-06:00', timeZone: 'Asia/Tokyo' },
+  end: { dateTime: '2026-03-30T15:30:00-06:00', timeZone: 'Asia/Tokyo' },
+  status: 'confirmed',
+};
+
 describe('isBlockingEvent', () => {
   it('returns true for an accepted timed event', () => {
     expect(isBlockingEvent(acceptedTimed)).toBe(true);
@@ -216,13 +245,14 @@ describe('isBlockingEvent', () => {
 });
 
 describe('gcalEventToDateRange', () => {
-  it('maps timed events without converting their clock time', () => {
+  it('expresses the clock time in the range timezone when the offset disagrees with it', () => {
+    // 12:30-04:00 is 16:30Z — 09:30 in America/Los_Angeles, the tagged zone.
     const range = gcalEventToDateRange(acceptedTimed);
 
     expect(range.fromDate).toBe('2026-03-30');
     expect(range.toDate).toBe('2026-03-30');
-    expect(range.startTime).toBe('12:30');
-    expect(range.endTime).toBe('13:00');
+    expect(range.startTime).toBe('09:30');
+    expect(range.endTime).toBe('10:00');
     expect(range.duration).toBe(30);
     expect(range.timezone).toBe('America/Los_Angeles');
     expect(range.label).toBe('Team PR Reviews');
@@ -231,6 +261,50 @@ describe('gcalEventToDateRange', () => {
       gcalId: 'evt_001_20260330T163000Z',
       responseStatus: 'accepted',
     });
+  });
+
+  it('lands a cross-zone event at its true instant for the session timezone', () => {
+    // 11:00-06:00 is 17:00Z — 13:00 in America/New_York. Before the fix the
+    // adapter kept the 11:00 wall clock in the LA zone, which evaluates to
+    // 14:00 ET and misses the conflict.
+    const meeting = {
+      id: 'mtg_et',
+      label: 'Overlapping meeting',
+      dates: ['2026-03-30'],
+      startTime: '13:00',
+      endTime: '14:00',
+    };
+
+    const evaluator = new RangeEvaluator('America/New_York');
+    const conflicts = evaluator.findConflicts(
+      [gcalEventToDateRange(offsetZoneMismatch), meeting],
+      '2026-03-30',
+    );
+
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].overlapStart).toBe('13:00');
+    expect(conflicts[0].overlapEnd).toBe('14:00');
+  });
+
+  it('pins an offset-only event to a fixed-offset zone instead of leaving it floating', () => {
+    const range = gcalEventToDateRange(offsetNoTimeZone);
+
+    expect(range.timezone).toBe('-06:00');
+    expect(range.fromDate).toBe('2026-03-30');
+    expect(range.toDate).toBe('2026-03-30');
+    expect(range.startTime).toBe('11:00');
+    expect(range.endTime).toBe('12:00');
+  });
+
+  it('rolls the date over for events that cross midnight after zone conversion', () => {
+    // 14:00-06:00 is 20:00Z on Mar 30 — already Mar 31 in Asia/Tokyo.
+    const range = gcalEventToDateRange(midnightCrossingRaw);
+
+    expect(range.timezone).toBe('Asia/Tokyo');
+    expect(range.fromDate).toBe('2026-03-31');
+    expect(range.toDate).toBe('2026-03-31');
+    expect(range.startTime).toBe('05:00');
+    expect(range.endTime).toBe('06:30');
   });
 
   it('maps all-day events with inclusive end dates', () => {
@@ -277,10 +351,23 @@ describe('gcalEventToDateRange', () => {
     expect(conflicts[0].overlapEnd).toBe('10:00');
   });
 
-  it('leaves timezone undefined for floating timed events', () => {
+  it('keeps offset-free dateTimes floating', () => {
+    const range = gcalEventToDateRange({
+      ...noTimezone,
+      start: { dateTime: '2026-03-30T11:00' },
+      end: { dateTime: '2026-03-30T19:00' },
+    });
+
+    expect(range.startTime).toBe('11:00');
+    expect(range.timezone).toBeUndefined();
+  });
+
+  it('pins offset-bearing dateTimes without a timeZone to a fixed-offset zone', () => {
     const range = gcalEventToDateRange(noTimezone);
 
-    expect(range.timezone).toBeUndefined();
+    expect(range.timezone).toBe('-04:00');
+    expect(range.startTime).toBe('11:00');
+    expect(range.endTime).toBe('19:00');
   });
 
   it('uses the default fallback label when summary is missing', () => {
@@ -331,10 +418,11 @@ describe('gcalEventsToDateRanges', () => {
     expect(ranges).toEqual([
       expect.objectContaining({
         id: 'evt_009',
+        // 14:00-04:00 is 18:00Z — 13:00 in America/Chicago (CDT).
         fromDate: '2026-03-30',
         toDate: '2026-03-30',
-        startTime: '14:00',
-        endTime: '18:00',
+        startTime: '13:00',
+        endTime: '17:00',
       }),
     ]);
   });
@@ -344,9 +432,11 @@ describe('gcalEventsToDateRanges', () => {
       declinedAllDayRaw,
       declinedTimedRaw,
       workingLocationRaw,
+      offsetZoneMismatch,
     ]);
 
-    expect(ranges).toEqual([]);
+    expect(ranges).toHaveLength(1);
+    expect(ranges[0].id).toBe(offsetZoneMismatch.id);
   });
 
   it('surfaces the self attendee response status in range metadata', () => {

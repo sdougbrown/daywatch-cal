@@ -4,6 +4,61 @@ import type { DateRange } from '@daywatch/cal';
 
 import type { GCalAdapterOptions, GCalEvent, GCalEventAttendee } from './types.js';
 
+const zonedPartsFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function getZonedPartsFormatter(timeZone: string): Intl.DateTimeFormat {
+  let formatter = zonedPartsFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    });
+    zonedPartsFormatters.set(timeZone, formatter);
+  }
+  return formatter;
+}
+
+interface ZonedFields {
+  date: string;
+  time?: string;
+}
+
+/** Format an instant's date (YYYY-MM-DD) and time (HH:mm) in a timezone. */
+function zonedFields(date: Date, timeZone: string): ZonedFields {
+  const parts = new Map(
+    getZonedPartsFormatter(timeZone)
+      .formatToParts(date)
+      .map((part) => [part.type, part.value]),
+  );
+  return {
+    date: `${parts.get('year')}-${parts.get('month')}-${parts.get('day')}`,
+    time: `${parts.get('hour')}:${parts.get('minute')}`,
+  };
+}
+
+function hasExplicitOffset(dateTime: string): boolean {
+  return /(?:Z|z|[+-]\d{2}:\d{2})$/.test(dateTime);
+}
+
+/**
+ * Fixed-offset zone for an offset-bearing dateTime with no timeZone field,
+ * e.g. '2026-03-30T11:00:00-06:00' → '-06:00'. Intl accepts literal offset
+ * strings as timezones, so times stay on their original wall clock instead
+ * of being left floating.
+ */
+function fixedOffsetZone(dateTime: string): string | undefined {
+  if (/[Zz]$/.test(dateTime)) return 'UTC';
+  const match = /([+-]\d{2}):(\d{2})$/.exec(dateTime);
+  if (!match) return undefined;
+  if (match[1] === '+00' || match[1] === '-00') return 'UTC';
+  return `${match[1]}:${match[2]}`;
+}
+
 /**
  * The raw API format puts the current user's response on their self attendee;
  * the condensed format folds it into myResponseStatus. Prefer the self
@@ -39,6 +94,20 @@ export function subtractOneDay(dateStr: string): string {
   const date = new Date(year, month, day);
   date.setDate(date.getDate() - 1);
   return formatDate(date);
+}
+
+/**
+ * Date (and time, when present) fields for a dateTime string, expressed in
+ * `timeZone`. Offset-bearing dateTimes are parsed to an instant and formatted
+ * in the zone; offset-free dateTimes keep their wall clock untouched.
+ */
+function resolveZonedFields(dateTime: string, timeZone: string | undefined): ZonedFields {
+  const time = dateTime.length > 10 ? dateTime.slice(11, 16) : undefined;
+  const ms = Date.parse(dateTime);
+  if (!time || !hasExplicitOffset(dateTime) || !timeZone || Number.isNaN(ms)) {
+    return { date: dateTime.slice(0, 10), time };
+  }
+  return zonedFields(new Date(ms), timeZone);
 }
 
 export function gcalEventToDateRange(
@@ -89,15 +158,24 @@ export function gcalEventToDateRange(
   const endMs = Date.parse(endDateTime);
   const hasDuration = Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs;
 
+  // The dateTime offset is the source of truth for the instant; express
+  // fromDate/toDate/startTime/endTime in the zone the range carries so a
+  // dateTime written in one zone and tagged with another lands at the right
+  // time, and an event that crosses midnight after conversion gets the right
+  // dates. Offset-free dateTimes keep their wall clock as-is.
+  const timeZone = event.start.timeZone ?? fixedOffsetZone(startDateTime);
+  const startFields = resolveZonedFields(startDateTime, timeZone);
+  const endFields = resolveZonedFields(endDateTime, timeZone);
+
   return {
     id: event.id,
     label,
-    fromDate: startDateTime.slice(0, 10),
-    toDate: endDateTime.slice(0, 10),
-    startTime: startDateTime.length > 10 ? startDateTime.slice(11, 16) : undefined,
-    endTime: endDateTime.length > 10 ? endDateTime.slice(11, 16) : undefined,
+    fromDate: startFields.date,
+    toDate: endFields.date,
+    startTime: startFields.time,
+    endTime: endFields.time,
     duration: hasDuration ? Math.round((endMs - startMs) / 60000) : undefined,
-    timezone: event.start.timeZone,
+    timezone: timeZone,
     metadata,
   };
 }

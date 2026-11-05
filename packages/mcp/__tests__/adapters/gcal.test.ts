@@ -115,6 +115,39 @@ const noTimezone: GCalEvent = {
   status: 'confirmed',
 };
 
+// --- Raw Google Calendar API format repros (issues #41 and #42) ---
+
+// Issue #42: raw format puts the current user's response on the self
+// attendee instead of myResponseStatus.
+const declinedAllDayRaw: GCalEvent = {
+  id: 'evt_raw_042a',
+  summary: 'Company Offsite',
+  eventType: 'default',
+  start: { date: '2026-04-01' },
+  end: { date: '2026-04-02' },
+  status: 'confirmed',
+  attendees: [{ email: 'me@example.com', responseStatus: 'declined', self: true }],
+};
+
+const declinedTimedRaw: GCalEvent = {
+  id: 'evt_raw_042b',
+  summary: 'Vendor Demo',
+  eventType: 'default',
+  start: { dateTime: '2026-04-01T10:00:00-07:00' },
+  end: { dateTime: '2026-04-01T11:00:00-07:00' },
+  status: 'confirmed',
+  attendees: [{ email: 'me@example.com', responseStatus: 'declined', self: true }],
+};
+
+const workingLocationRaw: GCalEvent = {
+  id: 'evt_raw_042c',
+  summary: 'Home Office',
+  eventType: 'WORKING_LOCATION',
+  start: { date: '2026-04-01' },
+  end: { date: '2026-04-02' },
+  status: 'confirmed',
+};
+
 describe('isBlockingEvent', () => {
   it('returns true for an accepted timed event', () => {
     expect(isBlockingEvent(acceptedTimed)).toBe(true);
@@ -146,6 +179,35 @@ describe('isBlockingEvent', () => {
 
   it('returns false for declined events', () => {
     expect(isBlockingEvent(declinedEvent)).toBe(false);
+  });
+
+  it('returns false for raw-format all-day events declined via the self attendee', () => {
+    expect(isBlockingEvent(declinedAllDayRaw)).toBe(false);
+  });
+
+  it('returns false for raw-format timed events declined via the self attendee', () => {
+    expect(isBlockingEvent(declinedTimedRaw)).toBe(false);
+  });
+
+  it('excludes raw-format uppercase WORKING_LOCATION and BIRTHDAY events', () => {
+    expect(isBlockingEvent(workingLocationRaw)).toBe(false);
+    expect(
+      isBlockingEvent({
+        ...workingLocationRaw,
+        id: 'evt_raw_birthday',
+        eventType: 'BIRTHDAY',
+      }),
+    ).toBe(false);
+  });
+
+  it('keeps raw-format events accepted via the self attendee as blocking', () => {
+    expect(
+      isBlockingEvent({
+        ...declinedTimedRaw,
+        id: 'evt_raw_accepted',
+        attendees: [{ email: 'me@example.com', responseStatus: 'accepted', self: true }],
+      }),
+    ).toBe(true);
   });
 
   it('returns false for cancelled events', () => {
@@ -275,5 +337,24 @@ describe('gcalEventsToDateRanges', () => {
         endTime: '18:00',
       }),
     ]);
+  });
+
+  it('filters raw-format declined and working-location events in batch mode', () => {
+    const ranges = gcalEventsToDateRanges([
+      declinedAllDayRaw,
+      declinedTimedRaw,
+      workingLocationRaw,
+    ]);
+
+    expect(ranges).toEqual([]);
+  });
+
+  it('surfaces the self attendee response status in range metadata', () => {
+    const range = gcalEventToDateRange({
+      ...declinedTimedRaw,
+      attendees: [{ email: 'me@example.com', responseStatus: 'tentative', self: true }],
+    });
+
+    expect(range.metadata).toMatchObject({ responseStatus: 'tentative' });
   });
 });

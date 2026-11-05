@@ -2,14 +2,35 @@ import { formatDate, parseDate } from '@daywatch/cal';
 
 import type { DateRange } from '@daywatch/cal';
 
-import type { GCalAdapterOptions, GCalEvent } from './types.js';
+import type { GCalAdapterOptions, GCalEvent, GCalEventAttendee } from './types.js';
+
+/**
+ * The raw API format puts the current user's response on their self attendee;
+ * the condensed format folds it into myResponseStatus. Prefer the self
+ * attendee when present.
+ */
+function getMyResponseStatus(event: GCalEvent): string | undefined {
+  const selfAttendee = event.attendees?.find((attendee: GCalEventAttendee) => attendee.self);
+  return selfAttendee?.responseStatus ?? event.myResponseStatus;
+}
+
+/**
+ * The raw API sends eventType in uppercase (WORKING_LOCATION, BIRTHDAY);
+ * normalize snake-case uppercase values to the condensed camelCase form.
+ */
+function normalizeEventType(eventType: string | undefined): string | undefined {
+  if (!eventType) return eventType;
+  return eventType.toLowerCase().replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+}
 
 export function isBlockingEvent(event: GCalEvent, options: GCalAdapterOptions = {}): boolean {
   if (event.status === 'cancelled') return false;
-  if (event.eventType === 'workingLocation' || event.eventType === 'birthday') return false;
+  const eventType = normalizeEventType(event.eventType);
+  if (eventType === 'workingLocation' || eventType === 'birthday') return false;
   if (event.transparency === 'transparent' && options.includeTransparent !== true) return false;
-  if (event.myResponseStatus === 'declined') return false;
-  if (event.myResponseStatus === 'tentative' && options.includeTentative === false) return false;
+  const myResponseStatus = getMyResponseStatus(event);
+  if (myResponseStatus === 'declined') return false;
+  if (myResponseStatus === 'tentative' && options.includeTentative === false) return false;
   return true;
 }
 
@@ -28,8 +49,10 @@ export function gcalEventToDateRange(
     gcalId: event.id,
   };
 
-  if (event.eventType) metadata.eventType = event.eventType;
-  if (event.myResponseStatus) metadata.responseStatus = event.myResponseStatus;
+  const eventType = normalizeEventType(event.eventType);
+  if (eventType) metadata.eventType = eventType;
+  const myResponseStatus = getMyResponseStatus(event);
+  if (myResponseStatus) metadata.responseStatus = myResponseStatus;
   if (event.transparency) metadata.transparency = event.transparency;
   if (event.numAttendees) metadata.numAttendees = event.numAttendees;
   if (event.recurringEventId) metadata.recurringEventId = event.recurringEventId;

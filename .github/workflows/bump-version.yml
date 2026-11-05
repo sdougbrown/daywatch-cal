@@ -1,0 +1,165 @@
+name: Bump versions
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_option:
+        description: 'Select version bump type'
+        required: true
+        type: choice
+        options:
+          - Bump minor version
+          - Bump patch version
+        default: Bump minor version
+      bump_target:
+        description: 'Select what to bump'
+        required: true
+        type: choice
+        options:
+          - packages
+          - rust
+          - both
+        default: packages
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: bump-version
+  cancel-in-progress: false
+
+jobs:
+  bump-version:
+    name: Bump versions and open PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Determine bump type and targets
+        id: plan
+        run: |
+          if [ "${{ github.event.inputs.bump_option }}" = "Bump minor version" ]; then
+            echo "bump_type=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "bump_type=patch" >> "$GITHUB_OUTPUT"
+          fi
+          case "${{ github.event.inputs.bump_target }}" in
+            packages) echo "bump_packages=true" >> "$GITHUB_OUTPUT"; echo "bump_rust=false" >> "$GITHUB_OUTPUT" ;;
+            rust)     echo "bump_packages=false" >> "$GITHUB_OUTPUT"; echo "bump_rust=true" >> "$GITHUB_OUTPUT" ;;
+            both)     echo "bump_packages=true" >> "$GITHUB_OUTPUT"; echo "bump_rust=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Error: unknown bump target '${{ github.event.inputs.bump_target }}'"; exit 1 ;;
+          esac
+
+      # The changeset bump only re-releases what the pending changesets name;
+      # when none are pending it still applies the version bump to every
+      # published package, so a release with no feature PRs stays possible.
+      - name: Bump package versions via changesets
+        if: steps.plan.outputs.bump_packages == 'true'
+        run: |
+          BUMP_TYPE="${{ steps.plan.outputs.bump_type }}"
+          {
+            echo "---"
+            for pkg in packages/*/; do
+              name=$(jq -r '.name // empty' "$pkg/package.json")
+              private=$(jq -r '.private // false' "$pkg/package.json")
+              [ "$private" = "true" ] && continue
+              echo "\"$name\": $BUMP_TYPE"
+            done
+            echo "---"
+            echo "Version bump across all published packages"
+          } > .changeset/version-bump-workflow.md
+
+      - name: Calculate versions
+        id: versioning
+        run: |
+          bump_version() {
+            local current="$1" major minor patch
+            if ! [[ "$current" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Error: unexpected version format: $current"
+              exit 1
+            fi
+            IFS='.' read -r major minor patch <<< "$current"
+            if [ "${{ steps.plan.outputs.bump_type }}" = "minor" ]; then
+              echo "$major.$((minor + 1)).0"
+            else
+              echo "$major.$minor.$((patch + 1))"
+            fi
+          }
+
+          PKG_VERSION=""
+          RUST_VERSION=""
+          if [ "${{ steps.plan.outputs.bump_packages }}" = "true" ]; then
+            PKG_VERSION=$(bump_version "$(jq -r '.version' packages/core/package.json)")
+            echo "Package version: $PKG_VERSION"
+          fi
+          if [ "${{ steps.plan.outputs.bump_rust }}" = "true" ]; then
+            RUST_CURRENT=$(sed -n 's/^version = "\(.*\)"/\1/p' crates/daywatch-cal/Cargo.toml | head -1)
+            RUST_VERSION=$(bump_version "$RUST_CURRENT")
+            echo "Rust crate version: $RUST_VERSION"
+          fi
+
+          BRANCH_NAME="version/v${PKG_VERSION:-none}"
+          PR_TITLE="🐪 bump: packages v${PKG_VERSION:-none}"
+          [ "${{ steps.plan.outputs.bump_rust }}" = "true" ] && BRANCH_NAME="${BRANCH_NAME}-rust-v${RUST_VERSION}"
+          if [ "${{ steps.plan.outputs.bump_packages }}" = "true" ] && [ "${{ steps.plan.outputs.bump_rust }}" = "true" ]; then
+            PR_TITLE="🐪 bump: packages v${PKG_VERSION}, rust v${RUST_VERSION}"
+          elif [ "${{ steps.plan.outputs.bump_rust }}" = "true" ]; then
+            BRANCH_NAME="version/rust-v${RUST_VERSION}"
+            PR_TITLE="🐪 bump: rust v${RUST_VERSION}"
+          fi
+
+          echo "pkg_version=${PKG_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "rust_version=${RUST_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "branch_name=${BRANCH_NAME}" >> "$GITHUB_OUTPUT"
+          echo "pr_title=${PR_TITLE}" >> "$GITHUB_OUTPUT"
+
+      - name: Apply package version bumps
+        if: steps.plan.outputs.bump_packages == 'true'
+        run: |
+          corepack enable
+          yarn install --immutable
+          yarn changeset:version
+
+      - name: Bump the Rust crate and refresh its lockfile
+        if: steps.plan.outputs.bump_rust == 'true'
+        run: |
+          sed -i "0,/^version = \".*\"/s//version = \"${{ steps.versioning.outputs.rust_version }}\"/" crates/daywatch-cal/Cargo.toml
+
+      - name: Setup Rust
+        if: steps.plan.outputs.bump_rust == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Refresh Cargo.lock
+        if: steps.plan.outputs.bump_rust == 'true'
+        run: cargo update -w
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "${{ steps.versioning.outputs.pr_title }}"
+          committer: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+          author: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+          title: "${{ steps.versioning.outputs.pr_title }}"
+          body: |
+            This PR was created automatically by the **Bump versions** workflow.
+
+            - Bump target: ${{ github.event.inputs.bump_target }}
+            - Bump type: ${{ steps.plan.outputs.bump_type }}
+            - Packages: ${{ steps.versioning.outputs.pkg_version || 'not bumped' }}
+            - Rust crate: ${{ steps.versioning.outputs.rust_version || 'not bumped' }}
+
+            After merging, publish the Rust crate with:
+            ```
+            git tag rust-v${{ steps.versioning.outputs.rust_version }} && git push origin rust-v${{ steps.versioning.outputs.rust_version }}
+            ```
+          branch: ${{ steps.versioning.outputs.branch_name }}
+          base: main
+          draft: true
+          labels: |
+            🐪 bump

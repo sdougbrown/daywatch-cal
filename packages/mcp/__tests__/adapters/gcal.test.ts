@@ -323,14 +323,39 @@ describe('gcalEventToDateRange', () => {
     expect(conflicts[0].overlapEnd).toBe('14:00');
   });
 
-  it('pins an offset-only event to a fixed-offset zone instead of leaving it floating', () => {
+  it('evaluates an offset-only event at its true instant for the session timezone', () => {
+    // Issue #41 event B: 12:00-06:00 is 18:00Z — 13:00 ET, not 12:00 floating.
+    const evtB = {
+      id: 'evt-b',
+      status: 'confirmed',
+      eventType: 'DEFAULT',
+      start: { dateTime: '2026-11-03T12:00:00-06:00' },
+      end: { dateTime: '2026-11-03T12:30:00-06:00' },
+    } as never;
+    const meeting = {
+      id: 'mtg_et',
+      label: 'Overlapping meeting',
+      dates: ['2026-11-03'],
+      startTime: '13:00',
+      endTime: '13:30',
+    } as never;
+    const evaluator = new RangeEvaluator('America/New_York');
+
+    expect(evaluator.findConflicts([gcalEventToDateRange(evtB), meeting], '2026-11-03')).toHaveLength(
+      1,
+    );
+  });
+
+  it('pins an offset-only event to UTC instead of leaving it floating', () => {
+    // 11:00-06:00 is 17:00Z; the range is evaluated in UTC and the evaluator
+    // converts to the session zone from there.
     const range = gcalEventToDateRange(offsetNoTimeZone);
 
-    expect(range.timezone).toBe('-06:00');
+    expect(range.timezone).toBe('UTC');
     expect(range.fromDate).toBe('2026-03-30');
     expect(range.toDate).toBe('2026-03-30');
-    expect(range.startTime).toBe('11:00');
-    expect(range.endTime).toBe('12:00');
+    expect(range.startTime).toBe('17:00');
+    expect(range.endTime).toBe('18:00');
   });
 
   it('rolls the date over for events that cross midnight after zone conversion', () => {
@@ -399,12 +424,13 @@ describe('gcalEventToDateRange', () => {
     expect(range.timezone).toBeUndefined();
   });
 
-  it('pins offset-bearing dateTimes without a timeZone to a fixed-offset zone', () => {
+  it('pins offset-bearing dateTimes without a timeZone to UTC', () => {
+    // 11:00-04:00 is 15:00Z; 19:00-04:00 is 23:00Z.
     const range = gcalEventToDateRange(noTimezone);
 
-    expect(range.timezone).toBe('-04:00');
-    expect(range.startTime).toBe('11:00');
-    expect(range.endTime).toBe('19:00');
+    expect(range.timezone).toBe('UTC');
+    expect(range.startTime).toBe('15:00');
+    expect(range.endTime).toBe('23:00');
   });
 
   it('uses the default fallback label when summary is missing', () => {

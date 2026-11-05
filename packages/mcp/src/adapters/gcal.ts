@@ -46,20 +46,6 @@ function hasExplicitOffset(dateTime: string): boolean {
 }
 
 /**
- * Fixed-offset zone for an offset-bearing dateTime with no timeZone field,
- * e.g. '2026-03-30T11:00:00-06:00' → '-06:00'. Intl accepts literal offset
- * strings as timezones, so times stay on their original wall clock instead
- * of being left floating.
- */
-function fixedOffsetZone(dateTime: string): string | undefined {
-  if (/[Zz]$/.test(dateTime)) return 'UTC';
-  const match = /([+-]\d{2}):(\d{2})$/.exec(dateTime);
-  if (!match) return undefined;
-  if (match[1] === '+00' || match[1] === '-00') return 'UTC';
-  return `${match[1]}:${match[2]}`;
-}
-
-/**
  * The raw API format puts the current user's response on their self attendee;
  * the condensed format folds it into myResponseStatus. Prefer the self
  * attendee when present.
@@ -166,7 +152,9 @@ export function gcalEventToDateRange(
   // carries. A dateTime written in one zone and tagged with another then
   // lands at the right time. An event that crosses midnight after conversion
   // gets the right dates. Offset-free dateTimes keep their wall clock as-is.
-  const timeZone = event.start.timeZone ?? fixedOffsetZone(startDateTime);
+  // With no timeZone field, an offset-bearing dateTime is pinned to UTC so
+  // it is never compared as floating time; offset-free ones stay floating.
+  const timeZone = event.start.timeZone ?? (hasExplicitOffset(startDateTime) ? 'UTC' : undefined);
   const startFields = resolveZonedFields(startDateTime, timeZone);
   const endFields = resolveZonedFields(endDateTime, timeZone);
 

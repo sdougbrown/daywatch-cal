@@ -71,10 +71,13 @@ function getMyResponseStatus(event: GCalEvent): string | undefined {
 
 /**
  * The raw API sends eventType in uppercase (WORKING_LOCATION, BIRTHDAY);
- * normalize snake-case uppercase values to the condensed camelCase form.
+ * map those to the condensed camelCase form. Condensed-format values pass
+ * through verbatim — lowercasing them would mangle camelCase names like
+ * 'workingLocation' into 'workinglocation'.
  */
 function normalizeEventType(eventType: string | undefined): string | undefined {
   if (!eventType) return eventType;
+  if (eventType !== eventType.toUpperCase()) return eventType;
   return eventType.toLowerCase().replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
@@ -158,11 +161,11 @@ export function gcalEventToDateRange(
   const endMs = Date.parse(endDateTime);
   const hasDuration = Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs;
 
-  // The dateTime offset is the source of truth for the instant; express
-  // fromDate/toDate/startTime/endTime in the zone the range carries so a
-  // dateTime written in one zone and tagged with another lands at the right
-  // time, and an event that crosses midnight after conversion gets the right
-  // dates. Offset-free dateTimes keep their wall clock as-is.
+  // The dateTime offset is the source of truth for the instant. fromDate,
+  // toDate, startTime and endTime are re-expressed in the zone the range
+  // carries. A dateTime written in one zone and tagged with another then
+  // lands at the right time. An event that crosses midnight after conversion
+  // gets the right dates. Offset-free dateTimes keep their wall clock as-is.
   const timeZone = event.start.timeZone ?? fixedOffsetZone(startDateTime);
   const startFields = resolveZonedFields(startDateTime, timeZone);
   const endFields = resolveZonedFields(endDateTime, timeZone);

@@ -186,6 +186,11 @@ describe('isBlockingEvent', () => {
     expect(isBlockingEvent(workingLocation)).toBe(false);
   });
 
+  it('returns false for condensed working-location events with no transparency field', () => {
+    // The eventType branch, not the transparency branch, must exclude this.
+    expect(isBlockingEvent({ ...workingLocation, transparency: undefined })).toBe(false);
+  });
+
   it('returns false for transparent events by default', () => {
     expect(isBlockingEvent(transparentAllDay)).toBe(false);
   });
@@ -237,6 +242,38 @@ describe('isBlockingEvent', () => {
         attendees: [{ email: 'me@example.com', responseStatus: 'accepted', self: true }],
       }),
     ).toBe(true);
+  });
+
+  it('falls back to myResponseStatus when the self attendee carries no responseStatus', () => {
+    expect(
+      isBlockingEvent({
+        ...declinedTimedRaw,
+        id: 'evt_raw_fallback',
+        myResponseStatus: 'accepted',
+        attendees: [{ email: 'me@example.com', self: true }],
+      }),
+    ).toBe(true);
+    expect(
+      isBlockingEvent({
+        ...declinedTimedRaw,
+        id: 'evt_raw_fallback_declined',
+        myResponseStatus: 'declined',
+        attendees: [{ email: 'me@example.com', self: true }],
+      }),
+    ).toBe(false);
+  });
+
+  it('excludes self-attendee tentative events when includeTentative is false', () => {
+    expect(
+      isBlockingEvent(
+        {
+          ...declinedTimedRaw,
+          id: 'evt_raw_tentative',
+          attendees: [{ email: 'me@example.com', responseStatus: 'tentative', self: true }],
+        },
+        { includeTentative: false },
+      ),
+    ).toBe(false);
   });
 
   it('returns false for cancelled events', () => {
@@ -446,5 +483,32 @@ describe('gcalEventsToDateRanges', () => {
     });
 
     expect(range.metadata).toMatchObject({ responseStatus: 'tentative' });
+  });
+
+  it('keeps condensed eventType values verbatim in metadata', () => {
+    const range = gcalEventToDateRange({
+      ...acceptedTimed,
+      eventType: 'outOfOffice',
+    });
+
+    expect(range.metadata.eventType).toBe('outOfOffice');
+  });
+
+  it('normalizes raw uppercase eventType values to camelCase in metadata', () => {
+    const range = gcalEventToDateRange(workingLocationRaw);
+
+    expect(range.metadata.eventType).toBe('workingLocation');
+  });
+
+  it('pins Z-suffixed dateTimes without a timeZone to UTC', () => {
+    const range = gcalEventToDateRange({
+      ...noTimezone,
+      start: { dateTime: '2026-03-30T11:00:00Z' },
+      end: { dateTime: '2026-03-30T12:00:00Z' },
+    });
+
+    expect(range.timezone).toBe('UTC');
+    expect(range.startTime).toBe('11:00');
+    expect(range.endTime).toBe('12:00');
   });
 });

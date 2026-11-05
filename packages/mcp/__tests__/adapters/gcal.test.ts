@@ -139,6 +139,14 @@ const declinedTimedRaw: GCalEvent = {
   attendees: [{ email: 'me@example.com', responseStatus: 'declined', self: true }],
 };
 
+const acceptedAllDayRaw: GCalEvent = {
+  id: 'evt_raw_allday_ok',
+  summary: 'Raw All-Day Confirmed',
+  status: 'confirmed',
+  start: { date: '2026-04-01' },
+  end: { date: '2026-04-03' },
+};
+
 const workingLocationRaw: GCalEvent = {
   id: 'evt_raw_042c',
   summary: 'Home Office',
@@ -261,6 +269,17 @@ describe('isBlockingEvent', () => {
         attendees: [{ email: 'me@example.com', self: true }],
       }),
     ).toBe(false);
+  });
+
+  it('prefers the self attendee responseStatus over a contradictory myResponseStatus', () => {
+    const event = {
+      ...declinedTimedRaw,
+      id: 'evt_raw_self_precedence',
+      myResponseStatus: 'accepted',
+    };
+
+    expect(isBlockingEvent(event)).toBe(false);
+    expect(gcalEventToDateRange(event).metadata.responseStatus).toBe('declined');
   });
 
   it('excludes self-attendee tentative events when includeTentative is false', () => {
@@ -524,6 +543,25 @@ describe('gcalEventsToDateRanges', () => {
     const range = gcalEventToDateRange(workingLocationRaw);
 
     expect(range.metadata.eventType).toBe('workingLocation');
+  });
+
+  it('normalizes raw multi-underscore eventType values to camelCase in metadata', () => {
+    const range = gcalEventToDateRange({
+      ...declinedTimedRaw,
+      eventType: 'OUT_OF_OFFICE',
+      attendees: undefined,
+    });
+
+    expect(range.metadata.eventType).toBe('outOfOffice');
+  });
+
+  it('maps an accepted raw-format all-day event in batch mode', () => {
+    const ranges = gcalEventsToDateRanges([acceptedAllDayRaw]);
+
+    expect(ranges).toHaveLength(1);
+    expect(ranges[0].fromDate).toBe('2026-04-01');
+    expect(ranges[0].toDate).toBe('2026-04-02');
+    expect(ranges[0].startTime).toBeUndefined();
   });
 
   it('pins Z-suffixed dateTimes without a timeZone to UTC', () => {

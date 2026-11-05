@@ -4,7 +4,7 @@
 //! operations a consumer (e.g. the MCP server) would expose as tools.
 
 use serde_json::{json, Value};
-use umpire::{AvailabilityMap, Umpire};
+use umpire::Umpire;
 
 const TOOL_GATE_SCHEMA: &str = r#"{
     "version": 1,
@@ -176,7 +176,3 @@ fn play_recommends_clearing_values_after_the_profile_locks() {
         "deleting needs a connected, writable profile"
     );
 }
-
-// Keep the availability map type in scope for consumers copying this pattern.
-#[allow(dead_code)]
-fn _availability_map_type_is_reexported(_: &AvailabilityMap) {}

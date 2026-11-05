@@ -341,9 +341,9 @@ describe('gcalEventToDateRange', () => {
     } as never;
     const evaluator = new RangeEvaluator('America/New_York');
 
-    expect(evaluator.findConflicts([gcalEventToDateRange(evtB), meeting], '2026-11-03')).toHaveLength(
-      1,
-    );
+    expect(
+      evaluator.findConflicts([gcalEventToDateRange(evtB), meeting], '2026-11-03'),
+    ).toHaveLength(1);
   });
 
   it('pins an offset-only event to UTC instead of leaving it floating', () => {

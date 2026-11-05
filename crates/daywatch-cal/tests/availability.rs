@@ -104,8 +104,10 @@ fn gated(status: &umpire::FieldAvailability) -> bool {
 fn disconnected_profile_gates_every_operation() {
     let engine = engine();
     let evaluator = RangeEvaluator::new(Some("America/New_York")).expect("evaluator builds");
-    // A disconnected profile has no ranges, so the evaluator derives no open
-    // time either.
+    // An empty range list leaves the whole working window open, so the
+    // evaluator reports one free slot spanning 09:00–17:00 and hasOpenTime
+    // stays true; it is the connected rule, not the schedule, that gates
+    // the reads on a disconnected profile.
     let conditions = conditions(&evaluator, &[], false, false, "2026-03-02");
     let availability = engine
         .check(&values("team sync"), &conditions, None)
@@ -252,16 +254,27 @@ fn play_recommends_clearing_values_after_the_profile_locks() {
         .unwrap();
 
     let fouls = engine.play(&before, &after, &values("team sync"));
-    let fouled: Vec<&str> = fouls.iter().map(|f| f.field.as_str()).collect();
+    let mut fouled: Vec<&str> = fouls.iter().map(|f| f.field.as_str()).collect();
+    fouled.sort_unstable();
     assert_eq!(
         fouled,
         vec!["cal.createEvent", "cal.deleteEvent"],
         "fouls: {:?}",
         fouls
     );
-    assert_eq!(fouls[0].reason, "writable calendar required");
+    // Look reasons up by field: umpire-core's foul ordering is its own
+    // implementation detail.
+    let reason_of = |field: &str| {
+        fouls
+            .iter()
+            .find(|f| f.field == field)
+            .expect("foul present")
+            .reason
+            .clone()
+    };
+    assert_eq!(reason_of("cal.createEvent"), "writable calendar required");
     assert_eq!(
-        fouls[1].reason,
+        reason_of("cal.deleteEvent"),
         "deleting needs a connected, writable profile"
     );
 }

@@ -707,6 +707,9 @@ export class RangeEvaluator {
   /**
    * Find free (unoccupied) time slots on a given date by analysing all ranges.
    *
+   * Busy all-day spans occupy the full day (00:00–24:00); free
+   * ('transparent') spans never occupy time.
+   *
    * Algorithm:
    * 1. Expand all ranges for the date into time slots (using getTimeSlots)
    * 2. Collect occupied intervals as [startMinutes, endMinutes] pairs
@@ -732,6 +735,18 @@ export class RangeEvaluator {
     for (const entry of this.getTimedEntriesForDay(ranges, date)) {
       if (entry.endMinutes > entry.startMinutes) {
         occupied.push([entry.startMinutes, entry.endMinutes]);
+      }
+    }
+    // getTimeSlots yields nothing for all-day ranges, so busy all-day
+    // occupancy (full day, 00:00–24:00) is added here; transparent ones
+    // are excluded — they never occupy time.
+    for (const range of ranges) {
+      if (
+        !this.hasTimeFields(range) &&
+        range.transparency !== 'transparent' &&
+        this.isDateInRange(date, range)
+      ) {
+        occupied.push([0, 1440]);
       }
     }
 

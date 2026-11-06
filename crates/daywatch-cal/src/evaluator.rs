@@ -879,6 +879,23 @@ impl RangeEvaluator {
             .map(|e| (e.start_minutes, e.end_minutes))
             .collect();
 
+        // getTime_slots yields nothing for all-day ranges, so busy all-day
+        // occupancy (full day, 00:00–24:00) is added here; transparent ones
+        // are excluded — they never occupy time.
+        for range in ranges {
+            let compiled = compile_range(range);
+            if compiled.has_time_fields {
+                continue;
+            }
+            if range.transparency.as_deref() == Some("transparent") {
+                continue;
+            }
+            if !self.is_date_in_range(date, range) {
+                continue;
+            }
+            occupied.push((0, 1440));
+        }
+
         occupied.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
 
         let mut merged: Vec<(u32, u32)> = Vec::new();
@@ -2630,6 +2647,62 @@ mod tests {
 
         let after = free.iter().find(|s| s.start_time == "11:00");
         assert!(after.is_some());
+    }
+
+    #[test]
+    fn test_free_slots_busy_all_day_occupies_full_day() {
+        let ev = evaluator();
+        let range = make_range(
+            "1",
+            "holiday",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        let free = ev.find_free_slots(&[range], "2026-03-02", FindFreeSlotsOptions::default());
+        assert!(free.is_empty());
+    }
+
+    #[test]
+    fn test_free_slots_transparent_all_day_leaves_day_free() {
+        let ev = evaluator();
+        let mut range = make_range(
+            "1",
+            "fyi",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        range.transparency = Some("transparent".to_string());
+        let free = ev.find_free_slots(&[range], "2026-03-02", FindFreeSlotsOptions::default());
+        assert_eq!(free.len(), 1);
+        assert_eq!(free[0].start_time, "00:00");
+        assert_eq!(free[0].end_time, "24:00");
+    }
+
+    #[test]
+    fn test_free_slots_busy_all_day_outside_date_leaves_day_free() {
+        let ev = evaluator();
+        let range = make_range(
+            "1",
+            "holiday",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-03")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        let free = ev.find_free_slots(&[range], "2026-03-02", FindFreeSlotsOptions::default());
+        assert_eq!(free.len(), 1);
+        assert_eq!(free[0].start_time, "00:00");
+        assert_eq!(free[0].end_time, "24:00");
     }
 
     // ── find_next_free_slot ─────────────────────────────────────────────

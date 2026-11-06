@@ -30,7 +30,7 @@ export type {
 } from './types.js';
 
 // Core classes
-export { RangeEvaluator } from './evaluator.js';
+export { RangeEvaluator, isFreeRange } from './evaluator.js';
 export { CalendarGrid } from './grid.js';
 export { TimelineGrid, computeEventPositions } from './timeline.js';
 export { YearGrid } from './yearGrid.js';

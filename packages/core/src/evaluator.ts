@@ -48,6 +48,20 @@ function buildLookup(size: number, values: readonly number[]): Uint8Array {
 }
 
 /**
+ * Free/busy predicate for a DateRange. A range is free when its
+ * transparency is 'transparent', or — when transparency is undeclared —
+ * when the legacy `metadata.transparent` flag is set (back-compat).
+ * Free ranges never occupy time: occupancy computation skips them and
+ * they never conflict.
+ */
+export function isFreeRange(range: DateRange): boolean {
+  return (
+    range.transparency === 'transparent' ||
+    (range.transparency === undefined && range.metadata?.transparent === true)
+  );
+}
+
+/**
  * RangeEvaluator — the core computation engine of daywatch-cal.
  *
  * Determines whether dates/times fall within a DateRange and expands
@@ -293,13 +307,8 @@ export class RangeEvaluator {
     for (let index = 0; index < ranges.length; index++) {
       const range = ranges[index];
       if (!this.isDateInRange(date, range)) continue;
-      // Free — never occupies time. An explicit transparency value always
-      // wins; the legacy metadata.transparent flag applies only when
-      // transparency is undeclared.
-      if (
-        range.transparency === 'transparent' ||
-        (range.transparency === undefined && range.metadata?.transparent === true)
-      ) {
+      // Free — never occupies time.
+      if (isFreeRange(range)) {
         continue;
       }
 

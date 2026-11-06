@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import {
   RangeEvaluator,
   dateRange,
+  isFreeRange,
   scoreSchedule,
   type DateRange,
   type DayRangeInfo,
@@ -1071,10 +1072,7 @@ function buildListRangeRow(calendarId: string, range: DateRange, isPattern: bool
         : { occurrence_count: 1 }),
     ...(typeof metadata?.location === 'string' ? { location: metadata.location } : {}),
     ...(typeof metadata?.status === 'string' ? { status: metadata.status } : {}),
-    ...(range.transparency === 'transparent' ||
-    (range.transparency === undefined && metadata?.transparent === true)
-      ? { transparent: true }
-      : {}),
+    ...(isFreeRange(range) ? { transparent: true } : {}),
     ...(attendees ? { has_attendees: true } : {}),
     ...(organizer ? { organizer_email: organizer.email } : {}),
   };

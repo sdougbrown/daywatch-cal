@@ -45,6 +45,21 @@ struct RawSpan {
 
 // ── Free helpers ────────────────────────────────────────────────────────────
 
+/// Free/busy predicate for a DateRange. A range is free when its
+/// transparency is "transparent", or — when transparency is undeclared —
+/// when the legacy `metadata.transparent` flag is set (back-compat).
+/// Free ranges never occupy time: occupancy computation skips them and
+/// they never conflict.
+fn is_free_range(range: &DateRange) -> bool {
+    let legacy_free = matches!(
+        &range.metadata,
+        Some(serde_json::Value::Object(map))
+            if map.get("transparent") == Some(&serde_json::Value::Bool(true))
+    );
+    range.transparency.as_deref() == Some("transparent")
+        || (range.transparency.is_none() && legacy_free)
+}
+
 fn compile_range(range: &DateRange) -> CompiledRange {
     let mut weekday_mask = [false; 7];
     let mut date_mask = [false; 32];
@@ -941,17 +956,8 @@ impl RangeEvaluator {
             if !self.is_date_in_range(date, range) {
                 continue;
             }
-            // Free ranges never occupy time. An explicit transparency value
-            // always wins; the legacy metadata.transparent flag applies only
-            // when transparency is undeclared.
-            let legacy_free = matches!(
-                &range.metadata,
-                Some(serde_json::Value::Object(map))
-                    if map.get("transparent") == Some(&serde_json::Value::Bool(true))
-            );
-            if range.transparency.as_deref() == Some("transparent")
-                || (range.transparency.is_none() && legacy_free)
-            {
+            // Free ranges never occupy time.
+            if is_free_range(range) {
                 continue;
             }
             let compiled = compile_range(range);

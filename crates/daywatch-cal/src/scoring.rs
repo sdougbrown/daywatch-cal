@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 
 use crate::evaluator::{RangeEvaluator, TimedEntry};
 use crate::time::{date_range, format_date, parse_hhmm};
-use crate::types::{DateRange, ScheduleScore, ScoreScheduleOptions, Transparency};
+use crate::types::{DateRange, ScheduleScore, ScoreScheduleOptions};
 
 fn merge_intervals(
     entries: &[TimedEntry],
@@ -155,6 +155,7 @@ pub fn score_schedule(
 mod tests {
     use super::*;
     use crate::time::parse_date;
+    use crate::types::Transparency;
     use crate::types::{DaySelector, TimeSelector};
     use chrono::NaiveDate;
 

@@ -515,7 +515,7 @@ fn walk_fixtures(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
         let path = entry.path();
         if path.is_dir() {
             walk_fixtures(&path, files);
-        } else if path.extension().map_or(false, |ext| ext == "json") {
+        } else if path.extension().is_some_and(|ext| ext == "json") {
             files.push(path);
         }
     }

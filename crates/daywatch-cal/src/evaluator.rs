@@ -529,7 +529,7 @@ impl RangeEvaluator {
                         label: range.label.clone(),
                         all_day: false,
                         display_type: range.display_type.clone(),
-                        transparency: range.transparency.clone(),
+                        transparency: range.transparency,
                     });
                 }
             } else {
@@ -542,7 +542,7 @@ impl RangeEvaluator {
                     label: range.label.clone(),
                     all_day: true,
                     display_type: range.display_type.clone(),
-                    transparency: range.transparency.clone(),
+                    transparency: range.transparency,
                 });
             }
         }
@@ -2827,7 +2827,7 @@ mod tests {
         assert!(slot.is_some());
         let s = slot.unwrap();
         // Should find a free slot on 2026-03-01 (no busy range) or early on 2026-03-02
-        assert!(s.date <= "2026-03-02".to_string());
+        assert!(s.date.as_str() <= "2026-03-02");
         assert!(s.duration >= 60);
     }
 

@@ -286,6 +286,55 @@ describe('@daywatch/cal-rules', () => {
     expect(high.ok).toBe(true);
   });
 
+  test('accepts transparency in strict mode', () => {
+    const result = validateRangeCreate(
+      {
+        id: 'r1',
+        label: 'FYI',
+        transparency: 'transparent',
+      },
+      { mode: 'strict' },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.issues).toEqual([]);
+    expect(result.candidate).toEqual({
+      id: 'r1',
+      label: 'FYI',
+      transparency: 'transparent',
+    });
+  });
+
+  test('preserves transparency on the sanitized candidate in lenient mode', () => {
+    const result = validateRangeCreate({
+      id: 'r1',
+      label: 'FYI',
+      transparency: 'opaque',
+      extra: true,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.issues).toEqual([]);
+    expect(result.candidate).toEqual({
+      id: 'r1',
+      label: 'FYI',
+      transparency: 'opaque',
+    });
+  });
+
+  test('flags invalid transparency value', () => {
+    const result = validateRangeCreate({
+      id: 'r1',
+      label: 'Bad transp',
+      transparency: 'free',
+    });
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'transparency'),
+    ).toBe(true);
+  });
+
   test('rejects repeatEvery/duration zero', () => {
     const result = validateRangeCreate({
       id: 'r1',

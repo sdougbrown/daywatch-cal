@@ -70,6 +70,7 @@ export const RANGE_KEYS = [
   'duration',
   'timezone',
   'displayType',
+  'transparency',
   'flexibility',
   'metadata',
 ] as const satisfies readonly (keyof DateRange)[];
@@ -100,6 +101,7 @@ export const rangeInputUmp = umpire({
 
     timezone: { isEmpty: isEmptyStringLike },
     displayType: { isEmpty: isEmptyStringLike },
+    transparency: { isEmpty: isEmptyStringLike },
     flexibility: {},
     metadata: {},
   },
@@ -336,6 +338,11 @@ export const rangeInputUmp = umpire({
         typeof value === 'string' &&
         ['auto', 'span', 'dot', 'fill', 'chip', 'block'].includes(value),
       error: 'displayType must be one of auto|span|dot|fill|chip|block',
+    },
+    transparency: {
+      validator: (value: unknown) =>
+        typeof value === 'string' && ['opaque', 'transparent'].includes(value),
+      error: 'transparency must be one of opaque|transparent',
     },
     flexibility: {
       validator: (value: unknown) =>

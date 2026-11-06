@@ -282,6 +282,32 @@ describe('findConflicts', () => {
     });
   });
 
+  it('two ranges with the same id overlap → a conflict is reported with each participant carrying its own metadata', () => {
+    const rangeA = makeRange({
+      id: 'dup',
+      label: 'A',
+      dates: ['2026-03-23'],
+      startTime: '09:00',
+      endTime: '10:30',
+      eventType: 'a',
+    });
+    const rangeB = makeRange({
+      id: 'dup',
+      label: 'B',
+      dates: ['2026-03-23'],
+      startTime: '10:00',
+      endTime: '11:00',
+      eventType: 'b',
+    });
+
+    const conflicts = evaluator.findConflicts([rangeA, rangeB], '2026-03-23');
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].rangeA).toEqual({ id: 'dup', label: 'A', eventType: 'a' });
+    expect(conflicts[0].rangeB).toEqual({ id: 'dup', label: 'B', eventType: 'b' });
+    expect(conflicts[0].overlapStart).toBe('10:00');
+    expect(conflicts[0].overlapEnd).toBe('10:30');
+  });
+
   it('three-way overlap → three conflicts (A-B, A-C, B-C)', () => {
     const rangeA = makeRange({
       id: 'a',

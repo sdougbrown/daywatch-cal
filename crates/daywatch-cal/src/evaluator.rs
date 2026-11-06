@@ -18,6 +18,7 @@ pub(crate) struct TimedEntry {
     pub start_minutes: u32,
     pub end_minutes: u32,
     pub all_day: bool,
+    pub range_index: usize,
 }
 
 struct CompiledRange {
@@ -732,25 +733,21 @@ impl RangeEvaluator {
     }
 
     pub fn find_conflicts(&self, ranges: &[DateRange], date: &str) -> Vec<Conflict> {
-        let ranges_by_id: HashMap<String, &DateRange> = ranges
-            .iter()
-            .map(|range| (range.id.clone(), range))
-            .collect();
-
         let mut slots: Vec<ConflictSlot> = self
             .get_timed_entries_for_day(ranges, date)
             .into_iter()
             .filter(|e| e.end_minutes > e.start_minutes)
             .map(|e| {
-                let range = ranges_by_id.get(&e.slot.range_id);
+                let range = &ranges[e.range_index];
                 ConflictSlot {
+                    range_index: e.range_index,
                     range_id: e.slot.range_id,
                     label: e.slot.label,
                     start_minutes: e.start_minutes,
                     end_minutes: e.end_minutes,
                     all_day: if e.all_day { Some(true) } else { None },
-                    transparency: range.and_then(|r| r.transparency.clone()),
-                    event_type: range.and_then(|r| r.event_type.clone()),
+                    transparency: range.transparency.clone(),
+                    event_type: range.event_type.clone(),
                 }
             })
             .collect();
@@ -762,7 +759,7 @@ impl RangeEvaluator {
         });
 
         let mut conflicts: Vec<Conflict> = Vec::new();
-        let mut seen: HashSet<(String, String)> = HashSet::new();
+        let mut seen: HashSet<(usize, usize)> = HashSet::new();
 
         for i in 0..slots.len() {
             for j in (i + 1)..slots.len() {
@@ -770,14 +767,14 @@ impl RangeEvaluator {
                     break;
                 }
 
-                if slots[i].range_id == slots[j].range_id {
+                if slots[i].range_index == slots[j].range_index {
                     continue;
                 }
 
-                let pair_key = if slots[i].range_id < slots[j].range_id {
-                    (slots[i].range_id.clone(), slots[j].range_id.clone())
+                let pair_key = if slots[i].range_index < slots[j].range_index {
+                    (slots[i].range_index, slots[j].range_index)
                 } else {
-                    (slots[j].range_id.clone(), slots[i].range_id.clone())
+                    (slots[j].range_index, slots[i].range_index)
                 };
 
                 if seen.contains(&pair_key) {
@@ -940,7 +937,7 @@ impl RangeEvaluator {
     ) -> Vec<TimedEntry> {
         let mut entries: Vec<TimedEntry> = Vec::new();
 
-        for range in ranges {
+        for (range_index, range) in ranges.iter().enumerate() {
             if !self.is_date_in_range(date, range) {
                 continue;
             }
@@ -972,6 +969,7 @@ impl RangeEvaluator {
                     start_minutes: 0,
                     end_minutes: 1440, // full day
                     all_day: true,
+                    range_index,
                 });
                 continue;
             }
@@ -999,6 +997,7 @@ impl RangeEvaluator {
                     start_minutes,
                     end_minutes,
                     all_day: false,
+                    range_index,
                 });
             }
         }
@@ -1274,6 +1273,7 @@ impl RangeEvaluator {
 // ── Internal type for conflict sweep ────────────────────────────────────────
 
 struct ConflictSlot {
+    range_index: usize,
     range_id: String,
     label: String,
     start_minutes: u32,
@@ -2424,6 +2424,50 @@ mod tests {
             Some("outOfOffice".to_string())
         );
         assert_eq!(conflicts[0].range_b.event_type, None);
+    }
+
+    #[test]
+    fn test_conflicts_duplicate_ids_do_not_merge() {
+        let ev = evaluator();
+        let mut range1 = make_range(
+            "dup",
+            "A",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("10:30".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+        range1.event_type = Some("a".to_string());
+        let mut range2 = make_range(
+            "dup",
+            "B",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "10:00".to_string(),
+                end_time: Some("11:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+        range2.event_type = Some("b".to_string());
+
+        let conflicts = ev.find_conflicts(&[range1, range2], "2026-03-02");
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].range_a.event_type, Some("a".to_string()));
+        assert_eq!(conflicts[0].range_b.event_type, Some("b".to_string()));
+        assert_eq!(conflicts[0].overlap_start, Some("10:00".to_string()));
+        assert_eq!(conflicts[0].overlap_end, Some("10:30".to_string()));
     }
 
     #[test]

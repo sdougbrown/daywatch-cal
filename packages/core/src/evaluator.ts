@@ -268,20 +268,30 @@ export class RangeEvaluator {
    * `metadata.transparent` is honored as a free signal only when `transparency`
    * is undeclared (back-compat). Busy all-day ranges (no time fields) occupy
    * the full day (00:00–24:00) and are emitted with allDay: true and a
-   * 00:00–24:00 slot.
+   * 00:00–24:00 slot. Each entry carries the index of the source range in
+   * the input array, so callers can resolve per-range state without
+   * re-keying by id.
    */
   getTimedEntriesForDay(
     ranges: DateRange[],
     date: string,
-  ): Array<{ slot: TimeSlot; startMinutes: number; endMinutes: number; allDay: boolean }> {
+  ): Array<{
+    slot: TimeSlot;
+    startMinutes: number;
+    endMinutes: number;
+    allDay: boolean;
+    rangeIndex: number;
+  }> {
     const entries: Array<{
       slot: TimeSlot;
       startMinutes: number;
       endMinutes: number;
       allDay: boolean;
+      rangeIndex: number;
     }> = [];
 
-    for (const range of ranges) {
+    for (let index = 0; index < ranges.length; index++) {
+      const range = ranges[index];
       if (!this.isDateInRange(date, range)) continue;
       // Free — never occupies time. An explicit transparency value always
       // wins; the legacy metadata.transparent flag applies only when
@@ -305,6 +315,7 @@ export class RangeEvaluator {
           startMinutes: 0,
           endMinutes: 1440, // full day
           allDay: true,
+          rangeIndex: index,
         });
         continue;
       }
@@ -324,6 +335,7 @@ export class RangeEvaluator {
           startMinutes,
           endMinutes,
           allDay: false,
+          rangeIndex: index,
         });
       }
     }
@@ -634,26 +646,23 @@ export class RangeEvaluator {
    * when present so callers can grade severity.
    */
   findConflicts(ranges: DateRange[], date: string): Conflict[] {
-    const rangesById = new Map(ranges.map((range) => [range.id, range]));
-
-    const toRef = (rangeId: string, label: string, allDay: boolean): ConflictRangeRef => {
-      const range = rangesById.get(rangeId);
+    const toRef = (range: DateRange, label: string, allDay: boolean): ConflictRangeRef => {
       return {
-        id: rangeId,
+        id: range.id,
         label,
         ...(allDay ? { allDay: true } : {}),
-        ...(range?.transparency !== undefined ? { transparency: range.transparency } : {}),
-        ...(range?.eventType !== undefined ? { eventType: range.eventType } : {}),
+        ...(range.transparency !== undefined ? { transparency: range.transparency } : {}),
+        ...(range.eventType !== undefined ? { eventType: range.eventType } : {}),
       };
     };
 
     const slots = this.getTimedEntriesForDay(ranges, date)
       .map((entry) => ({
-        rangeId: entry.slot.rangeId,
+        rangeIndex: entry.rangeIndex,
         label: entry.slot.label,
         startMinutes: entry.startMinutes,
         endMinutes: entry.endMinutes,
-        ref: toRef(entry.slot.rangeId, entry.slot.label, entry.allDay),
+        ref: toRef(ranges[entry.rangeIndex], entry.slot.label, entry.allDay),
       }))
       // Zero-width entries (no endTime and no duration) never occupy time.
       .filter((slot) => slot.endMinutes > slot.startMinutes)
@@ -668,14 +677,14 @@ export class RangeEvaluator {
         // Since sorted by start, slots[j].startMinutes >= slots[i].startMinutes
         if (slots[j].startMinutes >= slots[i].endMinutes) break; // no more overlaps with i
 
-        // Same range — not a conflict
-        if (slots[i].rangeId === slots[j].rangeId) continue;
+        // Same source range — not a conflict
+        if (slots[i].rangeIndex === slots[j].rangeIndex) continue;
 
         // Deduplicate: use sorted pair key
         const pairKey =
-          slots[i].rangeId < slots[j].rangeId
-            ? `${slots[i].rangeId}|${slots[j].rangeId}`
-            : `${slots[j].rangeId}|${slots[i].rangeId}`;
+          slots[i].rangeIndex < slots[j].rangeIndex
+            ? `${slots[i].rangeIndex}|${slots[j].rangeIndex}`
+            : `${slots[j].rangeIndex}|${slots[i].rangeIndex}`;
         if (seen.has(pairKey)) continue;
         seen.add(pairKey);
 

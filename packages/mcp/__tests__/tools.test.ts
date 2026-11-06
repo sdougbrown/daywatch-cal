@@ -727,6 +727,47 @@ describe('handleToolCall', () => {
       ]);
     });
 
+    it('marks gcal transparent events with transparent: true in list_ranges rows', async () => {
+      const session = new CalendarSession('UTC');
+      const events: GCalEvent[] = [
+        {
+          id: 'evt_fyi',
+          summary: 'FYI Hold',
+          eventType: 'default',
+          start: { dateTime: '2026-03-30T09:00:00-04:00', timeZone: 'America/New_York' },
+          end: { dateTime: '2026-03-30T10:00:00-04:00', timeZone: 'America/New_York' },
+          allDay: false,
+          status: 'confirmed',
+          transparency: 'transparent',
+        },
+        {
+          id: 'evt_meeting',
+          summary: 'Meeting',
+          eventType: 'default',
+          start: { dateTime: '2026-03-30T11:00:00-04:00', timeZone: 'America/New_York' },
+          end: { dateTime: '2026-03-30T12:00:00-04:00', timeZone: 'America/New_York' },
+          allDay: false,
+          status: 'confirmed',
+        },
+      ];
+
+      const loadResult = await handleToolCall(session, 'load_calendar', {
+        source: 'gcal',
+        data: JSON.stringify(events),
+        id: 'team',
+      });
+      expect(parseJsonContent<{ ranges_loaded: number }>(loadResult).ranges_loaded).toBe(2);
+
+      const listResult = await handleToolCall(session, 'list_ranges', {});
+      const body = parseJsonContent<{
+        ranges: Array<{ range_id: string; transparent?: boolean }>;
+      }>(listResult);
+
+      const flags = new Map(body.ranges.map((row) => [row.range_id, row.transparent]));
+      expect(flags.get('evt_fyi')).toBe(true);
+      expect(flags.get('evt_meeting')).toBeUndefined();
+    });
+
     it('groups gcal series instances into one row by default', async () => {
       const session = await createGcalSession();
 

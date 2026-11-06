@@ -217,11 +217,16 @@ function buildEvent(range: DateRange): InstanceType<typeof ICAL.Component> | nul
   }
 
   const metadata = range.metadata;
-  if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
-    if (metadata.transparent === true) {
-      component.addPropertyWithValue('transp', 'TRANSPARENT');
-    }
+  const legacyTransparent =
+    metadata !== undefined &&
+    typeof metadata === 'object' &&
+    !Array.isArray(metadata) &&
+    metadata.transparent === true;
+  if (range.transparency === 'transparent' || legacyTransparent) {
+    component.addPropertyWithValue('transp', 'TRANSPARENT');
+  }
 
+  if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
     if (
       metadata.status === 'tentative' ||
       metadata.status === 'confirmed' ||

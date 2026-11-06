@@ -1071,7 +1071,9 @@ function buildListRangeRow(calendarId: string, range: DateRange, isPattern: bool
         : { occurrence_count: 1 }),
     ...(typeof metadata?.location === 'string' ? { location: metadata.location } : {}),
     ...(typeof metadata?.status === 'string' ? { status: metadata.status } : {}),
-    ...(metadata?.transparent === true ? { transparent: true } : {}),
+    ...(range.transparency === 'transparent' || metadata?.transparent === true
+      ? { transparent: true }
+      : {}),
     ...(attendees ? { has_attendees: true } : {}),
     ...(organizer ? { organizer_email: organizer.email } : {}),
   };

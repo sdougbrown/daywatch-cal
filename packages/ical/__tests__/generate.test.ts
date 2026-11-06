@@ -182,4 +182,46 @@ describe('generateICS', () => {
       'EXDATE;VALUE=DATE:20260312,20260313,20260314',
     );
   });
+
+  it('exports TRANSP:TRANSPARENT from the canonical transparency field, with legacy metadata fallback', () => {
+    const ranges: DateRange[] = [
+      {
+        id: 'free-canonical',
+        label: 'Free',
+        dates: ['2026-03-21'],
+        transparency: 'transparent',
+      },
+      {
+        id: 'free-legacy',
+        label: 'Free Legacy',
+        dates: ['2026-03-22'],
+        metadata: { transparent: true },
+      },
+      {
+        id: 'opaque',
+        label: 'Opaque',
+        dates: ['2026-03-23'],
+        transparency: 'opaque',
+      },
+      {
+        id: 'absent',
+        label: 'Absent',
+        dates: ['2026-03-24'],
+      },
+    ];
+
+    const calendar = new ICAL.Component(ICAL.parse(generateICS(ranges)));
+
+    const freeCanonical = byUid(calendar, 'free-canonical');
+    expect(freeCanonical.getFirstPropertyValue('transp')).toBe('TRANSPARENT');
+
+    const freeLegacy = byUid(calendar, 'free-legacy');
+    expect(freeLegacy.getFirstPropertyValue('transp')).toBe('TRANSPARENT');
+
+    const opaque = byUid(calendar, 'opaque');
+    expect(opaque.getFirstProperty('transp')).toBeNull();
+
+    const absent = byUid(calendar, 'absent');
+    expect(absent.getFirstProperty('transp')).toBeNull();
+  });
 });

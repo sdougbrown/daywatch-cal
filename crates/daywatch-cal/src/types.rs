@@ -84,7 +84,7 @@ pub struct DateRange {
     pub flexibility: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transparency: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "eventType", skip_serializing_if = "Option::is_none")]
     pub event_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
@@ -948,5 +948,32 @@ mod tests {
             r#"{"id": "1", "label": "test", "dates": ["2026-03-21"], "displayType": "chip"}"#;
         let dr: DateRange = serde_json::from_str(json).unwrap();
         assert_eq!(dr.display_type.as_deref(), Some("chip"));
+    }
+
+    #[test]
+    fn date_range_event_type_roundtrips_as_camel_case() {
+        let dr = DateRange {
+            id: "10".to_string(),
+            label: "Test EventType".to_string(),
+            title: None,
+            display_type: None,
+            day_selector: DaySelector::Explicit {
+                dates: vec!["2026-03-21".to_string()],
+                except_dates: None,
+                except_between: None,
+            },
+            time_selector: None,
+            timezone: None,
+            flexibility: None,
+            transparency: Some("transparent".to_string()),
+            event_type: Some("outOfOffice".to_string()),
+            metadata: None,
+        };
+        let json = serde_json::to_string(&dr).unwrap();
+        assert!(json.contains("\"eventType\""));
+        assert!(!json.contains("\"event_type\""));
+        let dr2: DateRange = serde_json::from_str(&json).unwrap();
+        assert_eq!(dr2.event_type.as_deref(), Some("outOfOffice"));
+        assert_eq!(dr2.transparency.as_deref(), Some("transparent"));
     }
 }

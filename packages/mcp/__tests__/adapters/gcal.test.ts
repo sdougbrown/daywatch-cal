@@ -199,9 +199,9 @@ describe('isBlockingEvent', () => {
     expect(isBlockingEvent({ ...workingLocation, transparency: undefined })).toBe(false);
   });
 
-  it('includes transparent events so their free signal can be carried', () => {
+  it('includes transparent events even when the deprecated includeTransparent option is false', () => {
     expect(isBlockingEvent(transparentAllDay)).toBe(true);
-    expect(isBlockingEvent(transparentAllDay, { includeTransparent: true })).toBe(true);
+    expect(isBlockingEvent(transparentAllDay, { includeTransparent: false })).toBe(true);
   });
 
   it('includes tentative events by default', () => {

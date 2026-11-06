@@ -3019,4 +3019,27 @@ mod tests {
         assert_eq!(occurrences.len(), 1);
         assert_eq!(occurrences[0].transparency, None);
     }
+
+    #[test]
+    fn test_expand_carries_transparency_onto_all_day_occurrences() {
+        let ev = evaluator();
+        let mut range = make_range(
+            "1",
+            "test",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        range.transparency = Some("transparent".to_string());
+
+        let from = parse_date("2026-03-02").unwrap();
+        let to = parse_date("2026-03-02").unwrap();
+        let occurrences = ev.expand(&range, from, to);
+        assert_eq!(occurrences.len(), 1);
+        assert!(occurrences[0].all_day);
+        assert_eq!(occurrences[0].transparency, Some("transparent".to_string()));
+    }
 }

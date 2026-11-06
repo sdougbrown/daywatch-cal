@@ -335,6 +335,55 @@ describe('@daywatch/cal-rules', () => {
     ).toBe(true);
   });
 
+  test('accepts eventType in strict mode', () => {
+    const result = validateRangeCreate(
+      {
+        id: 'r1',
+        label: 'OOO',
+        eventType: 'outOfOffice',
+      },
+      { mode: 'strict' },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.issues).toEqual([]);
+    expect(result.candidate).toEqual({
+      id: 'r1',
+      label: 'OOO',
+      eventType: 'outOfOffice',
+    });
+  });
+
+  test('preserves eventType on the sanitized candidate in lenient mode', () => {
+    const result = validateRangeCreate({
+      id: 'r1',
+      label: 'OOO',
+      eventType: 'outOfOffice',
+      extra: true,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.issues).toEqual([]);
+    expect(result.candidate).toEqual({
+      id: 'r1',
+      label: 'OOO',
+      eventType: 'outOfOffice',
+    });
+  });
+
+  test('flags invalid eventType value', () => {
+    const result = validateRangeCreate({
+      id: 'r1',
+      label: 'Bad type',
+      eventType: 42,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.issues.some((issue) => issue.code === 'invalid' && issue.field === 'eventType'),
+    ).toBe(true);
+  });
+
   test('rejects repeatEvery/duration zero', () => {
     const result = validateRangeCreate({
       id: 'r1',

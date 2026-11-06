@@ -154,18 +154,18 @@ describe('isBlockingMsftEvent', () => {
     expect(isBlockingMsftEvent(normalMeeting)).toBe(true);
   });
 
-  it('includes free events so their busy/free signal can be carried', () => {
+  it('includes free events even when the deprecated includeFree option is false', () => {
     expect(isBlockingMsftEvent(freeBlock)).toBe(true);
-    expect(isBlockingMsftEvent(freeBlock, { includeFree: true })).toBe(true);
+    expect(isBlockingMsftEvent(freeBlock, { includeFree: false })).toBe(true);
   });
 
   it('keeps out of office events as blocking', () => {
     expect(isBlockingMsftEvent(oofEvent)).toBe(true);
   });
 
-  it('includes working elsewhere events so their busy/free signal can be carried', () => {
+  it('includes working elsewhere events even when the deprecated includeFree option is false', () => {
     expect(isBlockingMsftEvent(workingElsewhere)).toBe(true);
-    expect(isBlockingMsftEvent(workingElsewhere, { includeFree: true })).toBe(true);
+    expect(isBlockingMsftEvent(workingElsewhere, { includeFree: false })).toBe(true);
   });
 
   it('includes tentative events by default', () => {

@@ -565,6 +565,21 @@ describe('RangeEvaluator', () => {
       expect(plainOccurrences[0]).not.toHaveProperty('transparency');
     });
 
+    it('carries transparency onto all-day occurrences', () => {
+      const transparentRange = makeRange({
+        dates: ['2026-03-21'],
+        transparency: 'transparent',
+      });
+
+      const from = new Date(2026, 2, 21);
+      const to = new Date(2026, 2, 21);
+
+      const occurrences = utcEvaluator.expand(transparentRange, from, to);
+      expect(occurrences).toHaveLength(1);
+      expect(occurrences[0].allDay).toBe(true);
+      expect(occurrences[0].transparency).toBe('transparent');
+    });
+
     it('clips to query window when range is wider', () => {
       const range = makeRange({
         everyWeekday: [1], // Mondays

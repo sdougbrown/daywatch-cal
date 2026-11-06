@@ -114,6 +114,7 @@ export function gcalEventToDateRange(
       fromDate,
       toDate: endDate ? subtractOneDay(endDate) : fromDate,
       ...(transparency !== undefined ? { transparency } : {}),
+      ...(eventType !== undefined ? { eventType } : {}),
       metadata,
     };
   }
@@ -155,6 +156,7 @@ export function gcalEventToDateRange(
     duration: hasDuration ? Math.round((endMs - startMs) / 60000) : undefined,
     timezone: timeZone,
     ...(transparency !== undefined ? { transparency } : {}),
+    ...(eventType !== undefined ? { eventType } : {}),
     metadata,
   };
 }

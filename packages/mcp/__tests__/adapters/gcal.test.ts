@@ -603,12 +603,14 @@ describe('gcalEventsToDateRanges', () => {
     });
 
     expect(range.metadata.eventType).toBe('outOfOffice');
+    expect(range.eventType).toBe('outOfOffice');
   });
 
   it('normalizes raw uppercase eventType values to camelCase in metadata', () => {
     const range = gcalEventToDateRange(workingLocationRaw);
 
     expect(range.metadata.eventType).toBe('workingLocation');
+    expect(range.eventType).toBe('workingLocation');
   });
 
   it('normalizes raw multi-underscore eventType values to camelCase in metadata', () => {

@@ -741,16 +741,7 @@ impl RangeEvaluator {
         ranges
             .iter()
             .find(|range| range.id == range_id)
-            .and_then(Self::event_type_from_metadata)
-    }
-
-    fn event_type_from_metadata(range: &DateRange) -> Option<String> {
-        range
-            .metadata
-            .as_ref()
-            .and_then(|m| m.get("eventType"))
-            .and_then(|v| v.as_str())
-            .map(String::from)
+            .and_then(|range| range.event_type.clone())
     }
 
     pub fn find_conflicts(&self, ranges: &[DateRange], date: &str) -> Vec<Conflict> {
@@ -794,7 +785,7 @@ impl RangeEvaluator {
                 end_minutes: 1440,
                 all_day: Some(true),
                 transparency: range.transparency.clone(),
-                event_type: Self::event_type_from_metadata(range),
+                event_type: range.event_type.clone(),
             });
         }
 
@@ -1325,6 +1316,7 @@ mod tests {
             timezone: None,
             flexibility: None,
             transparency: None,
+            event_type: None,
             metadata: None,
         }
     }
@@ -2386,7 +2378,7 @@ mod tests {
     }
 
     #[test]
-    fn test_conflicts_event_type_lifted_from_metadata() {
+    fn test_conflicts_event_type_carried_on_participants() {
         let ev = evaluator();
         let mut ooo = make_range(
             "1",
@@ -2398,7 +2390,7 @@ mod tests {
             },
             None,
         );
-        ooo.metadata = Some(serde_json::json!({ "eventType": "outOfOffice" }));
+        ooo.event_type = Some("outOfOffice".to_string());
         let timed = make_range(
             "2",
             "On-call",

@@ -88,6 +88,12 @@ export interface DateRange {
   transparency?: Transparency;
 
   /**
+   * Normalized event category from the ingestion surface, e.g. gcal
+   * eventType; used for conflict severity grading.
+   */
+  eventType?: string;
+
+  /**
    * Flexibility score (0-5). 0=locked, 1-5=increasingly flexible.
    * Neo-reckoning passes this through — agent-facing code interprets it.
    */
@@ -495,6 +501,6 @@ export interface ConflictRangeRef {
   allDay?: boolean;
   /** Free/busy signal carried from the range; absent defaults to busy. */
   transparency?: Transparency;
-  /** Event type lifted from the range's metadata.eventType when it is a string. */
+  /** Event type carried from the range's eventType field. */
   eventType?: string;
 }

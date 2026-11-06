@@ -174,6 +174,7 @@ mod tests {
             timezone: None,
             flexibility: None,
             transparency: None,
+            event_type: None,
             metadata: None,
         }
     }

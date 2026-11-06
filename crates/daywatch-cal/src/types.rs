@@ -85,6 +85,8 @@ pub struct DateRange {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transparency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
 }
 
@@ -321,6 +323,11 @@ impl<'de> Deserialize<'de> for DateRange {
             .and_then(non_null)
             .map(|v| serde_json::from_value(v).map_err(Error::custom))
             .transpose()?;
+        let event_type: Option<String> = map
+            .get("eventType")
+            .and_then(non_null)
+            .map(|v| serde_json::from_value(v).map_err(Error::custom))
+            .transpose()?;
         let metadata: Option<serde_json::Value> = map.get("metadata").and_then(non_null);
 
         Ok(DateRange {
@@ -333,6 +340,7 @@ impl<'de> Deserialize<'de> for DateRange {
             timezone,
             flexibility,
             transparency,
+            event_type,
             metadata,
         })
     }
@@ -458,6 +466,7 @@ mod tests {
             timezone: None,
             flexibility: None,
             transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -486,6 +495,7 @@ mod tests {
             timezone: None,
             flexibility: None,
             transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -511,6 +521,7 @@ mod tests {
             timezone: None,
             flexibility: None,
             transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -536,6 +547,7 @@ mod tests {
             timezone: None,
             flexibility: None,
             transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -562,6 +574,7 @@ mod tests {
             timezone: None,
             flexibility: None,
             transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -590,6 +603,7 @@ mod tests {
             timezone: None,
             flexibility: None,
             transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -623,6 +637,7 @@ mod tests {
             timezone: None,
             flexibility: None,
             transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -646,6 +661,7 @@ mod tests {
             timezone: Some("America/New_York".to_string()),
             flexibility: None,
             transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -669,6 +685,7 @@ mod tests {
             timezone: None,
             flexibility: None,
             transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();

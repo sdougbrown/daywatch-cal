@@ -609,14 +609,12 @@ export class RangeEvaluator {
 
     const toRef = (rangeId: string, label: string, allDay: boolean): ConflictRangeRef => {
       const range = rangesById.get(rangeId);
-      const eventType =
-        typeof range?.metadata?.eventType === 'string' ? range.metadata.eventType : undefined;
       return {
         id: rangeId,
         label,
         ...(allDay ? { allDay: true } : {}),
         ...(range?.transparency !== undefined ? { transparency: range.transparency } : {}),
-        ...(eventType !== undefined ? { eventType } : {}),
+        ...(range?.eventType !== undefined ? { eventType: range.eventType } : {}),
       };
     };
 

@@ -1,5 +1,5 @@
 {
-  "description": "A busy all-day span occupies the full day and conflicts with a timed range, with the timed window as the overlap. The all-day participant is marked allDay and carries its declared transparency plus the eventType lifted from metadata. Regression for all-day events never conflicting.",
+  "description": "A busy all-day span occupies the full day and conflicts with a timed range, with the timed window as the overlap. The all-day participant is marked allDay and carries its declared transparency plus the eventType carried on the range. Regression for all-day events never conflicting.",
   "userTimezone": "America/New_York",
   "ranges": [
     {
@@ -7,7 +7,7 @@
       "label": "Byron OOO",
       "dates": ["2026-04-02"],
       "transparency": "opaque",
-      "metadata": { "eventType": "outOfOffice" }
+      "eventType": "outOfOffice"
     },
     {
       "id": "shift",

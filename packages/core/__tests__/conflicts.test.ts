@@ -132,12 +132,12 @@ describe('findConflicts', () => {
     expect(evaluator.findConflicts([vacation, offsite], '2026-03-23')).toHaveLength(0);
   });
 
-  it('conflict participants carry eventType lifted from metadata', () => {
+  it('conflict participants carry eventType from the range field', () => {
     const ooo = makeRange({
       id: 'a',
       label: 'Byron OOO',
       dates: ['2026-03-23'],
-      metadata: { eventType: 'outOfOffice' },
+      eventType: 'outOfOffice',
     });
     const shift = makeRange({
       id: 'b',
@@ -156,6 +156,28 @@ describe('findConflicts', () => {
       eventType: 'outOfOffice',
     });
     expect(conflicts[0].rangeB).toEqual({ id: 'b', label: 'On-call' });
+  });
+
+  it('a range with no eventType produces participants without the eventType key', () => {
+    const a = makeRange({
+      id: 'a',
+      label: 'A',
+      dates: ['2026-03-23'],
+      startTime: '09:00',
+      endTime: '10:00',
+    });
+    const b = makeRange({
+      id: 'b',
+      label: 'B',
+      dates: ['2026-03-23'],
+      startTime: '09:30',
+      endTime: '10:30',
+    });
+
+    const conflicts = evaluator.findConflicts([a, b], '2026-03-23');
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].rangeA).not.toHaveProperty('eventType');
+    expect(conflicts[0].rangeB).not.toHaveProperty('eventType');
   });
 
   it('multi-day busy all-day span conflicts on each day it covers', () => {

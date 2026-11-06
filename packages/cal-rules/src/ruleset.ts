@@ -71,6 +71,7 @@ export const RANGE_KEYS = [
   'timezone',
   'displayType',
   'transparency',
+  'eventType',
   'flexibility',
   'metadata',
 ] as const satisfies readonly (keyof DateRange)[];
@@ -102,6 +103,7 @@ export const rangeInputUmp = umpire({
     timezone: { isEmpty: isEmptyStringLike },
     displayType: { isEmpty: isEmptyStringLike },
     transparency: { isEmpty: isEmptyStringLike },
+    eventType: { isEmpty: isEmptyStringLike },
     flexibility: {},
     metadata: {},
   },
@@ -328,6 +330,10 @@ export const rangeInputUmp = umpire({
     title: {
       validator: (value: unknown) => typeof value === 'string',
       error: 'title must be a string',
+    },
+    eventType: {
+      validator: (value: unknown) => typeof value === 'string',
+      error: 'eventType must be a string',
     },
     metadata: {
       validator: isPlainObject,

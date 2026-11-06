@@ -16,6 +16,7 @@ export type {
   CacheAdapter,
   ViewFidelity,
   DisplayType,
+  Transparency,
   YearGridConfig,
   YearMonth,
   YearDay,
@@ -23,6 +24,7 @@ export type {
   TimelineMonth,
   MonthSpanInfo,
   Conflict,
+  ConflictRangeRef,
   FreeSlot,
   ScheduleScore,
 } from './types.js';

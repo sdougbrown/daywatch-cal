@@ -1,0 +1,41 @@
+{
+  "description": "Two busy all-day spans on the same day conflict with the full day (00:00–24:00) as the overlap window. Both participants are marked allDay; an explicitly declared transparency is carried through.",
+  "userTimezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "offsite",
+      "label": "Mandatory offsite",
+      "fromDate": "2026-04-02",
+      "toDate": "2026-04-02",
+      "transparency": "opaque"
+    },
+    {
+      "id": "oncall-handoff",
+      "label": "On-call handoff day",
+      "dates": ["2026-04-02"]
+    }
+  ],
+  "findConflicts": [
+    {
+      "date": "2026-04-02",
+      "expected": [
+        {
+          "rangeA": {
+            "id": "offsite",
+            "label": "Mandatory offsite",
+            "allDay": true,
+            "transparency": "opaque"
+          },
+          "rangeB": {
+            "id": "oncall-handoff",
+            "label": "On-call handoff day",
+            "allDay": true
+          },
+          "date": "2026-04-02",
+          "overlapStart": "00:00",
+          "overlapEnd": "24:00"
+        }
+      ]
+    }
+  ]
+}

@@ -83,6 +83,8 @@ pub struct DateRange {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flexibility: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub transparency: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
 }
 
@@ -314,6 +316,11 @@ impl<'de> Deserialize<'de> for DateRange {
             .and_then(non_null)
             .map(|v| serde_json::from_value(v).map_err(Error::custom))
             .transpose()?;
+        let transparency: Option<String> = map
+            .get("transparency")
+            .and_then(non_null)
+            .map(|v| serde_json::from_value(v).map_err(Error::custom))
+            .transpose()?;
         let metadata: Option<serde_json::Value> = map.get("metadata").and_then(non_null);
 
         Ok(DateRange {
@@ -325,6 +332,7 @@ impl<'de> Deserialize<'de> for DateRange {
             time_selector,
             timezone,
             flexibility,
+            transparency,
             metadata,
         })
     }
@@ -342,6 +350,8 @@ pub struct Occurrence {
     pub label: String,
     pub all_day: bool,
     pub display_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transparency: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -369,6 +379,12 @@ pub struct FreeSlot {
 pub struct RangeRef {
     pub id: String,
     pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub all_day: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transparency: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_type: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -440,6 +456,7 @@ mod tests {
             time_selector: None,
             timezone: None,
             flexibility: None,
+            transparency: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -467,6 +484,7 @@ mod tests {
             time_selector: None,
             timezone: None,
             flexibility: None,
+            transparency: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -491,6 +509,7 @@ mod tests {
             time_selector: None,
             timezone: None,
             flexibility: None,
+            transparency: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -515,6 +534,7 @@ mod tests {
             time_selector: None,
             timezone: None,
             flexibility: None,
+            transparency: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -540,6 +560,7 @@ mod tests {
             }),
             timezone: None,
             flexibility: None,
+            transparency: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -567,6 +588,7 @@ mod tests {
             }),
             timezone: None,
             flexibility: None,
+            transparency: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -599,6 +621,7 @@ mod tests {
             }),
             timezone: None,
             flexibility: None,
+            transparency: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -621,6 +644,7 @@ mod tests {
             time_selector: None,
             timezone: Some("America/New_York".to_string()),
             flexibility: None,
+            transparency: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -643,6 +667,7 @@ mod tests {
             time_selector: None,
             timezone: None,
             flexibility: None,
+            transparency: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();

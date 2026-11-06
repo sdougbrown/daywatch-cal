@@ -1,4 +1,12 @@
-import type { DateRange, Occurrence, TimeSlot, SpanInfo, Conflict, FreeSlot } from './types.js';
+import type {
+  DateRange,
+  Occurrence,
+  TimeSlot,
+  SpanInfo,
+  Conflict,
+  ConflictRangeRef,
+  FreeSlot,
+} from './types.js';
 import type { AddMinutesResult } from './time.js';
 import {
   parseDate,
@@ -256,6 +264,7 @@ export class RangeEvaluator {
   /**
    * Expand all timed slots for a specific day across multiple ranges and
    * precompute minute offsets for downstream conflict/free-slot scoring.
+   * Free ('transparent') ranges are skipped — they never occupy time.
    */
   getTimedEntriesForDay(
     ranges: DateRange[],
@@ -270,6 +279,7 @@ export class RangeEvaluator {
     for (const range of ranges) {
       if (!this.isDateInRange(date, range)) continue;
       if (!this.hasTimeFields(range)) continue;
+      if (range.transparency === 'transparent') continue; // free — never occupies time
 
       const timeSlots = this.getTimeSlots(date, range);
       for (const slot of timeSlots) {
@@ -366,6 +376,7 @@ export class RangeEvaluator {
             label: range.label,
             allDay: false,
             ...(range.displayType !== undefined ? { displayType: range.displayType } : {}),
+            ...(range.transparency !== undefined ? { transparency: range.transparency } : {}),
           });
         }
       } else {
@@ -377,6 +388,7 @@ export class RangeEvaluator {
           label: range.label,
           allDay: true,
           ...(range.displayType !== undefined ? { displayType: range.displayType } : {}),
+          ...(range.transparency !== undefined ? { transparency: range.transparency } : {}),
         });
       }
     }
@@ -586,18 +598,58 @@ export class RangeEvaluator {
 
   /**
    * Find time-level conflicts among ranges on a single date.
-   * Two timed ranges that overlap in time are a conflict.
-   * Two all-day ranges, or an all-day + timed range, are NOT conflicts.
+   * Timed ranges conflict when they overlap. Busy all-day spans occupy the
+   * full day (00:00–24:00) and conflict with anything on that day; free
+   * ('transparent') spans never occupy time and never conflict. Each side of
+   * a conflict carries the range's allDay/transparency/eventType metadata
+   * when present so callers can grade severity.
    */
   findConflicts(ranges: DateRange[], date: string): Conflict[] {
-    const slots = this.getTimedEntriesForDay(ranges, date)
-      .filter((entry) => entry.slot.endTime !== null && entry.endMinutes > entry.startMinutes)
-      .map((entry) => ({
-        rangeId: entry.slot.rangeId,
-        label: entry.slot.label,
-        startMinutes: entry.startMinutes,
-        endMinutes: entry.endMinutes,
-      }));
+    const rangesById = new Map(ranges.map((range) => [range.id, range]));
+
+    const toRef = (rangeId: string, label: string, allDay: boolean): ConflictRangeRef => {
+      const range = rangesById.get(rangeId);
+      const eventType =
+        typeof range?.metadata?.eventType === 'string' ? range.metadata.eventType : undefined;
+      return {
+        id: rangeId,
+        label,
+        ...(allDay ? { allDay: true } : {}),
+        ...(range?.transparency !== undefined ? { transparency: range.transparency } : {}),
+        ...(eventType !== undefined ? { eventType } : {}),
+      };
+    };
+
+    const slots = [
+      ...this.getTimedEntriesForDay(ranges, date)
+        .filter((entry) => entry.slot.endTime !== null)
+        .map((entry) => ({
+          rangeId: entry.slot.rangeId,
+          label: entry.slot.label,
+          startMinutes: entry.startMinutes,
+          endMinutes: entry.endMinutes,
+          ref: toRef(entry.slot.rangeId, entry.slot.label, false),
+        })),
+      // getTimeSlots yields nothing for all-day ranges, so busy all-day
+      // occupancy (full day, 00:00–24:00) is added here; transparent ones
+      // are excluded — they never occupy time.
+      ...ranges
+        .filter(
+          (range) =>
+            !this.hasTimeFields(range) &&
+            range.transparency !== 'transparent' &&
+            this.isDateInRange(date, range),
+        )
+        .map((range) => ({
+          rangeId: range.id,
+          label: range.label,
+          startMinutes: 0,
+          endMinutes: 1440, // full day
+          ref: toRef(range.id, range.label, true),
+        })),
+    ]
+      .filter((slot) => slot.endMinutes > slot.startMinutes)
+      .sort((a, b) => a.startMinutes - b.startMinutes || a.endMinutes - b.endMinutes);
 
     // Sweep-line: find overlapping pairs from different ranges
     const conflicts: Conflict[] = [];
@@ -623,8 +675,8 @@ export class RangeEvaluator {
         const overlapEnd = Math.min(slots[i].endMinutes, slots[j].endMinutes);
 
         conflicts.push({
-          rangeA: { id: slots[i].rangeId, label: slots[i].label },
-          rangeB: { id: slots[j].rangeId, label: slots[j].label },
+          rangeA: slots[i].ref,
+          rangeB: slots[j].ref,
           date,
           overlapStart: formatTime(Math.floor(overlapStart / 60), overlapStart % 60),
           overlapEnd: formatTime(Math.floor(overlapEnd / 60), overlapEnd % 60),

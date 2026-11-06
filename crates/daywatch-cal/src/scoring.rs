@@ -173,6 +173,7 @@ mod tests {
             time_selector,
             timezone: None,
             flexibility: None,
+            transparency: None,
             metadata: None,
         }
     }

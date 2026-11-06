@@ -44,10 +44,17 @@ struct TimeSlotsAssertion {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 struct RangeRefExpected {
     id: String,
     label: String,
+    #[serde(default)]
+    all_day: Option<bool>,
+    #[serde(default)]
+    transparency: Option<String>,
+    #[serde(default)]
+    event_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -359,6 +366,36 @@ fn run_fixture_file(path: &Path) {
                 assert_eq!(
                     actual.overlap_end, expected.overlap_end,
                     "{} — conflict[{}].overlap_end",
+                    file_stem, i
+                );
+                assert_eq!(
+                    actual.range_a.all_day, expected.range_a.all_day,
+                    "{} — conflict[{}].range_a.all_day",
+                    file_stem, i
+                );
+                assert_eq!(
+                    actual.range_a.transparency, expected.range_a.transparency,
+                    "{} — conflict[{}].range_a.transparency",
+                    file_stem, i
+                );
+                assert_eq!(
+                    actual.range_a.event_type, expected.range_a.event_type,
+                    "{} — conflict[{}].range_a.event_type",
+                    file_stem, i
+                );
+                assert_eq!(
+                    actual.range_b.all_day, expected.range_b.all_day,
+                    "{} — conflict[{}].range_b.all_day",
+                    file_stem, i
+                );
+                assert_eq!(
+                    actual.range_b.transparency, expected.range_b.transparency,
+                    "{} — conflict[{}].range_b.transparency",
+                    file_stem, i
+                );
+                assert_eq!(
+                    actual.range_b.event_type, expected.range_b.event_type,
+                    "{} — conflict[{}].range_b.event_type",
                     file_stem, i
                 );
             }

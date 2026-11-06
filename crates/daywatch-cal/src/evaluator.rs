@@ -46,7 +46,7 @@ struct RawSpan {
 // ── Free helpers ────────────────────────────────────────────────────────────
 
 /// Free/busy predicate for a DateRange. A range is free when its
-/// transparency is "transparent", or — when transparency is undeclared —
+/// transparency is Transparent, or — when transparency is undeclared —
 /// when the legacy `metadata.transparent` flag is set (back-compat).
 /// Free ranges never occupy time: occupancy computation skips them and
 /// they never conflict.
@@ -56,7 +56,7 @@ fn is_free_range(range: &DateRange) -> bool {
         Some(serde_json::Value::Object(map))
             if map.get("transparent") == Some(&serde_json::Value::Bool(true))
     );
-    range.transparency.as_deref() == Some("transparent")
+    matches!(range.transparency, Some(Transparency::Transparent))
         || (range.transparency.is_none() && legacy_free)
 }
 
@@ -2263,7 +2263,7 @@ mod tests {
     }
 
     fn make_transparent(mut range: DateRange) -> DateRange {
-        range.transparency = Some("transparent".to_string());
+        range.transparency = Some(Transparency::Transparent);
         range
     }
 
@@ -2364,7 +2364,7 @@ mod tests {
             },
             None,
         );
-        offsite.transparency = Some("opaque".to_string());
+        offsite.transparency = Some(Transparency::Opaque);
         let handoff = make_range(
             "2",
             "Handoff",
@@ -2534,7 +2534,7 @@ mod tests {
                 duration: None,
             }),
         );
-        range.transparency = Some("opaque".to_string());
+        range.transparency = Some(Transparency::Opaque);
         range.metadata = Some(serde_json::json!({ "transparent": true }));
 
         assert_eq!(
@@ -2775,7 +2775,7 @@ mod tests {
             },
             None,
         );
-        range.transparency = Some("transparent".to_string());
+        range.transparency = Some(Transparency::Transparent);
         let free = ev.find_free_slots(&[range], "2026-03-02", FindFreeSlotsOptions::default());
         assert_eq!(free.len(), 1);
         assert_eq!(free[0].start_time, "00:00");
@@ -3081,13 +3081,13 @@ mod tests {
                 duration: None,
             }),
         );
-        range.transparency = Some("transparent".to_string());
+        range.transparency = Some(Transparency::Transparent);
 
         let from = parse_date("2026-03-02").unwrap();
         let to = parse_date("2026-03-02").unwrap();
         let occurrences = ev.expand(&range, from, to);
         assert_eq!(occurrences.len(), 1);
-        assert_eq!(occurrences[0].transparency, Some("transparent".to_string()));
+        assert_eq!(occurrences[0].transparency, Some(Transparency::Transparent));
     }
 
     #[test]
@@ -3129,13 +3129,13 @@ mod tests {
             },
             None,
         );
-        range.transparency = Some("transparent".to_string());
+        range.transparency = Some(Transparency::Transparent);
 
         let from = parse_date("2026-03-02").unwrap();
         let to = parse_date("2026-03-02").unwrap();
         let occurrences = ev.expand(&range, from, to);
         assert_eq!(occurrences.len(), 1);
         assert!(occurrences[0].all_day);
-        assert_eq!(occurrences[0].transparency, Some("transparent".to_string()));
+        assert_eq!(occurrences[0].transparency, Some(Transparency::Transparent));
     }
 }

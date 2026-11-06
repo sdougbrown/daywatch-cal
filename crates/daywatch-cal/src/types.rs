@@ -63,6 +63,17 @@ pub enum TimeSelector {
     },
 }
 
+/// Free/busy signal carried on ranges and occurrences. `Transparent` means
+/// free — an FYI/backdrop that does not occupy time; `Opaque` means busy.
+/// Absent defaults to busy. Mirrors Google Calendar's transparency field.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Transparency {
+    #[serde(rename = "transparent")]
+    Transparent,
+    #[serde(rename = "opaque")]
+    Opaque,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DateRange {
     pub id: String,
@@ -83,7 +94,7 @@ pub struct DateRange {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flexibility: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub transparency: Option<String>,
+    pub transparency: Option<Transparency>,
     #[serde(rename = "eventType", skip_serializing_if = "Option::is_none")]
     pub event_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -318,7 +329,7 @@ impl<'de> Deserialize<'de> for DateRange {
             .and_then(non_null)
             .map(|v| serde_json::from_value(v).map_err(Error::custom))
             .transpose()?;
-        let transparency: Option<String> = map
+        let transparency: Option<Transparency> = map
             .get("transparency")
             .and_then(non_null)
             .map(|v| serde_json::from_value(v).map_err(Error::custom))
@@ -359,7 +370,7 @@ pub struct Occurrence {
     pub all_day: bool,
     pub display_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub transparency: Option<String>,
+    pub transparency: Option<Transparency>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -960,7 +971,7 @@ mod tests {
             time_selector: None,
             timezone: None,
             flexibility: None,
-            transparency: Some("transparent".to_string()),
+            transparency: Some(Transparency::Transparent),
             event_type: Some("outOfOffice".to_string()),
             metadata: None,
         };
@@ -969,6 +980,27 @@ mod tests {
         assert!(!json.contains("\"event_type\""));
         let dr2: DateRange = serde_json::from_str(&json).unwrap();
         assert_eq!(dr2.event_type.as_deref(), Some("outOfOffice"));
-        assert_eq!(dr2.transparency.as_deref(), Some("transparent"));
+        assert_eq!(dr2.transparency, Some(Transparency::Transparent));
+    }
+
+    #[test]
+    fn deser_transparency_maps_valid_strings_to_variants() {
+        let transparent: DateRange = serde_json::from_str(
+            r#"{"id": "1", "label": "t", "dates": ["2026-03-21"], "transparency": "transparent"}"#,
+        )
+        .unwrap();
+        assert_eq!(transparent.transparency, Some(Transparency::Transparent));
+
+        let opaque: DateRange = serde_json::from_str(
+            r#"{"id": "2", "label": "o", "dates": ["2026-03-21"], "transparency": "opaque"}"#,
+        )
+        .unwrap();
+        assert_eq!(opaque.transparency, Some(Transparency::Opaque));
+    }
+
+    #[test]
+    fn deser_transparency_rejects_unknown_strings() {
+        let json = r#"{"id": "1", "label": "t", "dates": ["2026-03-21"], "transparency": "free"}"#;
+        assert!(serde_json::from_str::<DateRange>(json).is_err());
     }
 }

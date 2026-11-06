@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 
 use crate::evaluator::{RangeEvaluator, TimedEntry};
 use crate::time::{date_range, format_date, parse_hhmm};
-use crate::types::{DateRange, ScheduleScore, ScoreScheduleOptions};
+use crate::types::{DateRange, ScheduleScore, ScoreScheduleOptions, Transparency};
 
 fn merge_intervals(
     entries: &[TimedEntry],
@@ -376,7 +376,7 @@ mod tests {
             },
             None,
         );
-        fyi.transparency = Some("transparent".to_string());
+        fyi.transparency = Some(Transparency::Transparent);
         let from = parse_date("2026-03-12").unwrap();
         let to = parse_date("2026-03-12").unwrap();
         let score = score_schedule(&ev, &[fyi], from, to, ScoreScheduleOptions::default());

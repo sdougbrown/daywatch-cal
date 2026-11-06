@@ -1,5 +1,12 @@
 import type { DateRange } from '@daywatch/cal';
 
+/** An attendee entry from the raw Google Calendar API format. */
+export interface GCalEventAttendee {
+  email?: string;
+  responseStatus?: string;
+  self?: boolean;
+}
+
 /** Google Calendar event as returned by gcal_list_events (condensed format). */
 export interface GCalEvent {
   id: string;
@@ -8,11 +15,13 @@ export interface GCalEvent {
   location?: string;
   start: { date?: string; dateTime?: string; timeZone?: string };
   end: { date?: string; dateTime?: string; timeZone?: string };
-  allDay: boolean;
+  allDay?: boolean;
   status: string;
   eventType?: string;
   transparency?: string;
   myResponseStatus?: string;
+  /** Raw API format only — the condensed format folds the self attendee into myResponseStatus. */
+  attendees?: GCalEventAttendee[];
   numAttendees?: number;
   recurringEventId?: string;
   htmlLink?: string;

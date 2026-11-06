@@ -757,7 +757,7 @@ impl RangeEvaluator {
         let mut slots: Vec<ConflictSlot> = self
             .get_timed_entries_for_day(ranges, date)
             .into_iter()
-            .filter(|e| e.slot.end_time.is_some())
+            .filter(|e| e.slot.end_time.is_some() && e.end_minutes > e.start_minutes)
             .map(|e| {
                 let transparency = Self::range_transparency(ranges, &e.slot.range_id);
                 let event_type = Self::range_event_type(ranges, &e.slot.range_id);
@@ -2339,7 +2339,9 @@ mod tests {
             None,
         );
 
-        assert!(ev.find_conflicts(&[vacation.clone(), timed], "2026-03-02").is_empty());
+        assert!(ev
+            .find_conflicts(&[vacation.clone(), timed], "2026-03-02")
+            .is_empty());
         assert!(ev
             .find_conflicts(&[vacation, busy_all_day], "2026-03-02")
             .is_empty());
@@ -2375,7 +2377,10 @@ mod tests {
         assert_eq!(conflicts[0].overlap_start, Some("00:00".to_string()));
         assert_eq!(conflicts[0].overlap_end, Some("24:00".to_string()));
         assert_eq!(conflicts[0].range_a.all_day, Some(true));
-        assert_eq!(conflicts[0].range_a.transparency, Some("opaque".to_string()));
+        assert_eq!(
+            conflicts[0].range_a.transparency,
+            Some("opaque".to_string())
+        );
         assert_eq!(conflicts[0].range_b.all_day, Some(true));
         assert_eq!(conflicts[0].range_b.transparency, None);
     }
@@ -2438,7 +2443,9 @@ mod tests {
             }),
         ));
 
-        assert!(ev.get_timed_entries_for_day(&[fyi], "2026-03-02").is_empty());
+        assert!(ev
+            .get_timed_entries_for_day(&[fyi], "2026-03-02")
+            .is_empty());
     }
 
     // ── find_conflicts_in_window ────────────────────────────────────────

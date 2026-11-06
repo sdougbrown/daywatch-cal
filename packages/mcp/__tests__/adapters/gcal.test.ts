@@ -443,6 +443,18 @@ describe('gcalEventToDateRange', () => {
     expect(range.timezone).toBeUndefined();
   });
 
+  it('keeps the wall clock of an offset-free dateTime that carries a timeZone', () => {
+    const range = gcalEventToDateRange({
+      ...noTimezone,
+      start: { dateTime: '2026-03-30T11:00', timeZone: 'America/Chicago' },
+      end: { dateTime: '2026-03-30T19:00', timeZone: 'America/Chicago' },
+    });
+
+    expect(range.startTime).toBe('11:00');
+    expect(range.endTime).toBe('19:00');
+    expect(range.timezone).toBe('America/Chicago');
+  });
+
   it('pins offset-bearing dateTimes without a timeZone to UTC', () => {
     // 11:00-04:00 is 15:00Z; 19:00-04:00 is 23:00Z.
     const range = gcalEventToDateRange(noTimezone);

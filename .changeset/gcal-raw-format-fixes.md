@@ -1,4 +1,5 @@
 ---
+'@daywatch/cal': minor
 '@daywatch/mcp': patch
 ---
 

@@ -899,6 +899,30 @@ mod tests {
         assert_eq!(json["endTime"], "09:30");
         assert_eq!(json["rangeId"], "r1");
         assert!(json.get("start_time").is_none());
+
+        let range_ref = RangeRef {
+            id: "r1".to_string(),
+            label: "Focus".to_string(),
+            all_day: Some(true),
+            transparency: Some("opaque".to_string()),
+            event_type: Some("outOfOffice".to_string()),
+        };
+        let json = serde_json::to_value(range_ref).unwrap();
+        assert_eq!(json["allDay"], true);
+        assert_eq!(json["eventType"], "outOfOffice");
+        assert_eq!(json["transparency"], "opaque");
+        assert!(json.get("all_day").is_none());
+        assert!(json.get("event_type").is_none());
+        let round_tripped: RangeRef = serde_json::from_value(serde_json::json!({
+            "id": "r1",
+            "label": "Focus",
+            "allDay": true,
+            "eventType": "outOfOffice",
+        }))
+        .unwrap();
+        assert_eq!(round_tripped.all_day, Some(true));
+        assert_eq!(round_tripped.event_type.as_deref(), Some("outOfOffice"));
+        assert_eq!(round_tripped.transparency, None);
     }
 
     #[test]

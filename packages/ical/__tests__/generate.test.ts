@@ -224,4 +224,20 @@ describe('generateICS', () => {
     const absent = byUid(calendar, 'absent');
     expect(absent.getFirstProperty('transp')).toBeNull();
   });
+
+  it('does not emit TRANSP when an explicit opaque transparency overrides legacy metadata', () => {
+    const ranges: DateRange[] = [
+      {
+        id: 'contradictory',
+        label: 'Contradictory',
+        dates: ['2026-03-25'],
+        transparency: 'opaque',
+        metadata: { transparent: true },
+      },
+    ];
+
+    const calendar = new ICAL.Component(ICAL.parse(generateICS(ranges)));
+    const event = byUid(calendar, 'contradictory');
+    expect(event.getFirstProperty('transp')).toBeNull();
+  });
 });

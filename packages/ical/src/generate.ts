@@ -222,7 +222,12 @@ function buildEvent(range: DateRange): InstanceType<typeof ICAL.Component> | nul
     typeof metadata === 'object' &&
     !Array.isArray(metadata) &&
     metadata.transparent === true;
-  if (range.transparency === 'transparent' || legacyTransparent) {
+  // An explicit transparency value always wins; the legacy metadata flag
+  // applies only when transparency is undeclared.
+  if (
+    range.transparency === 'transparent' ||
+    (range.transparency === undefined && legacyTransparent)
+  ) {
     component.addPropertyWithValue('transp', 'TRANSPARENT');
   }
 

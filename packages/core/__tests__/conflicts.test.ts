@@ -227,6 +227,61 @@ describe('findConflicts', () => {
     expect(freeSlots).toHaveLength(1);
   });
 
+  it('a range with only legacy metadata.transparent never occupies time or conflicts', () => {
+    const fyi = makeRange({
+      id: 'a',
+      label: 'FYI hold',
+      dates: ['2026-03-23'],
+      startTime: '09:00',
+      endTime: '10:00',
+      metadata: { transparent: true },
+    });
+    const meeting = makeRange({
+      id: 'b',
+      label: 'Meeting',
+      dates: ['2026-03-23'],
+      startTime: '09:30',
+      endTime: '10:30',
+    });
+
+    const conflicts = evaluator.findConflicts([fyi, meeting], '2026-03-23');
+    expect(conflicts).toHaveLength(0);
+    // The legacy-free hold must not occupy free-slot time either.
+    const freeSlots = evaluator.findFreeSlots([fyi], '2026-03-23', {
+      dayStart: '09:00',
+      dayEnd: '10:00',
+    });
+    expect(freeSlots).toHaveLength(1);
+  });
+
+  it('an explicit opaque transparency wins over legacy metadata.transparent', () => {
+    const hold = makeRange({
+      id: 'a',
+      label: 'Hold',
+      dates: ['2026-03-23'],
+      startTime: '09:00',
+      endTime: '10:00',
+      transparency: 'opaque',
+      metadata: { transparent: true },
+    });
+    const meeting = makeRange({
+      id: 'b',
+      label: 'Meeting',
+      dates: ['2026-03-23'],
+      startTime: '09:30',
+      endTime: '10:30',
+    });
+
+    // The explicit opaque flag wins: the hold occupies and conflicts.
+    const conflicts = evaluator.findConflicts([hold, meeting], '2026-03-23');
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].rangeA).toEqual({
+      id: 'a',
+      label: 'Hold',
+      transparency: 'opaque',
+    });
+  });
+
   it('three-way overlap → three conflicts (A-B, A-C, B-C)', () => {
     const rangeA = makeRange({
       id: 'a',

@@ -264,9 +264,11 @@ export class RangeEvaluator {
   /**
    * Expand all timed slots for a specific day across multiple ranges and
    * precompute minute offsets for downstream conflict/free-slot scoring.
-   * Free ('transparent') ranges are skipped — they never occupy time. Busy
-   * all-day ranges (no time fields) occupy the full day (00:00–24:00) and are
-   * emitted with allDay: true and a 00:00–24:00 slot.
+   * Free ('transparent') ranges are skipped — they never occupy time. Legacy
+   * `metadata.transparent` is honored as a free signal only when `transparency`
+   * is undeclared (back-compat). Busy all-day ranges (no time fields) occupy
+   * the full day (00:00–24:00) and are emitted with allDay: true and a
+   * 00:00–24:00 slot.
    */
   getTimedEntriesForDay(
     ranges: DateRange[],
@@ -281,7 +283,15 @@ export class RangeEvaluator {
 
     for (const range of ranges) {
       if (!this.isDateInRange(date, range)) continue;
-      if (range.transparency === 'transparent') continue; // free — never occupies time
+      // Free — never occupies time. An explicit transparency value always
+      // wins; the legacy metadata.transparent flag applies only when
+      // transparency is undeclared.
+      if (
+        range.transparency === 'transparent' ||
+        (range.transparency === undefined && range.metadata?.transparent === true)
+      ) {
+        continue;
+      }
 
       if (!this.hasTimeFields(range)) {
         entries.push({

@@ -944,8 +944,17 @@ impl RangeEvaluator {
             if !self.is_date_in_range(date, range) {
                 continue;
             }
-            // Free ('transparent') ranges never occupy time.
-            if range.transparency.as_deref() == Some("transparent") {
+            // Free ranges never occupy time. An explicit transparency value
+            // always wins; the legacy metadata.transparent flag applies only
+            // when transparency is undeclared.
+            let legacy_free = matches!(
+                &range.metadata,
+                Some(serde_json::Value::Object(map))
+                    if map.get("transparent") == Some(&serde_json::Value::Bool(true))
+            );
+            if range.transparency.as_deref() == Some("transparent")
+                || (range.transparency.is_none() && legacy_free)
+            {
                 continue;
             }
             let compiled = compile_range(range);
@@ -2439,6 +2448,58 @@ mod tests {
         assert!(ev
             .get_timed_entries_for_day(&[fyi], "2026-03-02")
             .is_empty());
+    }
+
+    #[test]
+    fn test_timed_entries_skip_legacy_transparent_metadata() {
+        let ev = evaluator();
+        let mut range = make_range(
+            "1",
+            "FYI",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("10:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+        range.metadata = Some(serde_json::json!({ "transparent": true }));
+
+        assert!(ev
+            .get_timed_entries_for_day(&[range], "2026-03-02")
+            .is_empty());
+    }
+
+    #[test]
+    fn test_timed_entries_explicit_transparency_wins_over_legacy_metadata() {
+        let ev = evaluator();
+        let mut range = make_range(
+            "1",
+            "Hold",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("10:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+        range.transparency = Some("opaque".to_string());
+        range.metadata = Some(serde_json::json!({ "transparent": true }));
+
+        assert_eq!(
+            ev.get_timed_entries_for_day(&[range], "2026-03-02").len(),
+            1
+        );
     }
 
     // ── find_conflicts_in_window ────────────────────────────────────────

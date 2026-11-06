@@ -768,6 +768,45 @@ describe('handleToolCall', () => {
       expect(flags.get('evt_meeting')).toBeUndefined();
     });
 
+    it('does not mark a row transparent when explicit opaque transparency overrides legacy metadata', async () => {
+      const session = new CalendarSession('UTC');
+      const ranges: DateRange[] = [
+        {
+          id: 'contradictory',
+          label: 'Contradictory',
+          dates: ['2026-03-30'],
+          startTime: '09:00',
+          endTime: '10:00',
+          transparency: 'opaque',
+          metadata: { transparent: true },
+        },
+        {
+          id: 'legacy-free',
+          label: 'Legacy Free',
+          dates: ['2026-03-30'],
+          startTime: '11:00',
+          endTime: '12:00',
+          metadata: { transparent: true },
+        },
+      ];
+
+      const loadResult = await handleToolCall(session, 'load_calendar', {
+        source: 'ranges',
+        data: JSON.stringify(ranges),
+        id: 'team',
+      });
+      expect(parseJsonContent<{ ranges_loaded: number }>(loadResult).ranges_loaded).toBe(2);
+
+      const listResult = await handleToolCall(session, 'list_ranges', {});
+      const body = parseJsonContent<{
+        ranges: Array<{ range_id: string; transparent?: boolean }>;
+      }>(listResult);
+
+      const flags = new Map(body.ranges.map((row) => [row.range_id, row.transparent]));
+      expect(flags.get('contradictory')).toBeUndefined();
+      expect(flags.get('legacy-free')).toBe(true);
+    });
+
     it('groups gcal series instances into one row by default', async () => {
       const session = await createGcalSession();
 

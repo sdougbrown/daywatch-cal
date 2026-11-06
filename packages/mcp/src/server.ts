@@ -48,9 +48,9 @@ Neo-reckoning is the thinking step between reading and writing. The source MCP i
 LOADING DATA:
 - File on disk → load_calendar_file (pass the path). Handles .ics (default) and gcal/msft JSON via the "source" param — use it whenever the data is already on disk (e.g. a list_events result too large to pass inline); never read large calendar files into the conversation yourself.
 - Feed URL (incident.io schedule feeds, published .ics links, webcal) → load_calendar_url with the url. The server fetches it directly — never fetch the feed yourself (curl/WebFetch) and paste it inline.
-- Google Calendar → load_calendar with source "gcal" and the raw JSON array from gcal_list_events. Auto-filters transparent, declined, working-location events.
-- Microsoft Outlook / Office 365 → load_calendar with source "msft" and the raw JSON array from Microsoft Graph. Auto-filters free, workingElsewhere, declined, cancelled events. Maps Windows timezones to IANA.
-- Always feed gcal/msft data through its native source. Do NOT pre-flatten it to "ranges" yourself — you lose the transparency/declined filtering and the per-event timezone reconciliation, both of which silently corrupt scoring (wrong busy/free, events at the wrong wall-clock hour).
+- Google Calendar → load_calendar with source "gcal" and the raw JSON array from gcal_list_events. Excludes declined, working-location and birthday events; transparent/FYI events load with a transparency flag so conflict detection treats them as free.
+- Microsoft Outlook / Office 365 → load_calendar with source "msft" and the raw JSON array from Microsoft Graph. Excludes declined, cancelled and seriesMaster events; free/workingElsewhere events load with a busy/free flag so conflict detection treats them as free. Maps Windows timezones to IANA.
+- Always feed gcal/msft data through its native source. Do NOT pre-flatten it to "ranges" yourself — you lose the transparency carrying, the declined/working-location filtering, and the per-event timezone reconciliation, all of which silently corrupt conflict detection and scoring (wrong busy/free, events at the wrong wall-clock hour).
 - Raw .ics text or pasted data → load_calendar with source "ics"
 - Pre-built DateRange JSON → load_calendar with source "ranges"
 - Data persists for the session — load once, query many times.
@@ -144,7 +144,7 @@ export const TOOLS: Tool[] = [
         data: {
           type: 'string',
           description:
-            'For source "ics": raw .ics calendar text. For source "ranges": JSON DateRange array (example: [{"id":"mtg1","label":"Team Sync","fromDate":"2026-03-30","toDate":"2026-03-30","startTime":"09:00","endTime":"10:00"}]). NOTE: use fromDate/toDate/startTime/endTime — NOT start/end. For source "gcal": JSON array from Google Calendar MCP gcal_list_events — events are auto-filtered (declined, transparent, working-location excluded) and converted to DateRange format. For source "msft": JSON array from Microsoft Graph Calendar API list events endpoint — events are auto-filtered (free, workingElsewhere, declined, cancelled, seriesMaster excluded) and Windows timezones are mapped to IANA. IMPORTANT: pass gcal/msft events through their native source — do NOT hand-convert them to "ranges" yourself. Flattening drops the transparency/declined filtering and the per-event timezone reconciliation this tool does for you (events stored in a different tz than their UTC offset will land at the wrong wall-clock time). If the upstream list_events payload is too large to bring into context, do NOT pass it through `data` at all — it has usually been saved to a file, so use load_calendar_file({path, source}) which reads it off disk. Only when the data is not on disk and must be inlined: slice it by date window at the source (e.g. jq on the saved result) and feed that native gcal/msft JSON — keep start/end/timeZone, eventType, transparency, and attendee responseStatus; only the heavy fields (description, htmlLink, conferenceData) are safe to strip.',
+            'For source "ics": raw .ics calendar text. For source "ranges": JSON DateRange array (example: [{"id":"mtg1","label":"Team Sync","fromDate":"2026-03-30","toDate":"2026-03-30","startTime":"09:00","endTime":"10:00"}]). NOTE: use fromDate/toDate/startTime/endTime — NOT start/end. For source "gcal": JSON array from Google Calendar MCP gcal_list_events — declined, working-location and birthday events are excluded, transparent events are kept with a transparency flag (free — never conflicts or occupies free slots), and everything is converted to DateRange format. For source "msft": JSON array from Microsoft Graph Calendar API list events endpoint — declined, cancelled and seriesMaster events are excluded, free/workingElsewhere events are kept with a busy/free flag (never conflicts or occupies free slots), and Windows timezones are mapped to IANA. IMPORTANT: pass gcal/msft events through their native source — do NOT hand-convert them to "ranges" yourself. Flattening drops the transparency/declined filtering and the per-event timezone reconciliation this tool does for you (events stored in a different tz than their UTC offset will land at the wrong wall-clock time). If the upstream list_events payload is too large to bring into context, do NOT pass it through `data` at all — it has usually been saved to a file, so use load_calendar_file({path, source}) which reads it off disk. Only when the data is not on disk and must be inlined: slice it by date window at the source (e.g. jq on the saved result) and feed that native gcal/msft JSON — keep start/end/timeZone, eventType, transparency, and attendee responseStatus; only the heavy fields (description, htmlLink, conferenceData) are safe to strip.',
         },
         id: {
           type: 'string',
@@ -183,7 +183,7 @@ export const TOOLS: Tool[] = [
           type: 'string',
           enum: ['ics', 'gcal', 'msft'],
           description:
-            'File format: "ics" (default) for .ics text, "gcal" for a Google Calendar list_events JSON file, "msft" for a Microsoft Graph events JSON file. gcal/msft are auto-filtered and converted exactly as in load_calendar.',
+            'File format: "ics" (default) for .ics text, "gcal" for a Google Calendar list_events JSON file, "msft" for a Microsoft Graph events JSON file. gcal/msft are filtered and converted exactly as in load_calendar.',
         },
         id: {
           type: 'string',
@@ -243,7 +243,8 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'find_conflicts',
-    description: 'Find timed conflicts across loaded calendars within a date window.',
+    description:
+      'Find timed conflicts across loaded calendars within a date window. Busy all-day spans count as full-day occupancy (00:00–24:00) and conflict with anything that day; free/transparent spans never conflict. Each side carries allDay/transparency/eventType metadata when present so severity can be graded.',
     inputSchema: {
       type: 'object',
       properties: {

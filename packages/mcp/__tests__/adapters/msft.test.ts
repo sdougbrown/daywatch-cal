@@ -1,3 +1,4 @@
+import { RangeEvaluator } from '@daywatch/cal';
 import type { MsftGraphEvent } from '../../src/adapters/types.js';
 import {
   isBlockingMsftEvent,
@@ -153,11 +154,8 @@ describe('isBlockingMsftEvent', () => {
     expect(isBlockingMsftEvent(normalMeeting)).toBe(true);
   });
 
-  it('returns false for free events by default', () => {
-    expect(isBlockingMsftEvent(freeBlock)).toBe(false);
-  });
-
-  it('includes free events when requested', () => {
+  it('includes free events so their busy/free signal can be carried', () => {
+    expect(isBlockingMsftEvent(freeBlock)).toBe(true);
     expect(isBlockingMsftEvent(freeBlock, { includeFree: true })).toBe(true);
   });
 
@@ -165,11 +163,8 @@ describe('isBlockingMsftEvent', () => {
     expect(isBlockingMsftEvent(oofEvent)).toBe(true);
   });
 
-  it('returns false for working elsewhere events by default', () => {
-    expect(isBlockingMsftEvent(workingElsewhere)).toBe(false);
-  });
-
-  it('includes working elsewhere events when requested', () => {
+  it('includes working elsewhere events so their busy/free signal can be carried', () => {
+    expect(isBlockingMsftEvent(workingElsewhere)).toBe(true);
     expect(isBlockingMsftEvent(workingElsewhere, { includeFree: true })).toBe(true);
   });
 
@@ -225,6 +220,37 @@ describe('msftEventToDateRange', () => {
     expect(range.endTime).toBeUndefined();
   });
 
+  it('maps free/workingElsewhere as transparent and busy/oof as opaque', () => {
+    expect(msftEventToDateRange(freeBlock).transparency).toBe('transparent');
+    expect(msftEventToDateRange(workingElsewhere).transparency).toBe('transparent');
+    expect(msftEventToDateRange(normalMeeting).transparency).toBe('opaque');
+    expect(msftEventToDateRange(oofEvent).transparency).toBe('opaque');
+    expect(
+      msftEventToDateRange({ ...normalMeeting, showAs: undefined }).transparency,
+    ).toBeUndefined();
+  });
+
+  it('free all-day spans load but never conflict, busy ones do', () => {
+    const evaluator = new RangeEvaluator('UTC');
+    const freeDay = msftEventToDateRange({
+      ...workingElsewhere,
+      start: { dateTime: '2026-03-30T00:00:00.0000000', timeZone: 'UTC' },
+      end: { dateTime: '2026-03-31T00:00:00.0000000', timeZone: 'UTC' },
+    });
+    const busyDay = msftEventToDateRange({
+      ...normalMeeting,
+      id: 'msft_offsite',
+      subject: 'Mandatory offsite',
+      isAllDay: true,
+      start: { dateTime: '2026-03-30T00:00:00.0000000', timeZone: 'UTC' },
+      end: { dateTime: '2026-03-31T00:00:00.0000000', timeZone: 'UTC' },
+    });
+    const standup = msftEventToDateRange(normalMeeting);
+
+    expect(evaluator.findConflicts([freeDay, standup], '2026-03-30')).toEqual([]);
+    expect(evaluator.findConflicts([busyDay, standup], '2026-03-30')).toHaveLength(1);
+  });
+
   it('passes through IANA timezones unchanged', () => {
     const range = msftEventToDateRange(ianaTimezoneEvent);
 
@@ -254,14 +280,11 @@ describe('msftEventsToDateRanges', () => {
   it('filters out non-blocking events before mapping', () => {
     const ranges = msftEventsToDateRanges([
       normalMeeting,
-      freeBlock,
       oofEvent,
-      workingElsewhere,
       tentativeEvent,
       declinedEvent,
       cancelledEvent,
       seriesMaster,
-      { ...freeBlock, id: 'msft_010' },
     ]);
 
     expect(ranges).toHaveLength(3);
@@ -272,18 +295,24 @@ describe('msftEventsToDateRanges', () => {
     ]);
   });
 
+  it('loads free and workingElsewhere events alongside blocking ones', () => {
+    const ranges = msftEventsToDateRanges([normalMeeting, freeBlock, workingElsewhere]);
+
+    expect(ranges.map((range) => range.id)).toEqual([
+      normalMeeting.id,
+      freeBlock.id,
+      workingElsewhere.id,
+    ]);
+    expect(ranges[1].transparency).toBe('transparent');
+    expect(ranges[2].transparency).toBe('transparent');
+  });
+
   it('returns an empty array for empty input', () => {
     expect(msftEventsToDateRanges([])).toEqual([]);
   });
 
   it('returns an empty array when all events are excluded', () => {
-    const ranges = msftEventsToDateRanges([
-      freeBlock,
-      workingElsewhere,
-      declinedEvent,
-      cancelledEvent,
-      seriesMaster,
-    ]);
+    const ranges = msftEventsToDateRanges([declinedEvent, cancelledEvent, seriesMaster]);
 
     expect(ranges).toEqual([]);
   });

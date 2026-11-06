@@ -35,7 +35,11 @@ export interface GCalEvent {
 export interface GCalAdapterOptions {
   /** Include tentative events as blocking (default: true) */
   includeTentative?: boolean;
-  /** Include transparent/FYI events (default: false) */
+  /**
+   * Deprecated no-op. Transparent/FYI events now always load, with their
+   * transparency carried on the range so conflict detection treats them
+   * as free.
+   */
   includeTransparent?: boolean;
   /** Fallback label for events with no summary (default: "(busy)") */
   fallbackLabel?: string;
@@ -77,7 +81,11 @@ export interface MsftGraphEvent {
 export interface MsftAdapterOptions {
   /** Include tentative events as blocking (default: true) */
   includeTentative?: boolean;
-  /** Include free/workingElsewhere events (default: false) */
+  /**
+   * Deprecated no-op. Free/workingElsewhere events now always load, with
+   * their busy/free signal carried on the range so conflict detection
+   * treats them as free.
+   */
   includeFree?: boolean;
   /** Fallback label for events with no subject (default: "(busy)") */
   fallbackLabel?: string;

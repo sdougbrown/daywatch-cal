@@ -195,15 +195,12 @@ describe('isBlockingEvent', () => {
   });
 
   it('returns false for condensed working-location events with no transparency field', () => {
-    // The eventType branch, not the transparency branch, must exclude this.
+    // The eventType branch, not the transparency flag, must exclude this.
     expect(isBlockingEvent({ ...workingLocation, transparency: undefined })).toBe(false);
   });
 
-  it('returns false for transparent events by default', () => {
-    expect(isBlockingEvent(transparentAllDay)).toBe(false);
-  });
-
-  it('includes transparent events when requested', () => {
+  it('includes transparent events so their free signal can be carried', () => {
+    expect(isBlockingEvent(transparentAllDay)).toBe(true);
     expect(isBlockingEvent(transparentAllDay, { includeTransparent: true })).toBe(true);
   });
 
@@ -397,6 +394,65 @@ describe('gcalEventToDateRange', () => {
     expect(range.endTime).toBeUndefined();
   });
 
+  it('carries transparency through for transparent all-day events', () => {
+    const range = gcalEventToDateRange(transparentAllDay);
+
+    expect(range.transparency).toBe('transparent');
+    expect(range.metadata.transparency).toBe('transparent');
+  });
+
+  it('carries transparency through for raw-format transparent events', () => {
+    const range = gcalEventToDateRange({
+      ...transparentAllDay,
+      myResponseStatus: undefined,
+      attendees: [{ email: 'me@example.com', responseStatus: 'accepted', self: true }],
+    });
+
+    expect(range.transparency).toBe('transparent');
+  });
+
+  it('carries an explicit opaque transparency and defaults to absent', () => {
+    const busy = gcalEventToDateRange({
+      ...transparentAllDay,
+      id: 'evt_offsite',
+      summary: 'Mandatory offsite',
+      transparency: 'opaque',
+    });
+    expect(busy.transparency).toBe('opaque');
+
+    const undeclared = gcalEventToDateRange({
+      ...transparentAllDay,
+      transparency: undefined,
+    });
+    expect(undeclared.transparency).toBeUndefined();
+  });
+
+  it('transparent all-day events load but never conflict, busy ones do', () => {
+    const evaluator = new RangeEvaluator('UTC');
+    const vacation = gcalEventToDateRange({
+      ...transparentAllDay,
+      start: { date: '2026-03-30' },
+      end: { date: '2026-03-31' },
+    });
+    const offsite = gcalEventToDateRange({
+      ...transparentAllDay,
+      id: 'evt_offsite',
+      summary: 'Mandatory offsite',
+      start: { date: '2026-03-30' },
+      end: { date: '2026-03-31' },
+      transparency: 'opaque',
+    });
+    const standup = gcalEventToDateRange(acceptedTimed);
+
+    // Both all-day spans cover 2026-03-30; the timed standup is that day.
+    expect(evaluator.findConflicts([vacation, standup], '2026-03-30')).toEqual([]);
+    expect(evaluator.findConflicts([offsite, standup], '2026-03-30')).toHaveLength(1);
+  });
+
+  it('returns an empty array for empty input', () => {
+    expect(gcalEventsToDateRanges([])).toEqual([]);
+  });
+
   it('preserves multi-month timed spans', () => {
     const range = gcalEventToDateRange(outOfOffice);
 
@@ -485,23 +541,21 @@ describe('gcalEventToDateRange', () => {
 
 describe('gcalEventsToDateRanges', () => {
   it('filters out non-blocking events before mapping', () => {
-    const ranges = gcalEventsToDateRanges([
-      acceptedTimed,
-      workingLocation,
-      transparentAllDay,
-      tentativeEvent,
-    ]);
+    const ranges = gcalEventsToDateRanges([acceptedTimed, workingLocation, tentativeEvent]);
 
     expect(ranges).toHaveLength(2);
     expect(ranges.map((range) => range.id)).toEqual([acceptedTimed.id, tentativeEvent.id]);
   });
 
-  it('returns an empty array for empty input', () => {
-    expect(gcalEventsToDateRanges([])).toEqual([]);
+  it('loads transparent events alongside blocking ones', () => {
+    const ranges = gcalEventsToDateRanges([acceptedTimed, transparentAllDay]);
+
+    expect(ranges.map((range) => range.id)).toEqual([acceptedTimed.id, transparentAllDay.id]);
+    expect(ranges[1].transparency).toBe('transparent');
   });
 
   it('returns an empty array when all events are excluded', () => {
-    const ranges = gcalEventsToDateRanges([workingLocation, transparentAllDay, declinedEvent]);
+    const ranges = gcalEventsToDateRanges([workingLocation, declinedEvent]);
 
     expect(ranges).toEqual([]);
   });

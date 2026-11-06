@@ -198,7 +198,10 @@ describe('findConflicts', () => {
     const conflicts = evaluator.findConflicts([fyi, meeting], '2026-03-23');
     expect(conflicts).toHaveLength(0);
     // The transparent hold must not occupy free-slot time either.
-    const freeSlots = evaluator.findFreeSlots([fyi], '2026-03-23', { dayStart: '09:00', dayEnd: '10:00' });
+    const freeSlots = evaluator.findFreeSlots([fyi], '2026-03-23', {
+      dayStart: '09:00',
+      dayEnd: '10:00',
+    });
     expect(freeSlots).toHaveLength(1);
   });
 

@@ -4,17 +4,18 @@ import { subtractOneDay } from './gcal.js';
 import type { MsftAdapterOptions, MsftGraphEvent } from './types.js';
 import { toIanaTimezone } from './windows-timezones.js';
 
+/**
+ * Whether an event loads as a range. Cancelled, declined and seriesMaster
+ * events are excluded; free/workingElsewhere events now load too, with
+ * their busy/free signal carried so conflict detection can treat them as
+ * free.
+ */
 export function isBlockingMsftEvent(
   event: MsftGraphEvent,
   options: MsftAdapterOptions = {},
 ): boolean {
   if (event.isCancelled) return false;
   if (event.type === 'seriesMaster') return false;
-  if (
-    (event.showAs === 'free' || event.showAs === 'workingElsewhere') &&
-    options.includeFree !== true
-  )
-    return false;
   if (event.responseStatus?.response === 'declined') return false;
   if (event.showAs === 'tentative' && options.includeTentative === false) return false;
   return true;
@@ -35,6 +36,12 @@ export function msftEventToDateRange(
   if (event.webLink) metadata.webLink = event.webLink;
 
   const label = event.subject ?? options.fallbackLabel ?? '(busy)';
+  const transparency =
+    event.showAs === 'free' || event.showAs === 'workingElsewhere'
+      ? ('transparent' as const)
+      : event.showAs !== undefined
+        ? ('opaque' as const)
+        : undefined;
   const startDt = event.start?.dateTime;
   const endDt = event.end?.dateTime;
 
@@ -48,6 +55,7 @@ export function msftEventToDateRange(
       label,
       fromDate: startDt.slice(0, 10),
       toDate: subtractOneDay(endDt.slice(0, 10)),
+      ...(transparency !== undefined ? { transparency } : {}),
       metadata,
     };
   }
@@ -68,6 +76,7 @@ export function msftEventToDateRange(
     endTime: endDt.length > 10 ? endDt.slice(11, 16) : undefined,
     duration: hasDuration ? Math.round((endMs - startMs) / 60000) : undefined,
     timezone: toIanaTimezone(event.start.timeZone),
+    ...(transparency !== undefined ? { transparency } : {}),
     metadata,
   };
 }

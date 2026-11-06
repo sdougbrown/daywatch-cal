@@ -264,22 +264,40 @@ export class RangeEvaluator {
   /**
    * Expand all timed slots for a specific day across multiple ranges and
    * precompute minute offsets for downstream conflict/free-slot scoring.
-   * Free ('transparent') ranges are skipped — they never occupy time.
+   * Free ('transparent') ranges are skipped — they never occupy time. Busy
+   * all-day ranges (no time fields) occupy the full day (00:00–24:00) and are
+   * emitted with allDay: true and a 00:00–24:00 slot.
    */
   getTimedEntriesForDay(
     ranges: DateRange[],
     date: string,
-  ): Array<{ slot: TimeSlot; startMinutes: number; endMinutes: number }> {
+  ): Array<{ slot: TimeSlot; startMinutes: number; endMinutes: number; allDay: boolean }> {
     const entries: Array<{
       slot: TimeSlot;
       startMinutes: number;
       endMinutes: number;
+      allDay: boolean;
     }> = [];
 
     for (const range of ranges) {
       if (!this.isDateInRange(date, range)) continue;
-      if (!this.hasTimeFields(range)) continue;
       if (range.transparency === 'transparent') continue; // free — never occupies time
+
+      if (!this.hasTimeFields(range)) {
+        entries.push({
+          slot: {
+            startTime: '00:00',
+            endTime: '24:00',
+            duration: 1440,
+            rangeId: range.id,
+            label: range.label,
+          },
+          startMinutes: 0,
+          endMinutes: 1440, // full day
+          allDay: true,
+        });
+        continue;
+      }
 
       const timeSlots = this.getTimeSlots(date, range);
       for (const slot of timeSlots) {
@@ -295,6 +313,7 @@ export class RangeEvaluator {
           slot,
           startMinutes,
           endMinutes,
+          allDay: false,
         });
       }
     }
@@ -618,34 +637,15 @@ export class RangeEvaluator {
       };
     };
 
-    const slots = [
-      ...this.getTimedEntriesForDay(ranges, date)
-        .filter((entry) => entry.slot.endTime !== null)
-        .map((entry) => ({
-          rangeId: entry.slot.rangeId,
-          label: entry.slot.label,
-          startMinutes: entry.startMinutes,
-          endMinutes: entry.endMinutes,
-          ref: toRef(entry.slot.rangeId, entry.slot.label, false),
-        })),
-      // getTimeSlots yields nothing for all-day ranges, so busy all-day
-      // occupancy (full day, 00:00–24:00) is added here; transparent ones
-      // are excluded — they never occupy time.
-      ...ranges
-        .filter(
-          (range) =>
-            !this.hasTimeFields(range) &&
-            range.transparency !== 'transparent' &&
-            this.isDateInRange(date, range),
-        )
-        .map((range) => ({
-          rangeId: range.id,
-          label: range.label,
-          startMinutes: 0,
-          endMinutes: 1440, // full day
-          ref: toRef(range.id, range.label, true),
-        })),
-    ]
+    const slots = this.getTimedEntriesForDay(ranges, date)
+      .map((entry) => ({
+        rangeId: entry.slot.rangeId,
+        label: entry.slot.label,
+        startMinutes: entry.startMinutes,
+        endMinutes: entry.endMinutes,
+        ref: toRef(entry.slot.rangeId, entry.slot.label, entry.allDay),
+      }))
+      // Zero-width entries (no endTime and no duration) never occupy time.
       .filter((slot) => slot.endMinutes > slot.startMinutes)
       .sort((a, b) => a.startMinutes - b.startMinutes || a.endMinutes - b.endMinutes);
 
@@ -730,23 +730,12 @@ export class RangeEvaluator {
     const dayStartMin = timeToMinutes(options?.dayStart ?? '00:00');
     const dayEndMin = timeToMinutes(options?.dayEnd ?? '24:00');
 
-    // Step 1-2: Collect all occupied intervals for this date
+    // Step 1-2: Collect all occupied intervals for this date (busy all-day
+    // ranges arrive as 00:00–24:00 entries from the accessor)
     const occupied: [number, number][] = [];
     for (const entry of this.getTimedEntriesForDay(ranges, date)) {
       if (entry.endMinutes > entry.startMinutes) {
         occupied.push([entry.startMinutes, entry.endMinutes]);
-      }
-    }
-    // getTimeSlots yields nothing for all-day ranges, so busy all-day
-    // occupancy (full day, 00:00–24:00) is added here; transparent ones
-    // are excluded — they never occupy time.
-    for (const range of ranges) {
-      if (
-        !this.hasTimeFields(range) &&
-        range.transparency !== 'transparent' &&
-        this.isDateInRange(date, range)
-      ) {
-        occupied.push([0, 1440]);
       }
     }
 

@@ -17,6 +17,7 @@ pub(crate) struct TimedEntry {
     pub slot: TimeSlot,
     pub start_minutes: u32,
     pub end_minutes: u32,
+    pub all_day: bool,
 }
 
 struct CompiledRange {
@@ -739,7 +740,7 @@ impl RangeEvaluator {
         let mut slots: Vec<ConflictSlot> = self
             .get_timed_entries_for_day(ranges, date)
             .into_iter()
-            .filter(|e| e.slot.end_time.is_some() && e.end_minutes > e.start_minutes)
+            .filter(|e| e.end_minutes > e.start_minutes)
             .map(|e| {
                 let range = ranges_by_id.get(&e.slot.range_id);
                 ConflictSlot {
@@ -747,37 +748,12 @@ impl RangeEvaluator {
                     label: e.slot.label,
                     start_minutes: e.start_minutes,
                     end_minutes: e.end_minutes,
-                    all_day: None,
+                    all_day: if e.all_day { Some(true) } else { None },
                     transparency: range.and_then(|r| r.transparency.clone()),
                     event_type: range.and_then(|r| r.event_type.clone()),
                 }
             })
             .collect();
-
-        // getTime_slots yields nothing for all-day ranges, so busy all-day
-        // occupancy (full day, 00:00–24:00) is added here; transparent ones
-        // are excluded — they never occupy time.
-        for range in ranges {
-            let compiled = compile_range(range);
-            if compiled.has_time_fields {
-                continue;
-            }
-            if range.transparency.as_deref() == Some("transparent") {
-                continue;
-            }
-            if !self.is_date_in_range(date, range) {
-                continue;
-            }
-            slots.push(ConflictSlot {
-                range_id: range.id.clone(),
-                label: range.label.clone(),
-                start_minutes: 0,
-                end_minutes: 1440,
-                all_day: Some(true),
-                transparency: range.transparency.clone(),
-                event_type: range.event_type.clone(),
-            });
-        }
 
         slots.sort_by(|a, b| {
             a.start_minutes
@@ -871,30 +847,12 @@ impl RangeEvaluator {
             None => return vec![],
         };
 
-        let entries = self.get_timed_entries_for_day(ranges, date);
-
-        let mut occupied: Vec<(u32, u32)> = entries
+        let mut occupied: Vec<(u32, u32)> = self
+            .get_timed_entries_for_day(ranges, date)
             .into_iter()
             .filter(|e| e.end_minutes > e.start_minutes)
             .map(|e| (e.start_minutes, e.end_minutes))
             .collect();
-
-        // getTime_slots yields nothing for all-day ranges, so busy all-day
-        // occupancy (full day, 00:00–24:00) is added here; transparent ones
-        // are excluded — they never occupy time.
-        for range in ranges {
-            let compiled = compile_range(range);
-            if compiled.has_time_fields {
-                continue;
-            }
-            if range.transparency.as_deref() == Some("transparent") {
-                continue;
-            }
-            if !self.is_date_in_range(date, range) {
-                continue;
-            }
-            occupied.push((0, 1440));
-        }
 
         occupied.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
 
@@ -992,6 +950,20 @@ impl RangeEvaluator {
             }
             let compiled = compile_range(range);
             if !compiled.has_time_fields {
+                // Busy all-day range: occupies the full day (00:00–24:00).
+                entries.push(TimedEntry {
+                    slot: TimeSlot {
+                        start_time: "00:00".to_string(),
+                        end_time: Some("24:00".to_string()),
+                        end_date: None,
+                        duration: Some(1440),
+                        range_id: range.id.clone(),
+                        label: range.label.clone(),
+                    },
+                    start_minutes: 0,
+                    end_minutes: 1440, // full day
+                    all_day: true,
+                });
                 continue;
             }
 
@@ -1017,6 +989,7 @@ impl RangeEvaluator {
                     slot,
                     start_minutes,
                     end_minutes,
+                    all_day: false,
                 });
             }
         }
@@ -2106,7 +2079,7 @@ mod tests {
     }
 
     #[test]
-    fn test_timed_entries_skip_all_day() {
+    fn test_timed_entries_busy_all_day() {
         let ev = evaluator();
         let range = make_range(
             "1",
@@ -2119,7 +2092,28 @@ mod tests {
             None, // no time selector => all-day
         );
         let entries = ev.get_timed_entries_for_day(&[range], "2026-03-02");
-        assert!(entries.is_empty());
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].start_minutes, 0);
+        assert_eq!(entries[0].end_minutes, 1440);
+        assert!(entries[0].all_day);
+    }
+
+    #[test]
+    fn test_timed_entries_skip_transparent_all_day() {
+        let ev = evaluator();
+        let fyi = make_transparent(make_range(
+            "1",
+            "test",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None, // no time selector => all-day
+        ));
+        assert!(ev
+            .get_timed_entries_for_day(&[fyi], "2026-03-02")
+            .is_empty());
     }
 
     // ── find_conflicts ──────────────────────────────────────────────────

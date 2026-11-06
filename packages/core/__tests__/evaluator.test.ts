@@ -405,6 +405,30 @@ describe('RangeEvaluator', () => {
       expect(entries[0].endMinutes).toBe(1500); // 01:00 next day = 1440 + 60
       expect(entries[0].slot.endDate).toBe('2026-03-22');
     });
+
+    it('getTimedEntriesForDay emits a full-day entry for busy all-day ranges', () => {
+      const range = makeRange({
+        id: 'ooo',
+        label: 'OOO',
+        dates: ['2026-03-23'],
+      });
+      const entries = evaluator.getTimedEntriesForDay([range], '2026-03-23');
+      expect(entries).toHaveLength(1);
+      expect(entries[0].startMinutes).toBe(0);
+      expect(entries[0].endMinutes).toBe(1440);
+      expect(entries[0].allDay).toBe(true);
+      expect(entries[0].slot.rangeId).toBe('ooo');
+    });
+
+    it('getTimedEntriesForDay skips transparent all-day ranges', () => {
+      const range = makeRange({
+        id: 'fyi',
+        label: 'FYI',
+        dates: ['2026-03-23'],
+        transparency: 'transparent',
+      });
+      expect(evaluator.getTimedEntriesForDay([range], '2026-03-23')).toHaveLength(0);
+    });
   });
 
   describe('everyHour + day recurrence (AND combination)', () => {

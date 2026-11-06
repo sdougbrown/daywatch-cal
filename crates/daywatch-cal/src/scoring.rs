@@ -295,4 +295,93 @@ mod tests {
         assert_eq!(score.conflict_days, 1);
         assert_eq!(score.avg_context_switches, 1.0);
     }
+
+    #[test]
+    fn test_score_schedule_busy_all_day_occupies_full_day() {
+        let ev = evaluator();
+        let r = make_range(
+            "1",
+            "OOO",
+            DaySelector::Explicit {
+                dates: vec![day_str(2026, 3, 12)],
+                except_dates: None,
+                except_between: None,
+            },
+            None, // no time selector => all-day
+        );
+        let from = parse_date("2026-03-12").unwrap();
+        let to = parse_date("2026-03-12").unwrap();
+        let score = score_schedule(&ev, &[r], from, to, ScoreScheduleOptions::default());
+        // Working hours 09:00–17:00 fully occupied by the all-day span
+        assert_eq!(score.free_minutes, 0);
+        assert_eq!(score.focus_blocks, 0);
+        // A single all-day range has nothing to conflict with
+        assert_eq!(score.conflicts, 0);
+        assert_eq!(score.conflict_days, 0);
+    }
+
+    #[test]
+    fn test_score_schedule_busy_all_day_conflicts_with_timed() {
+        let ev = evaluator();
+        let all_day = make_range(
+            "1",
+            "OOO",
+            DaySelector::Explicit {
+                dates: vec![day_str(2026, 3, 12)],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        let meeting = make_range(
+            "2",
+            "Meeting",
+            DaySelector::Explicit {
+                dates: vec![day_str(2026, 3, 12)],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "10:00".to_string(),
+                end_time: Some("11:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+        let from = parse_date("2026-03-12").unwrap();
+        let to = parse_date("2026-03-12").unwrap();
+        let score = score_schedule(
+            &ev,
+            &[all_day, meeting],
+            from,
+            to,
+            ScoreScheduleOptions::default(),
+        );
+        assert_eq!(score.conflicts, 1);
+        assert_eq!(score.conflict_days, 1);
+        assert_eq!(score.free_minutes, 0);
+        assert_eq!(score.focus_blocks, 0);
+    }
+
+    #[test]
+    fn test_score_schedule_transparent_all_day_never_occupies() {
+        let ev = evaluator();
+        let mut fyi = make_range(
+            "1",
+            "FYI",
+            DaySelector::Explicit {
+                dates: vec![day_str(2026, 3, 12)],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        fyi.transparency = Some("transparent".to_string());
+        let from = parse_date("2026-03-12").unwrap();
+        let to = parse_date("2026-03-12").unwrap();
+        let score = score_schedule(&ev, &[fyi], from, to, ScoreScheduleOptions::default());
+        assert_eq!(score.conflicts, 0);
+        assert_eq!(score.free_minutes, 8 * 60);
+        assert_eq!(score.focus_blocks, 1);
+    }
 }

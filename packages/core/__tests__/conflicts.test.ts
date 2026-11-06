@@ -76,11 +76,14 @@ describe('findConflicts', () => {
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0]).toEqual({
       rangeA: { id: 'a', label: 'Holiday', allDay: true },
-      rangeB: { id: 'b', label: 'Offsite', allDay: true, transparency: 'opaque' },
+      rangeB: { id: 'b', label: 'Offsite', allDay: true },
       date: '2026-03-23',
       overlapStart: '00:00',
       overlapEnd: '24:00',
     });
+    // Participants never carry transparency, even when the source range
+    // declared 'opaque' — transparent ranges are filtered before detection.
+    expect('transparency' in conflicts[0].rangeB).toBe(false);
   });
 
   it('all-day + timed range → conflict with the timed window as the overlap', () => {
@@ -278,7 +281,6 @@ describe('findConflicts', () => {
     expect(conflicts[0].rangeA).toEqual({
       id: 'a',
       label: 'Hold',
-      transparency: 'opaque',
     });
   });
 

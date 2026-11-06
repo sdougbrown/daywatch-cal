@@ -651,8 +651,8 @@ export class RangeEvaluator {
    * Timed ranges conflict when they overlap. Busy all-day spans occupy the
    * full day (00:00–24:00) and conflict with anything on that day; free
    * ('transparent') spans never occupy time and never conflict. Each side of
-   * a conflict carries the range's allDay/transparency/eventType metadata
-   * when present so callers can grade severity.
+   * a conflict carries the range's allDay/eventType metadata when present so
+   * callers can grade severity.
    */
   findConflicts(ranges: DateRange[], date: string): Conflict[] {
     const toRef = (range: DateRange, label: string, allDay: boolean): ConflictRangeRef => {
@@ -660,7 +660,6 @@ export class RangeEvaluator {
         id: range.id,
         label,
         ...(allDay ? { allDay: true } : {}),
-        ...(range.transparency !== undefined ? { transparency: range.transparency } : {}),
         ...(range.eventType !== undefined ? { eventType: range.eventType } : {}),
       };
     };

@@ -391,8 +391,6 @@ pub struct RangeRef {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub all_day: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub transparency: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub event_type: Option<String>,
 }
 
@@ -921,13 +919,11 @@ mod tests {
             id: "r1".to_string(),
             label: "Focus".to_string(),
             all_day: Some(true),
-            transparency: Some("opaque".to_string()),
             event_type: Some("outOfOffice".to_string()),
         };
         let json = serde_json::to_value(range_ref).unwrap();
         assert_eq!(json["allDay"], true);
         assert_eq!(json["eventType"], "outOfOffice");
-        assert_eq!(json["transparency"], "opaque");
         assert!(json.get("all_day").is_none());
         assert!(json.get("event_type").is_none());
         let round_tripped: RangeRef = serde_json::from_value(serde_json::json!({
@@ -939,7 +935,6 @@ mod tests {
         .unwrap();
         assert_eq!(round_tripped.all_day, Some(true));
         assert_eq!(round_tripped.event_type.as_deref(), Some("outOfOffice"));
-        assert_eq!(round_tripped.transparency, None);
     }
 
     #[test]

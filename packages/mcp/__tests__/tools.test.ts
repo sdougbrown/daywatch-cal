@@ -283,7 +283,6 @@ describe('handleToolCall', () => {
           rangeA: {
             id: string;
             allDay?: boolean;
-            transparency?: string;
             eventType?: string;
           };
           rangeB: { id: string };
@@ -296,7 +295,6 @@ describe('handleToolCall', () => {
         id: 'evt_offsite',
         label: 'Mandatory Offsite',
         allDay: true,
-        transparency: 'opaque',
         eventType: 'outOfOffice',
       });
       expect(conflicts.conflicts[0].rangeB.id).toBe('evt_standup');

@@ -245,7 +245,7 @@ export const TOOLS: Tool[] = [
   {
     name: 'find_conflicts',
     description:
-      'Find timed conflicts across loaded calendars within a date window. Busy all-day spans count as full-day occupancy (00:00–24:00) and conflict with anything that day; free/transparent spans never conflict. Each side carries allDay/transparency/eventType metadata when present so severity can be graded.',
+      'Find timed conflicts across loaded calendars within a date window. Busy all-day spans count as full-day occupancy (00:00–24:00) and conflict with anything that day; free/transparent spans never conflict. Each side carries allDay/eventType metadata when present so severity can be graded.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -490,17 +490,17 @@ export interface Conflict {
 }
 
 /**
- * One participant of a Conflict. The extra fields appear only when the
+ * One participant of a Conflict. Participants are always busy — transparent
+ * ranges are filtered before conflict detection, so they never appear here.
+ * allDay and eventType are the grading signals; they appear only when the
  * source range carries them, so JSON shape is unchanged for timed ranges
- * with no transparency/eventType metadata.
+ * with no metadata.
  */
 export interface ConflictRangeRef {
   id: string;
   label: string;
   /** True when the range is an all-day span occupying the full day. */
   allDay?: boolean;
-  /** Free/busy signal carried from the range; absent defaults to busy. */
-  transparency?: Transparency;
   /** Event type carried from the range's eventType field. */
   eventType?: string;
 }

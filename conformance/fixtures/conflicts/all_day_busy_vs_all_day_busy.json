@@ -1,5 +1,5 @@
 {
-  "description": "Two busy all-day spans on the same day conflict with the full day (00:00–24:00) as the overlap window. Both participants are marked allDay; an explicitly declared transparency is carried through.",
+  "description": "Two busy all-day spans on the same day conflict with the full day (00:00–24:00) as the overlap window. Both participants are marked allDay.",
   "userTimezone": "America/New_York",
   "ranges": [
     {
@@ -23,8 +23,7 @@
           "rangeA": {
             "id": "offsite",
             "label": "Mandatory offsite",
-            "allDay": true,
-            "transparency": "opaque"
+            "allDay": true
           },
           "rangeB": {
             "id": "oncall-handoff",

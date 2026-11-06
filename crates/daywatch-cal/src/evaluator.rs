@@ -761,7 +761,6 @@ impl RangeEvaluator {
                     start_minutes: e.start_minutes,
                     end_minutes: e.end_minutes,
                     all_day: if e.all_day { Some(true) } else { None },
-                    transparency: range.transparency.clone(),
                     event_type: range.event_type.clone(),
                 }
             })
@@ -805,14 +804,12 @@ impl RangeEvaluator {
                         id: slots[i].range_id.clone(),
                         label: slots[i].label.clone(),
                         all_day: slots[i].all_day,
-                        transparency: slots[i].transparency.clone(),
                         event_type: slots[i].event_type.clone(),
                     },
                     range_b: RangeRef {
                         id: slots[j].range_id.clone(),
                         label: slots[j].label.clone(),
                         all_day: slots[j].all_day,
-                        transparency: slots[j].transparency.clone(),
                         event_type: slots[j].event_type.clone(),
                     },
                     date: date.to_string(),
@@ -1285,7 +1282,6 @@ struct ConflictSlot {
     start_minutes: u32,
     end_minutes: u32,
     all_day: Option<bool>,
-    transparency: Option<String>,
     event_type: Option<String>,
 }
 
@@ -2385,12 +2381,7 @@ mod tests {
         assert_eq!(conflicts[0].overlap_start, Some("00:00".to_string()));
         assert_eq!(conflicts[0].overlap_end, Some("24:00".to_string()));
         assert_eq!(conflicts[0].range_a.all_day, Some(true));
-        assert_eq!(
-            conflicts[0].range_a.transparency,
-            Some("opaque".to_string())
-        );
         assert_eq!(conflicts[0].range_b.all_day, Some(true));
-        assert_eq!(conflicts[0].range_b.transparency, None);
     }
 
     #[test]

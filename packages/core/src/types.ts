@@ -477,9 +477,9 @@ export interface Conflict {
   rangeB: ConflictRangeRef;
   /** Date of the conflict (YYYY-MM-DD) */
   date: string;
-  /** Start of the overlap window (HH:mm), null for all-day */
+  /** Start of the overlap window (HH:mm); the full day starts at 00:00 */
   overlapStart: string | null;
-  /** End of the overlap window (HH:mm), null for all-day */
+  /** End of the overlap window (HH:mm), exclusive; the full day ends at 24:00 */
   overlapEnd: string | null;
 }
 

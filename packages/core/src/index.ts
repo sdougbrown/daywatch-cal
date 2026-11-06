@@ -3,6 +3,7 @@ export type {
   DateRange,
   Occurrence,
   TimeSlot,
+  TimedEntry,
   DayRangeInfo,
   SpanInfo,
   Day,

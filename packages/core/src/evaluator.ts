@@ -6,6 +6,7 @@ import type {
   Conflict,
   ConflictRangeRef,
   FreeSlot,
+  TimedEntry,
 } from './types.js';
 import type { AddMinutesResult } from './time.js';
 import {
@@ -286,23 +287,8 @@ export class RangeEvaluator {
    * the input array, so callers can resolve per-range state without
    * re-keying by id.
    */
-  getTimedEntriesForDay(
-    ranges: DateRange[],
-    date: string,
-  ): Array<{
-    slot: TimeSlot;
-    startMinutes: number;
-    endMinutes: number;
-    allDay: boolean;
-    rangeIndex: number;
-  }> {
-    const entries: Array<{
-      slot: TimeSlot;
-      startMinutes: number;
-      endMinutes: number;
-      allDay: boolean;
-      rangeIndex: number;
-    }> = [];
+  getTimedEntriesForDay(ranges: DateRange[], date: string): TimedEntry[] {
+    const entries: TimedEntry[] = [];
 
     for (let index = 0; index < ranges.length; index++) {
       const range = ranges[index];

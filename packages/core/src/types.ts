@@ -156,6 +156,20 @@ export interface TimeSlot {
 }
 
 /**
+ * A timed entry for a specific day — a TimeSlot with precomputed minute
+ * offsets and the index of the source range in the input array.
+ * Produced by RangeEvaluator.getTimedEntriesForDay(); consumed by
+ * conflict/free-slot scoring. Free ('transparent') ranges are excluded.
+ */
+export interface TimedEntry {
+  slot: TimeSlot;
+  startMinutes: number;
+  endMinutes: number;
+  allDay: boolean;
+  rangeIndex: number;
+}
+
+/**
  * Information about a DateRange's presence on a specific day — used for
  * month-grid rendering to show contiguous spans.
  */

@@ -1,5 +1,19 @@
 # @daywatch/cal-react
 
+## 0.3.0
+
+### Minor Changes
+
+- Version bump across all published packages
+
+### Patch Changes
+
+- Updated dependencies [83838a8]
+- Updated dependencies [832c856]
+- Updated dependencies
+  - @daywatch/cal@0.3.0
+  - @daywatch/cal-models@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes

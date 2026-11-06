@@ -1,6 +1,6 @@
 [package]
 name = "daywatch-cal"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Scheduling intelligence for daywatch — RangeEvaluator, conflict detection, free-slot finding"
 repository = "https://github.com/sdougbrown/daywatch-cal"

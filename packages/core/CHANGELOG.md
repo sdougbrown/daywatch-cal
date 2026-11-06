@@ -1,5 +1,13 @@
 # @daywatch/cal
 
+## 0.3.0
+
+### Minor Changes
+
+- 83838a8: Conflict detection is now free/busy-aware. Ranges, occurrences and conflict participants carry an optional `transparency` signal (`'opaque'` | `'transparent'`, absent = busy): busy all-day spans occupy the full day and conflict with anything on that day, transparent ranges never occupy time or conflict, and emitted `Conflict` participants carry `allDay`/`transparency`/`eventType` metadata so callers can grade severity. The gcal and msft adapters now load transparent/free events with the flag carried through instead of dropping them (`includeTransparent`/`includeFree` are deprecated no-ops), the ics parser sets `transparency: 'transparent'` from `TRANSP:TRANSPARENT`, and cal-rules admits `transparency` as a known range key.
+- 832c856: gcal adapter: accept the raw Google Calendar API format. Declined events (response on the `self` attendee) and uppercase `WORKING_LOCATION`/`BIRTHDAY` event types were loaded as busy time, and the UTC offset in `dateTime` was dropped, so events organized in another zone landed at the wrong time. Offset-bearing dateTimes are now re-expressed in the range's zone, or pinned to UTC when `timeZone` is absent, so no offset-bearing time stays floating.
+- Version bump across all published packages
+
 ## 0.2.2
 
 ### Patch Changes

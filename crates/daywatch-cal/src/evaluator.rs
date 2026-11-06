@@ -2909,4 +2909,59 @@ mod tests {
         let result = ev.resolve_time("2026-07-01", "14:00", Some("UTC"));
         assert_eq!(result, Some("10:00".to_string()));
     }
+
+    // ── expand transparency ─────────────────────────────────────────────
+
+    #[test]
+    fn test_expand_carries_transparency_onto_occurrences() {
+        let ev = evaluator();
+        let mut range = make_range(
+            "1",
+            "test",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("10:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+        range.transparency = Some("transparent".to_string());
+
+        let from = parse_date("2026-03-02").unwrap();
+        let to = parse_date("2026-03-02").unwrap();
+        let occurrences = ev.expand(&range, from, to);
+        assert_eq!(occurrences.len(), 1);
+        assert_eq!(occurrences[0].transparency, Some("transparent".to_string()));
+    }
+
+    #[test]
+    fn test_expand_omits_transparency_when_absent() {
+        let ev = evaluator();
+        let range = make_range(
+            "1",
+            "test",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("10:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+
+        let from = parse_date("2026-03-02").unwrap();
+        let to = parse_date("2026-03-02").unwrap();
+        let occurrences = ev.expand(&range, from, to);
+        assert_eq!(occurrences.len(), 1);
+        assert_eq!(occurrences[0].transparency, None);
+    }
 }

@@ -730,36 +730,26 @@ impl RangeEvaluator {
         results
     }
 
-    fn range_transparency(ranges: &[DateRange], range_id: &str) -> Option<String> {
-        ranges
-            .iter()
-            .find(|range| range.id == range_id)
-            .and_then(|range| range.transparency.clone())
-    }
-
-    fn range_event_type(ranges: &[DateRange], range_id: &str) -> Option<String> {
-        ranges
-            .iter()
-            .find(|range| range.id == range_id)
-            .and_then(|range| range.event_type.clone())
-    }
-
     pub fn find_conflicts(&self, ranges: &[DateRange], date: &str) -> Vec<Conflict> {
+        let ranges_by_id: HashMap<String, &DateRange> = ranges
+            .iter()
+            .map(|range| (range.id.clone(), range))
+            .collect();
+
         let mut slots: Vec<ConflictSlot> = self
             .get_timed_entries_for_day(ranges, date)
             .into_iter()
             .filter(|e| e.slot.end_time.is_some() && e.end_minutes > e.start_minutes)
             .map(|e| {
-                let transparency = Self::range_transparency(ranges, &e.slot.range_id);
-                let event_type = Self::range_event_type(ranges, &e.slot.range_id);
+                let range = ranges_by_id.get(&e.slot.range_id);
                 ConflictSlot {
                     range_id: e.slot.range_id,
                     label: e.slot.label,
                     start_minutes: e.start_minutes,
                     end_minutes: e.end_minutes,
                     all_day: None,
-                    transparency,
-                    event_type,
+                    transparency: range.and_then(|r| r.transparency.clone()),
+                    event_type: range.and_then(|r| r.event_type.clone()),
                 }
             })
             .collect();

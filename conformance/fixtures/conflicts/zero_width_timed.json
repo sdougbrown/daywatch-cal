@@ -1,0 +1,26 @@
+{
+  "description": "A zero-width timed range (startTime equal to endTime) occupies no time and never conflicts, even when another busy range occupies the same window. Regression for zero-width slots being reported as conflicts.",
+  "userTimezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "zero",
+      "label": "Zero-width",
+      "dates": ["2026-04-02"],
+      "startTime": "10:00",
+      "endTime": "10:00"
+    },
+    {
+      "id": "busy",
+      "label": "Busy",
+      "dates": ["2026-04-02"],
+      "startTime": "09:00",
+      "endTime": "11:00"
+    }
+  ],
+  "findConflicts": [
+    {
+      "date": "2026-04-02",
+      "expected": []
+    }
+  ]
+}

@@ -17,6 +17,8 @@ pub(crate) struct TimedEntry {
     pub slot: TimeSlot,
     pub start_minutes: u32,
     pub end_minutes: u32,
+    pub all_day: bool,
+    pub range_index: usize,
 }
 
 struct CompiledRange {
@@ -42,6 +44,21 @@ struct RawSpan {
 }
 
 // ── Free helpers ────────────────────────────────────────────────────────────
+
+/// Free/busy predicate for a DateRange. A range is free when its
+/// transparency is Transparent, or — when transparency is undeclared —
+/// when the legacy `metadata.transparent` flag is set (back-compat).
+/// Free ranges never occupy time: occupancy computation skips them and
+/// they never conflict.
+fn is_free_range(range: &DateRange) -> bool {
+    let legacy_free = matches!(
+        &range.metadata,
+        Some(serde_json::Value::Object(map))
+            if map.get("transparent") == Some(&serde_json::Value::Bool(true))
+    );
+    matches!(range.transparency, Some(Transparency::Transparent))
+        || (range.transparency.is_none() && legacy_free)
+}
 
 fn compile_range(range: &DateRange) -> CompiledRange {
     let mut weekday_mask = [false; 7];
@@ -512,6 +529,7 @@ impl RangeEvaluator {
                         label: range.label.clone(),
                         all_day: false,
                         display_type: range.display_type.clone(),
+                        transparency: range.transparency,
                     });
                 }
             } else {
@@ -524,6 +542,7 @@ impl RangeEvaluator {
                     label: range.label.clone(),
                     all_day: true,
                     display_type: range.display_type.clone(),
+                    transparency: range.transparency,
                 });
             }
         }
@@ -729,21 +748,32 @@ impl RangeEvaluator {
     }
 
     pub fn find_conflicts(&self, ranges: &[DateRange], date: &str) -> Vec<Conflict> {
-        let entries = self.get_timed_entries_for_day(ranges, date);
-
-        let slots: Vec<ConflictSlot> = entries
+        let mut slots: Vec<ConflictSlot> = self
+            .get_timed_entries_for_day(ranges, date)
             .into_iter()
-            .filter(|e| e.slot.end_time.is_some() && e.end_minutes > e.start_minutes)
-            .map(|e| ConflictSlot {
-                range_id: e.slot.range_id,
-                label: e.slot.label,
-                start_minutes: e.start_minutes,
-                end_minutes: e.end_minutes,
+            .filter(|e| e.end_minutes > e.start_minutes)
+            .map(|e| {
+                let range = &ranges[e.range_index];
+                ConflictSlot {
+                    range_index: e.range_index,
+                    range_id: e.slot.range_id,
+                    label: e.slot.label,
+                    start_minutes: e.start_minutes,
+                    end_minutes: e.end_minutes,
+                    all_day: if e.all_day { Some(true) } else { None },
+                    event_type: range.event_type.clone(),
+                }
             })
             .collect();
 
+        slots.sort_by(|a, b| {
+            a.start_minutes
+                .cmp(&b.start_minutes)
+                .then(a.end_minutes.cmp(&b.end_minutes))
+        });
+
         let mut conflicts: Vec<Conflict> = Vec::new();
-        let mut seen: HashSet<(String, String)> = HashSet::new();
+        let mut seen: HashSet<(usize, usize)> = HashSet::new();
 
         for i in 0..slots.len() {
             for j in (i + 1)..slots.len() {
@@ -751,14 +781,14 @@ impl RangeEvaluator {
                     break;
                 }
 
-                if slots[i].range_id == slots[j].range_id {
+                if slots[i].range_index == slots[j].range_index {
                     continue;
                 }
 
-                let pair_key = if slots[i].range_id < slots[j].range_id {
-                    (slots[i].range_id.clone(), slots[j].range_id.clone())
+                let pair_key = if slots[i].range_index < slots[j].range_index {
+                    (slots[i].range_index, slots[j].range_index)
                 } else {
-                    (slots[j].range_id.clone(), slots[i].range_id.clone())
+                    (slots[j].range_index, slots[i].range_index)
                 };
 
                 if seen.contains(&pair_key) {
@@ -773,10 +803,14 @@ impl RangeEvaluator {
                     range_a: RangeRef {
                         id: slots[i].range_id.clone(),
                         label: slots[i].label.clone(),
+                        all_day: slots[i].all_day,
+                        event_type: slots[i].event_type.clone(),
                     },
                     range_b: RangeRef {
                         id: slots[j].range_id.clone(),
                         label: slots[j].label.clone(),
+                        all_day: slots[j].all_day,
+                        event_type: slots[j].event_type.clone(),
                     },
                     date: date.to_string(),
                     overlap_start: Some(minutes_to_time(overlap_start)),
@@ -822,9 +856,8 @@ impl RangeEvaluator {
             None => return vec![],
         };
 
-        let entries = self.get_timed_entries_for_day(ranges, date);
-
-        let mut occupied: Vec<(u32, u32)> = entries
+        let mut occupied: Vec<(u32, u32)> = self
+            .get_timed_entries_for_day(ranges, date)
             .into_iter()
             .filter(|e| e.end_minutes > e.start_minutes)
             .map(|e| (e.start_minutes, e.end_minutes))
@@ -916,12 +949,31 @@ impl RangeEvaluator {
     ) -> Vec<TimedEntry> {
         let mut entries: Vec<TimedEntry> = Vec::new();
 
-        for range in ranges {
+        for (range_index, range) in ranges.iter().enumerate() {
             if !self.is_date_in_range(date, range) {
+                continue;
+            }
+            // Free ranges never occupy time.
+            if is_free_range(range) {
                 continue;
             }
             let compiled = compile_range(range);
             if !compiled.has_time_fields {
+                // Busy all-day range: occupies the full day (00:00–24:00).
+                entries.push(TimedEntry {
+                    slot: TimeSlot {
+                        start_time: "00:00".to_string(),
+                        end_time: Some("24:00".to_string()),
+                        end_date: None,
+                        duration: Some(1440),
+                        range_id: range.id.clone(),
+                        label: range.label.clone(),
+                    },
+                    start_minutes: 0,
+                    end_minutes: 1440, // full day
+                    all_day: true,
+                    range_index,
+                });
                 continue;
             }
 
@@ -947,6 +999,8 @@ impl RangeEvaluator {
                     slot,
                     start_minutes,
                     end_minutes,
+                    all_day: false,
+                    range_index,
                 });
             }
         }
@@ -1222,10 +1276,13 @@ impl RangeEvaluator {
 // ── Internal type for conflict sweep ────────────────────────────────────────
 
 struct ConflictSlot {
+    range_index: usize,
     range_id: String,
     label: String,
     start_minutes: u32,
     end_minutes: u32,
+    all_day: Option<bool>,
+    event_type: Option<String>,
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -1249,6 +1306,8 @@ mod tests {
             time_selector,
             timezone: None,
             flexibility: None,
+            transparency: None,
+            event_type: None,
             metadata: None,
         }
     }
@@ -2031,7 +2090,7 @@ mod tests {
     }
 
     #[test]
-    fn test_timed_entries_skip_all_day() {
+    fn test_timed_entries_busy_all_day() {
         let ev = evaluator();
         let range = make_range(
             "1",
@@ -2044,7 +2103,28 @@ mod tests {
             None, // no time selector => all-day
         );
         let entries = ev.get_timed_entries_for_day(&[range], "2026-03-02");
-        assert!(entries.is_empty());
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].start_minutes, 0);
+        assert_eq!(entries[0].end_minutes, 1440);
+        assert!(entries[0].all_day);
+    }
+
+    #[test]
+    fn test_timed_entries_skip_transparent_all_day() {
+        let ev = evaluator();
+        let fyi = make_transparent(make_range(
+            "1",
+            "test",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None, // no time selector => all-day
+        ));
+        assert!(ev
+            .get_timed_entries_for_day(&[fyi], "2026-03-02")
+            .is_empty());
     }
 
     // ── find_conflicts ──────────────────────────────────────────────────
@@ -2180,6 +2260,287 @@ mod tests {
         );
         let conflicts = ev.find_conflicts(&[range1, range2], "2026-03-02");
         assert!(conflicts.is_empty());
+    }
+
+    fn make_transparent(mut range: DateRange) -> DateRange {
+        range.transparency = Some(Transparency::Transparent);
+        range
+    }
+
+    #[test]
+    fn test_conflicts_busy_all_day_vs_timed() {
+        let ev = evaluator();
+        let all_day = make_range(
+            "1",
+            "OOO",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        let timed = make_range(
+            "2",
+            "Standup",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("09:30".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+
+        let conflicts = ev.find_conflicts(&[all_day, timed], "2026-03-02");
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].overlap_start, Some("09:00".to_string()));
+        assert_eq!(conflicts[0].overlap_end, Some("09:30".to_string()));
+        assert_eq!(conflicts[0].range_a.all_day, Some(true));
+        assert_eq!(conflicts[0].range_b.all_day, None);
+    }
+
+    #[test]
+    fn test_conflicts_transparent_all_day_never_conflicts() {
+        let ev = evaluator();
+        let vacation = make_transparent(make_range(
+            "1",
+            "Vacation",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        ));
+        let timed = make_range(
+            "2",
+            "Standup",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("09:30".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+        let busy_all_day = make_range(
+            "3",
+            "Offsite",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+
+        assert!(ev
+            .find_conflicts(&[vacation.clone(), timed], "2026-03-02")
+            .is_empty());
+        assert!(ev
+            .find_conflicts(&[vacation, busy_all_day], "2026-03-02")
+            .is_empty());
+    }
+
+    #[test]
+    fn test_conflicts_busy_all_day_vs_all_day() {
+        let ev = evaluator();
+        let mut offsite = make_range(
+            "1",
+            "Offsite",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        offsite.transparency = Some(Transparency::Opaque);
+        let handoff = make_range(
+            "2",
+            "Handoff",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+
+        let conflicts = ev.find_conflicts(&[offsite, handoff], "2026-03-02");
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].overlap_start, Some("00:00".to_string()));
+        assert_eq!(conflicts[0].overlap_end, Some("24:00".to_string()));
+        assert_eq!(conflicts[0].range_a.all_day, Some(true));
+        assert_eq!(conflicts[0].range_b.all_day, Some(true));
+    }
+
+    #[test]
+    fn test_conflicts_event_type_carried_on_participants() {
+        let ev = evaluator();
+        let mut ooo = make_range(
+            "1",
+            "OOO",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        ooo.event_type = Some("outOfOffice".to_string());
+        let timed = make_range(
+            "2",
+            "On-call",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("17:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+
+        let conflicts = ev.find_conflicts(&[ooo, timed], "2026-03-02");
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(
+            conflicts[0].range_a.event_type,
+            Some("outOfOffice".to_string())
+        );
+        assert_eq!(conflicts[0].range_b.event_type, None);
+    }
+
+    #[test]
+    fn test_conflicts_duplicate_ids_do_not_merge() {
+        let ev = evaluator();
+        let mut range1 = make_range(
+            "dup",
+            "A",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("10:30".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+        range1.event_type = Some("a".to_string());
+        let mut range2 = make_range(
+            "dup",
+            "B",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "10:00".to_string(),
+                end_time: Some("11:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+        range2.event_type = Some("b".to_string());
+
+        let conflicts = ev.find_conflicts(&[range1, range2], "2026-03-02");
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].range_a.event_type, Some("a".to_string()));
+        assert_eq!(conflicts[0].range_b.event_type, Some("b".to_string()));
+        assert_eq!(conflicts[0].overlap_start, Some("10:00".to_string()));
+        assert_eq!(conflicts[0].overlap_end, Some("10:30".to_string()));
+    }
+
+    #[test]
+    fn test_timed_entries_skip_transparent() {
+        let ev = evaluator();
+        let fyi = make_transparent(make_range(
+            "1",
+            "FYI",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("10:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        ));
+
+        assert!(ev
+            .get_timed_entries_for_day(&[fyi], "2026-03-02")
+            .is_empty());
+    }
+
+    #[test]
+    fn test_timed_entries_skip_legacy_transparent_metadata() {
+        let ev = evaluator();
+        let mut range = make_range(
+            "1",
+            "FYI",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("10:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+        range.metadata = Some(serde_json::json!({ "transparent": true }));
+
+        assert!(ev
+            .get_timed_entries_for_day(&[range], "2026-03-02")
+            .is_empty());
+    }
+
+    #[test]
+    fn test_timed_entries_explicit_transparency_wins_over_legacy_metadata() {
+        let ev = evaluator();
+        let mut range = make_range(
+            "1",
+            "Hold",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("10:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+        range.transparency = Some(Transparency::Opaque);
+        range.metadata = Some(serde_json::json!({ "transparent": true }));
+
+        assert_eq!(
+            ev.get_timed_entries_for_day(&[range], "2026-03-02").len(),
+            1
+        );
     }
 
     // ── find_conflicts_in_window ────────────────────────────────────────
@@ -2384,6 +2745,62 @@ mod tests {
         assert!(after.is_some());
     }
 
+    #[test]
+    fn test_free_slots_busy_all_day_occupies_full_day() {
+        let ev = evaluator();
+        let range = make_range(
+            "1",
+            "holiday",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        let free = ev.find_free_slots(&[range], "2026-03-02", FindFreeSlotsOptions::default());
+        assert!(free.is_empty());
+    }
+
+    #[test]
+    fn test_free_slots_transparent_all_day_leaves_day_free() {
+        let ev = evaluator();
+        let mut range = make_range(
+            "1",
+            "fyi",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        range.transparency = Some(Transparency::Transparent);
+        let free = ev.find_free_slots(&[range], "2026-03-02", FindFreeSlotsOptions::default());
+        assert_eq!(free.len(), 1);
+        assert_eq!(free[0].start_time, "00:00");
+        assert_eq!(free[0].end_time, "24:00");
+    }
+
+    #[test]
+    fn test_free_slots_busy_all_day_outside_date_leaves_day_free() {
+        let ev = evaluator();
+        let range = make_range(
+            "1",
+            "holiday",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-03")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        let free = ev.find_free_slots(&[range], "2026-03-02", FindFreeSlotsOptions::default());
+        assert_eq!(free.len(), 1);
+        assert_eq!(free[0].start_time, "00:00");
+        assert_eq!(free[0].end_time, "24:00");
+    }
+
     // ── find_next_free_slot ─────────────────────────────────────────────
 
     #[test]
@@ -2410,7 +2827,7 @@ mod tests {
         assert!(slot.is_some());
         let s = slot.unwrap();
         // Should find a free slot on 2026-03-01 (no busy range) or early on 2026-03-02
-        assert!(s.date <= "2026-03-02".to_string());
+        assert!(s.date.as_str() <= "2026-03-02");
         assert!(s.duration >= 60);
     }
 
@@ -2642,5 +3059,83 @@ mod tests {
         let ev = RangeEvaluator::new(Some("America/New_York")).unwrap();
         let result = ev.resolve_time("2026-07-01", "14:00", Some("UTC"));
         assert_eq!(result, Some("10:00".to_string()));
+    }
+
+    // ── expand transparency ─────────────────────────────────────────────
+
+    #[test]
+    fn test_expand_carries_transparency_onto_occurrences() {
+        let ev = evaluator();
+        let mut range = make_range(
+            "1",
+            "test",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("10:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+        range.transparency = Some(Transparency::Transparent);
+
+        let from = parse_date("2026-03-02").unwrap();
+        let to = parse_date("2026-03-02").unwrap();
+        let occurrences = ev.expand(&range, from, to);
+        assert_eq!(occurrences.len(), 1);
+        assert_eq!(occurrences[0].transparency, Some(Transparency::Transparent));
+    }
+
+    #[test]
+    fn test_expand_omits_transparency_when_absent() {
+        let ev = evaluator();
+        let range = make_range(
+            "1",
+            "test",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            Some(TimeSelector::Window {
+                start_time: "09:00".to_string(),
+                end_time: Some("10:00".to_string()),
+                repeat_every: None,
+                duration: None,
+            }),
+        );
+
+        let from = parse_date("2026-03-02").unwrap();
+        let to = parse_date("2026-03-02").unwrap();
+        let occurrences = ev.expand(&range, from, to);
+        assert_eq!(occurrences.len(), 1);
+        assert_eq!(occurrences[0].transparency, None);
+    }
+
+    #[test]
+    fn test_expand_carries_transparency_onto_all_day_occurrences() {
+        let ev = evaluator();
+        let mut range = make_range(
+            "1",
+            "test",
+            DaySelector::Explicit {
+                dates: vec![day("2026-03-02")],
+                except_dates: None,
+                except_between: None,
+            },
+            None,
+        );
+        range.transparency = Some(Transparency::Transparent);
+
+        let from = parse_date("2026-03-02").unwrap();
+        let to = parse_date("2026-03-02").unwrap();
+        let occurrences = ev.expand(&range, from, to);
+        assert_eq!(occurrences.len(), 1);
+        assert!(occurrences[0].all_day);
+        assert_eq!(occurrences[0].transparency, Some(Transparency::Transparent));
     }
 }

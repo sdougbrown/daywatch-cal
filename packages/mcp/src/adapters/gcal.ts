@@ -41,11 +41,15 @@ function normalizeEventType(eventType: string | undefined): string | undefined {
   return eventType.toLowerCase().replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
+/**
+ * Whether an event loads as a range. Cancelled, declined, working-location
+ * and birthday events are excluded; transparent events now load too, with
+ * their transparency carried so conflict detection can treat them as free.
+ */
 export function isBlockingEvent(event: GCalEvent, options: GCalAdapterOptions = {}): boolean {
   if (event.status === 'cancelled') return false;
   const eventType = normalizeEventType(event.eventType);
   if (eventType === 'workingLocation' || eventType === 'birthday') return false;
-  if (event.transparency === 'transparent' && options.includeTransparent !== true) return false;
   const myResponseStatus = getMyResponseStatus(event);
   if (myResponseStatus === 'declined') return false;
   if (myResponseStatus === 'tentative' && options.includeTentative === false) return false;
@@ -93,6 +97,12 @@ export function gcalEventToDateRange(
   if (event.htmlLink) metadata.htmlLink = event.htmlLink;
 
   const label = event.summary ?? options.fallbackLabel ?? '(busy)';
+  const transparency =
+    event.transparency === 'transparent'
+      ? ('transparent' as const)
+      : event.transparency === 'opaque'
+        ? ('opaque' as const)
+        : undefined;
   const isAllDay = event.allDay || (event.start.date != null && event.start.dateTime == null);
 
   if (isAllDay) {
@@ -103,6 +113,8 @@ export function gcalEventToDateRange(
       label,
       fromDate,
       toDate: endDate ? subtractOneDay(endDate) : fromDate,
+      ...(transparency !== undefined ? { transparency } : {}),
+      ...(eventType !== undefined ? { eventType } : {}),
       metadata,
     };
   }
@@ -143,6 +155,8 @@ export function gcalEventToDateRange(
     endTime: endFields.time,
     duration: hasDuration ? Math.round((endMs - startMs) / 60000) : undefined,
     timezone: timeZone,
+    ...(transparency !== undefined ? { transparency } : {}),
+    ...(eventType !== undefined ? { eventType } : {}),
     metadata,
   };
 }

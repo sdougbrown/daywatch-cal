@@ -1,4 +1,4 @@
-import type { DateRange, ScheduleScore, TimeSlot } from './types.js';
+import type { DateRange, ScheduleScore, TimeSlot, TimedEntry } from './types.js';
 import { RangeEvaluator } from './evaluator.js';
 import { formatDate, dateRange, timeToMinutes } from './time.js';
 
@@ -108,11 +108,7 @@ export function scoreSchedule(
  * Returns sorted array of [start, end] minute pairs.
  */
 function mergeIntervals(
-  timedEntries: Array<{
-    slot: TimeSlot;
-    startMinutes: number;
-    endMinutes: number;
-  }>,
+  timedEntries: TimedEntry[],
   dayStartMin: number,
   dayEndMin: number,
 ): [number, number][] {

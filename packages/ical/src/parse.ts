@@ -355,6 +355,7 @@ function buildDateRange(component: Component, window: ParseWindow): DateRange | 
   const transp = component.getFirstPropertyValue('transp');
   if (typeof transp === 'string' && transp.toUpperCase() === 'TRANSPARENT') {
     metadata.transparent = true;
+    baseRange.transparency = 'transparent';
   }
 
   const status = component.getFirstPropertyValue('status');

@@ -63,6 +63,17 @@ pub enum TimeSelector {
     },
 }
 
+/// Free/busy signal carried on ranges and occurrences. `Transparent` means
+/// free — an FYI/backdrop that does not occupy time; `Opaque` means busy.
+/// Absent defaults to busy. Mirrors Google Calendar's transparency field.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Transparency {
+    #[serde(rename = "transparent")]
+    Transparent,
+    #[serde(rename = "opaque")]
+    Opaque,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DateRange {
     pub id: String,
@@ -82,6 +93,10 @@ pub struct DateRange {
     pub timezone: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flexibility: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transparency: Option<Transparency>,
+    #[serde(rename = "eventType", skip_serializing_if = "Option::is_none")]
+    pub event_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
 }
@@ -314,6 +329,16 @@ impl<'de> Deserialize<'de> for DateRange {
             .and_then(non_null)
             .map(|v| serde_json::from_value(v).map_err(Error::custom))
             .transpose()?;
+        let transparency: Option<Transparency> = map
+            .get("transparency")
+            .and_then(non_null)
+            .map(|v| serde_json::from_value(v).map_err(Error::custom))
+            .transpose()?;
+        let event_type: Option<String> = map
+            .get("eventType")
+            .and_then(non_null)
+            .map(|v| serde_json::from_value(v).map_err(Error::custom))
+            .transpose()?;
         let metadata: Option<serde_json::Value> = map.get("metadata").and_then(non_null);
 
         Ok(DateRange {
@@ -325,6 +350,8 @@ impl<'de> Deserialize<'de> for DateRange {
             time_selector,
             timezone,
             flexibility,
+            transparency,
+            event_type,
             metadata,
         })
     }
@@ -342,6 +369,8 @@ pub struct Occurrence {
     pub label: String,
     pub all_day: bool,
     pub display_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transparency: Option<Transparency>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -366,9 +395,14 @@ pub struct FreeSlot {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RangeRef {
     pub id: String,
     pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub all_day: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_type: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -440,6 +474,8 @@ mod tests {
             time_selector: None,
             timezone: None,
             flexibility: None,
+            transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -467,6 +503,8 @@ mod tests {
             time_selector: None,
             timezone: None,
             flexibility: None,
+            transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -491,6 +529,8 @@ mod tests {
             time_selector: None,
             timezone: None,
             flexibility: None,
+            transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -515,6 +555,8 @@ mod tests {
             time_selector: None,
             timezone: None,
             flexibility: None,
+            transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -540,6 +582,8 @@ mod tests {
             }),
             timezone: None,
             flexibility: None,
+            transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -567,6 +611,8 @@ mod tests {
             }),
             timezone: None,
             flexibility: None,
+            transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -599,6 +645,8 @@ mod tests {
             }),
             timezone: None,
             flexibility: None,
+            transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -621,6 +669,8 @@ mod tests {
             time_selector: None,
             timezone: Some("America/New_York".to_string()),
             flexibility: None,
+            transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -643,6 +693,8 @@ mod tests {
             time_selector: None,
             timezone: None,
             flexibility: None,
+            transparency: None,
+            event_type: None,
             metadata: None,
         };
         let json = serde_json::to_string(&dr).unwrap();
@@ -873,6 +925,27 @@ mod tests {
         assert_eq!(json["endTime"], "09:30");
         assert_eq!(json["rangeId"], "r1");
         assert!(json.get("start_time").is_none());
+
+        let range_ref = RangeRef {
+            id: "r1".to_string(),
+            label: "Focus".to_string(),
+            all_day: Some(true),
+            event_type: Some("outOfOffice".to_string()),
+        };
+        let json = serde_json::to_value(range_ref).unwrap();
+        assert_eq!(json["allDay"], true);
+        assert_eq!(json["eventType"], "outOfOffice");
+        assert!(json.get("all_day").is_none());
+        assert!(json.get("event_type").is_none());
+        let round_tripped: RangeRef = serde_json::from_value(serde_json::json!({
+            "id": "r1",
+            "label": "Focus",
+            "allDay": true,
+            "eventType": "outOfOffice",
+        }))
+        .unwrap();
+        assert_eq!(round_tripped.all_day, Some(true));
+        assert_eq!(round_tripped.event_type.as_deref(), Some("outOfOffice"));
     }
 
     #[test]
@@ -881,5 +954,53 @@ mod tests {
             r#"{"id": "1", "label": "test", "dates": ["2026-03-21"], "displayType": "chip"}"#;
         let dr: DateRange = serde_json::from_str(json).unwrap();
         assert_eq!(dr.display_type.as_deref(), Some("chip"));
+    }
+
+    #[test]
+    fn date_range_event_type_roundtrips_as_camel_case() {
+        let dr = DateRange {
+            id: "10".to_string(),
+            label: "Test EventType".to_string(),
+            title: None,
+            display_type: None,
+            day_selector: DaySelector::Explicit {
+                dates: vec!["2026-03-21".to_string()],
+                except_dates: None,
+                except_between: None,
+            },
+            time_selector: None,
+            timezone: None,
+            flexibility: None,
+            transparency: Some(Transparency::Transparent),
+            event_type: Some("outOfOffice".to_string()),
+            metadata: None,
+        };
+        let json = serde_json::to_string(&dr).unwrap();
+        assert!(json.contains("\"eventType\""));
+        assert!(!json.contains("\"event_type\""));
+        let dr2: DateRange = serde_json::from_str(&json).unwrap();
+        assert_eq!(dr2.event_type.as_deref(), Some("outOfOffice"));
+        assert_eq!(dr2.transparency, Some(Transparency::Transparent));
+    }
+
+    #[test]
+    fn deser_transparency_maps_valid_strings_to_variants() {
+        let transparent: DateRange = serde_json::from_str(
+            r#"{"id": "1", "label": "t", "dates": ["2026-03-21"], "transparency": "transparent"}"#,
+        )
+        .unwrap();
+        assert_eq!(transparent.transparency, Some(Transparency::Transparent));
+
+        let opaque: DateRange = serde_json::from_str(
+            r#"{"id": "2", "label": "o", "dates": ["2026-03-21"], "transparency": "opaque"}"#,
+        )
+        .unwrap();
+        assert_eq!(opaque.transparency, Some(Transparency::Opaque));
+    }
+
+    #[test]
+    fn deser_transparency_rejects_unknown_strings() {
+        let json = r#"{"id": "1", "label": "t", "dates": ["2026-03-21"], "transparency": "free"}"#;
+        assert!(serde_json::from_str::<DateRange>(json).is_err());
     }
 }

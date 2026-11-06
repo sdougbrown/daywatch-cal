@@ -59,7 +59,7 @@ describe('findConflicts', () => {
     });
   });
 
-  it('two all-day ranges on same day → no conflict', () => {
+  it('two busy all-day ranges on same day → one full-day conflict', () => {
     const rangeA = makeRange({
       id: 'a',
       label: 'Holiday',
@@ -67,18 +67,29 @@ describe('findConflicts', () => {
     });
     const rangeB = makeRange({
       id: 'b',
-      label: 'Birthday',
+      label: 'Offsite',
       dates: ['2026-03-23'],
+      transparency: 'opaque',
     });
 
     const conflicts = evaluator.findConflicts([rangeA, rangeB], '2026-03-23');
-    expect(conflicts).toHaveLength(0);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toEqual({
+      rangeA: { id: 'a', label: 'Holiday', allDay: true },
+      rangeB: { id: 'b', label: 'Offsite', allDay: true },
+      date: '2026-03-23',
+      overlapStart: '00:00',
+      overlapEnd: '24:00',
+    });
+    // Participants never carry transparency, even when the source range
+    // declared 'opaque' — transparent ranges are filtered before detection.
+    expect('transparency' in conflicts[0].rangeB).toBe(false);
   });
 
-  it('all-day + timed range → no conflict', () => {
+  it('all-day + timed range → conflict with the timed window as the overlap', () => {
     const allDay = makeRange({
       id: 'a',
-      label: 'Holiday',
+      label: 'Offsite',
       dates: ['2026-03-23'],
     });
     const timed = makeRange({
@@ -90,7 +101,213 @@ describe('findConflicts', () => {
     });
 
     const conflicts = evaluator.findConflicts([allDay, timed], '2026-03-23');
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toEqual({
+      rangeA: { id: 'a', label: 'Offsite', allDay: true },
+      rangeB: { id: 'b', label: 'Standup' },
+      date: '2026-03-23',
+      overlapStart: '09:00',
+      overlapEnd: '09:30',
+    });
+  });
+
+  it('transparent all-day range → never conflicts (with timed or all-day)', () => {
+    const vacation = makeRange({
+      id: 'a',
+      label: 'Vacation',
+      dates: ['2026-03-23'],
+      transparency: 'transparent',
+    });
+    const timed = makeRange({
+      id: 'b',
+      label: 'Standup',
+      dates: ['2026-03-23'],
+      startTime: '09:00',
+      endTime: '09:30',
+    });
+    const offsite = makeRange({
+      id: 'c',
+      label: 'Offsite',
+      dates: ['2026-03-23'],
+    });
+
+    expect(evaluator.findConflicts([vacation, timed], '2026-03-23')).toHaveLength(0);
+    expect(evaluator.findConflicts([vacation, offsite], '2026-03-23')).toHaveLength(0);
+  });
+
+  it('conflict participants carry eventType from the range field', () => {
+    const ooo = makeRange({
+      id: 'a',
+      label: 'Byron OOO',
+      dates: ['2026-03-23'],
+      eventType: 'outOfOffice',
+    });
+    const shift = makeRange({
+      id: 'b',
+      label: 'On-call',
+      dates: ['2026-03-23'],
+      startTime: '09:00',
+      endTime: '17:00',
+    });
+
+    const conflicts = evaluator.findConflicts([ooo, shift], '2026-03-23');
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].rangeA).toEqual({
+      id: 'a',
+      label: 'Byron OOO',
+      allDay: true,
+      eventType: 'outOfOffice',
+    });
+    expect(conflicts[0].rangeB).toEqual({ id: 'b', label: 'On-call' });
+  });
+
+  it('a range with no eventType produces participants without the eventType key', () => {
+    const a = makeRange({
+      id: 'a',
+      label: 'A',
+      dates: ['2026-03-23'],
+      startTime: '09:00',
+      endTime: '10:00',
+    });
+    const b = makeRange({
+      id: 'b',
+      label: 'B',
+      dates: ['2026-03-23'],
+      startTime: '09:30',
+      endTime: '10:30',
+    });
+
+    const conflicts = evaluator.findConflicts([a, b], '2026-03-23');
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].rangeA).not.toHaveProperty('eventType');
+    expect(conflicts[0].rangeB).not.toHaveProperty('eventType');
+  });
+
+  it('multi-day busy all-day span conflicts on each day it covers', () => {
+    const ooo = makeRange({
+      id: 'a',
+      label: 'OOO',
+      fromDate: '2026-03-23',
+      toDate: '2026-03-25',
+    });
+    const meeting = makeRange({
+      id: 'b',
+      label: 'Meeting',
+      dates: ['2026-03-24'],
+      startTime: '10:00',
+      endTime: '11:00',
+    });
+
+    expect(evaluator.findConflicts([ooo, meeting], '2026-03-23')).toHaveLength(0);
+    expect(evaluator.findConflicts([ooo, meeting], '2026-03-24')).toHaveLength(1);
+    expect(evaluator.findConflicts([ooo, meeting], '2026-03-25')).toHaveLength(0);
+  });
+
+  it('transparent timed range → never occupies time or conflicts', () => {
+    const fyi = makeRange({
+      id: 'a',
+      label: 'FYI hold',
+      dates: ['2026-03-23'],
+      startTime: '09:00',
+      endTime: '10:00',
+      transparency: 'transparent',
+    });
+    const meeting = makeRange({
+      id: 'b',
+      label: 'Meeting',
+      dates: ['2026-03-23'],
+      startTime: '09:30',
+      endTime: '10:30',
+    });
+
+    const conflicts = evaluator.findConflicts([fyi, meeting], '2026-03-23');
     expect(conflicts).toHaveLength(0);
+    // The transparent hold must not occupy free-slot time either.
+    const freeSlots = evaluator.findFreeSlots([fyi], '2026-03-23', {
+      dayStart: '09:00',
+      dayEnd: '10:00',
+    });
+    expect(freeSlots).toHaveLength(1);
+  });
+
+  it('a range with only legacy metadata.transparent never occupies time or conflicts', () => {
+    const fyi = makeRange({
+      id: 'a',
+      label: 'FYI hold',
+      dates: ['2026-03-23'],
+      startTime: '09:00',
+      endTime: '10:00',
+      metadata: { transparent: true },
+    });
+    const meeting = makeRange({
+      id: 'b',
+      label: 'Meeting',
+      dates: ['2026-03-23'],
+      startTime: '09:30',
+      endTime: '10:30',
+    });
+
+    const conflicts = evaluator.findConflicts([fyi, meeting], '2026-03-23');
+    expect(conflicts).toHaveLength(0);
+    // The legacy-free hold must not occupy free-slot time either.
+    const freeSlots = evaluator.findFreeSlots([fyi], '2026-03-23', {
+      dayStart: '09:00',
+      dayEnd: '10:00',
+    });
+    expect(freeSlots).toHaveLength(1);
+  });
+
+  it('an explicit opaque transparency wins over legacy metadata.transparent', () => {
+    const hold = makeRange({
+      id: 'a',
+      label: 'Hold',
+      dates: ['2026-03-23'],
+      startTime: '09:00',
+      endTime: '10:00',
+      transparency: 'opaque',
+      metadata: { transparent: true },
+    });
+    const meeting = makeRange({
+      id: 'b',
+      label: 'Meeting',
+      dates: ['2026-03-23'],
+      startTime: '09:30',
+      endTime: '10:30',
+    });
+
+    // The explicit opaque flag wins: the hold occupies and conflicts.
+    const conflicts = evaluator.findConflicts([hold, meeting], '2026-03-23');
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].rangeA).toEqual({
+      id: 'a',
+      label: 'Hold',
+    });
+  });
+
+  it('two ranges with the same id overlap → a conflict is reported with each participant carrying its own metadata', () => {
+    const rangeA = makeRange({
+      id: 'dup',
+      label: 'A',
+      dates: ['2026-03-23'],
+      startTime: '09:00',
+      endTime: '10:30',
+      eventType: 'a',
+    });
+    const rangeB = makeRange({
+      id: 'dup',
+      label: 'B',
+      dates: ['2026-03-23'],
+      startTime: '10:00',
+      endTime: '11:00',
+      eventType: 'b',
+    });
+
+    const conflicts = evaluator.findConflicts([rangeA, rangeB], '2026-03-23');
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].rangeA).toEqual({ id: 'dup', label: 'A', eventType: 'a' });
+    expect(conflicts[0].rangeB).toEqual({ id: 'dup', label: 'B', eventType: 'b' });
+    expect(conflicts[0].overlapStart).toBe('10:00');
+    expect(conflicts[0].overlapEnd).toBe('10:30');
   });
 
   it('three-way overlap → three conflicts (A-B, A-C, B-C)', () => {

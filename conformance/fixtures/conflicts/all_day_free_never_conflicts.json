@@ -1,0 +1,45 @@
+{
+  "description": "A free (transparent) all-day span never occupies time: it takes part in no conflict, while busy all-day and timed spans on the same day still conflict with each other.",
+  "userTimezone": "America/New_York",
+  "ranges": [
+    {
+      "id": "vacation",
+      "label": "Vacation backdrop",
+      "dates": ["2026-04-02"],
+      "transparency": "transparent"
+    },
+    {
+      "id": "offsite",
+      "label": "Mandatory offsite",
+      "dates": ["2026-04-02"]
+    },
+    {
+      "id": "standup",
+      "label": "Standup",
+      "dates": ["2026-04-02"],
+      "startTime": "09:00",
+      "endTime": "09:30"
+    }
+  ],
+  "findConflicts": [
+    {
+      "date": "2026-04-02",
+      "expected": [
+        {
+          "rangeA": {
+            "id": "offsite",
+            "label": "Mandatory offsite",
+            "allDay": true
+          },
+          "rangeB": {
+            "id": "standup",
+            "label": "Standup"
+          },
+          "date": "2026-04-02",
+          "overlapStart": "09:00",
+          "overlapEnd": "09:30"
+        }
+      ]
+    }
+  ]
+}

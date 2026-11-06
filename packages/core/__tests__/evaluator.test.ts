@@ -405,6 +405,30 @@ describe('RangeEvaluator', () => {
       expect(entries[0].endMinutes).toBe(1500); // 01:00 next day = 1440 + 60
       expect(entries[0].slot.endDate).toBe('2026-03-22');
     });
+
+    it('getTimedEntriesForDay emits a full-day entry for busy all-day ranges', () => {
+      const range = makeRange({
+        id: 'ooo',
+        label: 'OOO',
+        dates: ['2026-03-23'],
+      });
+      const entries = evaluator.getTimedEntriesForDay([range], '2026-03-23');
+      expect(entries).toHaveLength(1);
+      expect(entries[0].startMinutes).toBe(0);
+      expect(entries[0].endMinutes).toBe(1440);
+      expect(entries[0].allDay).toBe(true);
+      expect(entries[0].slot.rangeId).toBe('ooo');
+    });
+
+    it('getTimedEntriesForDay skips transparent all-day ranges', () => {
+      const range = makeRange({
+        id: 'fyi',
+        label: 'FYI',
+        dates: ['2026-03-23'],
+        transparency: 'transparent',
+      });
+      expect(evaluator.getTimedEntriesForDay([range], '2026-03-23')).toHaveLength(0);
+    });
   });
 
   describe('everyHour + day recurrence (AND combination)', () => {
@@ -538,6 +562,46 @@ describe('RangeEvaluator', () => {
         startTime: '09:00',
         allDay: false,
       });
+    });
+
+    it('carries range transparency onto occurrences and omits it when absent', () => {
+      const transparentRange = makeRange({
+        dates: ['2026-03-21'],
+        startTime: '09:00',
+        endTime: '10:00',
+        transparency: 'transparent',
+      });
+      const plainRange = makeRange({
+        dates: ['2026-03-21'],
+        startTime: '09:00',
+        endTime: '10:00',
+      });
+
+      const from = new Date(2026, 2, 21);
+      const to = new Date(2026, 2, 21);
+
+      const transparentOccurrences = utcEvaluator.expand(transparentRange, from, to);
+      expect(transparentOccurrences).toHaveLength(1);
+      expect(transparentOccurrences[0].transparency).toBe('transparent');
+
+      const plainOccurrences = utcEvaluator.expand(plainRange, from, to);
+      expect(plainOccurrences).toHaveLength(1);
+      expect(plainOccurrences[0]).not.toHaveProperty('transparency');
+    });
+
+    it('carries transparency onto all-day occurrences', () => {
+      const transparentRange = makeRange({
+        dates: ['2026-03-21'],
+        transparency: 'transparent',
+      });
+
+      const from = new Date(2026, 2, 21);
+      const to = new Date(2026, 2, 21);
+
+      const occurrences = utcEvaluator.expand(transparentRange, from, to);
+      expect(occurrences).toHaveLength(1);
+      expect(occurrences[0].allDay).toBe(true);
+      expect(occurrences[0].transparency).toBe('transparent');
     });
 
     it('clips to query window when range is wider', () => {

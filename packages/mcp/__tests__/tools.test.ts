@@ -233,6 +233,73 @@ describe('handleToolCall', () => {
       expect(loaded?.ranges[1]?.label).toBe('Focus Block');
     });
 
+    it('keeps transparent events and surfaces busy all-day conflicts', async () => {
+      const session = new CalendarSession('UTC');
+      const gcalEvents: GCalEvent[] = [
+        {
+          id: 'evt_vacation',
+          summary: 'Byron Vacation',
+          eventType: 'default',
+          start: { date: '2026-03-30' },
+          end: { date: '2026-03-31' },
+          allDay: true,
+          status: 'confirmed',
+          transparency: 'transparent',
+        },
+        {
+          id: 'evt_offsite',
+          summary: 'Mandatory Offsite',
+          eventType: 'outOfOffice',
+          start: { date: '2026-03-30' },
+          end: { date: '2026-03-31' },
+          allDay: true,
+          status: 'confirmed',
+          transparency: 'opaque',
+        },
+        {
+          id: 'evt_standup',
+          summary: 'Standup',
+          eventType: 'default',
+          start: { dateTime: '2026-03-30T09:00:00-04:00', timeZone: 'America/New_York' },
+          end: { dateTime: '2026-03-30T09:30:00-04:00', timeZone: 'America/New_York' },
+          allDay: false,
+          status: 'confirmed',
+        },
+      ];
+
+      const loadResult = await handleToolCall(session, 'load_calendar', {
+        source: 'gcal',
+        data: JSON.stringify(gcalEvents),
+        id: 'team',
+      });
+      expect(parseJsonContent<{ ranges_loaded: number }>(loadResult).ranges_loaded).toBe(3);
+
+      const conflictsResult = await handleToolCall(session, 'find_conflicts', {
+        from: '2026-03-30',
+        to: '2026-03-30',
+      });
+      const conflicts = parseJsonContent<{
+        conflicts: Array<{
+          rangeA: {
+            id: string;
+            allDay?: boolean;
+            eventType?: string;
+          };
+          rangeB: { id: string };
+        }>;
+        total: number;
+      }>(conflictsResult);
+
+      expect(conflicts.total).toBe(1);
+      expect(conflicts.conflicts[0].rangeA).toEqual({
+        id: 'evt_offsite',
+        label: 'Mandatory Offsite',
+        allDay: true,
+        eventType: 'outOfOffice',
+      });
+      expect(conflicts.conflicts[0].rangeB.id).toBe('evt_standup');
+    });
+
     it('rejects non-array gcal data', async () => {
       const session = new CalendarSession();
       const result = await handleToolCall(session, 'load_calendar', {
@@ -489,16 +556,19 @@ describe('handleToolCall', () => {
         ranges_loaded: number;
         calendar_id: string;
       }>(result);
-      expect(body.ranges_loaded).toBe(2);
+      expect(body.ranges_loaded).toBe(3);
       expect(body.calendar_id).toBe('bob');
 
       const loaded = session.calendars.get('bob')!;
       expect(loaded.source).toBe('msft');
-      expect(loaded.ranges).toHaveLength(2);
+      expect(loaded.ranges).toHaveLength(3);
       expect(loaded.ranges[0].label).toBe('Sprint Planning');
       expect(loaded.ranges[0].timezone).toBe('America/New_York');
-      expect(loaded.ranges[1].label).toBe('Code Review');
-      expect(loaded.ranges[1].timezone).toBe('America/Los_Angeles');
+      // workingElsewhere now loads with its busy/free signal carried.
+      expect(loaded.ranges[1].label).toBe('Working from home');
+      expect(loaded.ranges[1].transparency).toBe('transparent');
+      expect(loaded.ranges[2].label).toBe('Code Review');
+      expect(loaded.ranges[2].timezone).toBe('America/Los_Angeles');
     });
 
     it('rejects non-array msft data', async () => {
@@ -653,6 +723,86 @@ describe('handleToolCall', () => {
           all_day: false,
         },
       ]);
+    });
+
+    it('marks gcal transparent events with transparent: true in list_ranges rows', async () => {
+      const session = new CalendarSession('UTC');
+      const events: GCalEvent[] = [
+        {
+          id: 'evt_fyi',
+          summary: 'FYI Hold',
+          eventType: 'default',
+          start: { dateTime: '2026-03-30T09:00:00-04:00', timeZone: 'America/New_York' },
+          end: { dateTime: '2026-03-30T10:00:00-04:00', timeZone: 'America/New_York' },
+          allDay: false,
+          status: 'confirmed',
+          transparency: 'transparent',
+        },
+        {
+          id: 'evt_meeting',
+          summary: 'Meeting',
+          eventType: 'default',
+          start: { dateTime: '2026-03-30T11:00:00-04:00', timeZone: 'America/New_York' },
+          end: { dateTime: '2026-03-30T12:00:00-04:00', timeZone: 'America/New_York' },
+          allDay: false,
+          status: 'confirmed',
+        },
+      ];
+
+      const loadResult = await handleToolCall(session, 'load_calendar', {
+        source: 'gcal',
+        data: JSON.stringify(events),
+        id: 'team',
+      });
+      expect(parseJsonContent<{ ranges_loaded: number }>(loadResult).ranges_loaded).toBe(2);
+
+      const listResult = await handleToolCall(session, 'list_ranges', {});
+      const body = parseJsonContent<{
+        ranges: Array<{ range_id: string; transparent?: boolean }>;
+      }>(listResult);
+
+      const flags = new Map(body.ranges.map((row) => [row.range_id, row.transparent]));
+      expect(flags.get('evt_fyi')).toBe(true);
+      expect(flags.get('evt_meeting')).toBeUndefined();
+    });
+
+    it('does not mark a row transparent when explicit opaque transparency overrides legacy metadata', async () => {
+      const session = new CalendarSession('UTC');
+      const ranges: DateRange[] = [
+        {
+          id: 'contradictory',
+          label: 'Contradictory',
+          dates: ['2026-03-30'],
+          startTime: '09:00',
+          endTime: '10:00',
+          transparency: 'opaque',
+          metadata: { transparent: true },
+        },
+        {
+          id: 'legacy-free',
+          label: 'Legacy Free',
+          dates: ['2026-03-30'],
+          startTime: '11:00',
+          endTime: '12:00',
+          metadata: { transparent: true },
+        },
+      ];
+
+      const loadResult = await handleToolCall(session, 'load_calendar', {
+        source: 'ranges',
+        data: JSON.stringify(ranges),
+        id: 'team',
+      });
+      expect(parseJsonContent<{ ranges_loaded: number }>(loadResult).ranges_loaded).toBe(2);
+
+      const listResult = await handleToolCall(session, 'list_ranges', {});
+      const body = parseJsonContent<{
+        ranges: Array<{ range_id: string; transparent?: boolean }>;
+      }>(listResult);
+
+      const flags = new Map(body.ranges.map((row) => [row.range_id, row.transparent]));
+      expect(flags.get('contradictory')).toBeUndefined();
+      expect(flags.get('legacy-free')).toBe(true);
     });
 
     it('groups gcal series instances into one row by default', async () => {

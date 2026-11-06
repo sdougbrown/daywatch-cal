@@ -383,16 +383,54 @@ describe('scoreSchedule', () => {
   });
 
   describe('all-day ranges', () => {
-    it('all-day ranges do not affect time-level scoring', () => {
+    it('busy all-day range occupies the full day in scoring', () => {
       const range = makeRange({
         id: 'a',
-        label: 'Holiday',
+        label: 'OOO',
         dates: ['2026-03-23'],
         // No startTime/endTime → all-day
       });
 
       const score = scoreSchedule(evaluator, [range], day('2026-03-23'), day('2026-03-23'));
-      // All-day ranges produce no time slots, so no impact on scoring
+      // 09:00–17:00 working hours fully occupied by the all-day span
+      expect(score.freeMinutes).toBe(0);
+      expect(score.focusBlocks).toBe(0);
+      // A single all-day range has nothing to conflict with
+      expect(score.conflicts).toBe(0);
+      expect(score.conflictDays).toBe(0);
+      expect(score.avgContextSwitches).toBe(0);
+    });
+
+    it('busy all-day range conflicts with a timed range and leaves no free minutes', () => {
+      const ooo = makeRange({
+        id: 'ooo',
+        label: 'OOO',
+        dates: ['2026-03-23'],
+      });
+      const meeting = makeRange({
+        id: 'm',
+        label: 'Meeting',
+        dates: ['2026-03-23'],
+        startTime: '10:00',
+        endTime: '11:00',
+      });
+
+      const score = scoreSchedule(evaluator, [ooo, meeting], day('2026-03-23'), day('2026-03-23'));
+      expect(score.conflicts).toBe(1);
+      expect(score.conflictDays).toBe(1);
+      expect(score.freeMinutes).toBe(0);
+      expect(score.focusBlocks).toBe(0);
+    });
+
+    it('transparent all-day ranges never occupy scoring time', () => {
+      const range = makeRange({
+        id: 'fyi',
+        label: 'FYI',
+        dates: ['2026-03-23'],
+        transparency: 'transparent',
+      });
+
+      const score = scoreSchedule(evaluator, [range], day('2026-03-23'), day('2026-03-23'));
       expect(score.conflicts).toBe(0);
       expect(score.freeMinutes).toBe(480);
       expect(score.focusBlocks).toBe(1);

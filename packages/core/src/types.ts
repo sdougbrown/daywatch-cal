@@ -12,6 +12,13 @@ export type ViewFidelity = 'year' | 'month' | 'week' | 'day';
 export type DisplayType = 'auto' | 'span' | 'dot' | 'fill' | 'chip' | 'block';
 
 /**
+ * Free/busy signal carried on ranges and occurrences. 'transparent' means
+ * free — an FYI/backdrop that does not occupy time; 'opaque' means busy.
+ * Absent defaults to busy. Mirrors Google Calendar's transparency field.
+ */
+export type Transparency = 'opaque' | 'transparent';
+
+/**
  * A DateRange defines a set of dates and/or times using either explicit values
  * or recurrence patterns. This is the core data model of daywatch-cal,
  * carried forward from the original Reckoning library and extended with
@@ -75,6 +82,18 @@ export interface DateRange {
   displayType?: DisplayType;
 
   /**
+   * Free/busy signal. 'transparent' = free (does not occupy time, never
+   * conflicts); absent or 'opaque' = busy (real occupancy). Default: busy.
+   */
+  transparency?: Transparency;
+
+  /**
+   * Normalized event category from the ingestion surface, e.g. gcal
+   * eventType; used for conflict severity grading.
+   */
+  eventType?: string;
+
+  /**
    * Flexibility score (0-5). 0=locked, 1-5=increasingly flexible.
    * Neo-reckoning passes this through — agent-facing code interprets it.
    */
@@ -99,6 +118,8 @@ export interface Occurrence {
   label: string;
   allDay: boolean;
   displayType?: string;
+  /** Free/busy signal carried from the range; absent defaults to busy. */
+  transparency?: Transparency;
   /** End date in YYYY-MM-DD format, present when endTime crosses midnight */
   endDate?: string;
 }
@@ -132,6 +153,20 @@ export interface TimeSlot {
   label: string;
   /** End date in YYYY-MM-DD format, present when endTime crosses midnight */
   endDate?: string;
+}
+
+/**
+ * A timed entry for a specific day — a TimeSlot with precomputed minute
+ * offsets and the index of the source range in the input array.
+ * Produced by RangeEvaluator.getTimedEntriesForDay(); consumed by
+ * conflict/free-slot scoring. Free ('transparent') ranges are excluded.
+ */
+export interface TimedEntry {
+  slot: TimeSlot;
+  startMinutes: number;
+  endMinutes: number;
+  allDay: boolean;
+  rangeIndex: number;
 }
 
 /**
@@ -451,17 +486,35 @@ export interface ScheduleScore {
 
 /**
  * A time-level conflict between two ranges on a specific date.
- * Only timed ranges can conflict — two all-day ranges stack, they don't conflict.
+ * Timed ranges conflict when they overlap; busy all-day spans occupy the
+ * full day (00:00–24:00) and conflict with anything that day. Free
+ * ('transparent') ranges never occupy time and never conflict.
  */
 export interface Conflict {
   /** First conflicting range */
-  rangeA: { id: string; label: string };
+  rangeA: ConflictRangeRef;
   /** Second conflicting range */
-  rangeB: { id: string; label: string };
+  rangeB: ConflictRangeRef;
   /** Date of the conflict (YYYY-MM-DD) */
   date: string;
-  /** Start of the overlap window (HH:mm), null for all-day */
+  /** Start of the overlap window (HH:mm); the full day starts at 00:00 */
   overlapStart: string | null;
-  /** End of the overlap window (HH:mm), null for all-day */
+  /** End of the overlap window (HH:mm), exclusive; the full day ends at 24:00 */
   overlapEnd: string | null;
+}
+
+/**
+ * One participant of a Conflict. Participants are always busy — transparent
+ * ranges are filtered before conflict detection, so they never appear here.
+ * allDay and eventType are the grading signals; they appear only when the
+ * source range carries them, so JSON shape is unchanged for timed ranges
+ * with no metadata.
+ */
+export interface ConflictRangeRef {
+  id: string;
+  label: string;
+  /** True when the range is an all-day span occupying the full day. */
+  allDay?: boolean;
+  /** Event type carried from the range's eventType field. */
+  eventType?: string;
 }

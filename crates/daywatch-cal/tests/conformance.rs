@@ -44,10 +44,15 @@ struct TimeSlotsAssertion {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 struct RangeRefExpected {
     id: String,
     label: String,
+    #[serde(default)]
+    all_day: Option<bool>,
+    #[serde(default)]
+    event_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -361,6 +366,26 @@ fn run_fixture_file(path: &Path) {
                     "{} — conflict[{}].overlap_end",
                     file_stem, i
                 );
+                assert_eq!(
+                    actual.range_a.all_day, expected.range_a.all_day,
+                    "{} — conflict[{}].range_a.all_day",
+                    file_stem, i
+                );
+                assert_eq!(
+                    actual.range_a.event_type, expected.range_a.event_type,
+                    "{} — conflict[{}].range_a.event_type",
+                    file_stem, i
+                );
+                assert_eq!(
+                    actual.range_b.all_day, expected.range_b.all_day,
+                    "{} — conflict[{}].range_b.all_day",
+                    file_stem, i
+                );
+                assert_eq!(
+                    actual.range_b.event_type, expected.range_b.event_type,
+                    "{} — conflict[{}].range_b.event_type",
+                    file_stem, i
+                );
             }
             test_count += 1;
         }
@@ -490,7 +515,7 @@ fn walk_fixtures(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
         let path = entry.path();
         if path.is_dir() {
             walk_fixtures(&path, files);
-        } else if path.extension().map_or(false, |ext| ext == "json") {
+        } else if path.extension().is_some_and(|ext| ext == "json") {
             files.push(path);
         }
     }

@@ -355,6 +355,24 @@ describe('parseICS', () => {
     expect(noTranspRange.metadata).not.toHaveProperty('transparent');
   });
 
+  it('carries TRANSP:TRANSPARENT onto the range and leaves it absent otherwise', () => {
+    const ranges = parseICS(
+      loadFixture('transparency-events.ics'),
+      makeWindow('2026-04-01', '2026-04-30'),
+    );
+
+    const transparentRange = byId(ranges, 'transp-transparent');
+    expect(transparentRange.transparency).toBe('transparent');
+    expect(transparentRange.metadata).toEqual(
+      expect.objectContaining({
+        transparent: true,
+      }),
+    );
+
+    expect(byId(ranges, 'transp-opaque').transparency).toBeUndefined();
+    expect(byId(ranges, 'transp-none').transparency).toBeUndefined();
+  });
+
   it('extracts organizer email even when no CN parameter is present', () => {
     const ranges = parseICS(
       loadFixture('shared-meetings-bob.ics'),

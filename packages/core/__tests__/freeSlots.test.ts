@@ -234,10 +234,41 @@ describe('RangeEvaluator.findFreeSlots', () => {
     ]);
   });
 
-  it('all-day ranges do not block time slots', () => {
+  it('busy all-day ranges occupy the full day, leaving no free slots', () => {
     const ranges = [
       makeRange({ id: 'holiday', dates: ['2026-03-22'] }), // all-day, no startTime/endTime
     ];
+    const slots = evaluator.findFreeSlots(ranges, '2026-03-22', {
+      dayStart: '08:00',
+      dayEnd: '18:00',
+    });
+    expect(slots).toEqual([]);
+  });
+
+  it('transparent all-day ranges do not occupy the day', () => {
+    const ranges = [
+      makeRange({
+        id: 'fyi',
+        dates: ['2026-03-22'],
+        transparency: 'transparent',
+      }),
+    ];
+    const slots = evaluator.findFreeSlots(ranges, '2026-03-22', {
+      dayStart: '08:00',
+      dayEnd: '18:00',
+    });
+    expect(slots).toEqual([
+      {
+        date: '2026-03-22',
+        startTime: '08:00',
+        endTime: '18:00',
+        duration: 600,
+      },
+    ]);
+  });
+
+  it('busy all-day ranges not covering the queried date leave the day free', () => {
+    const ranges = [makeRange({ id: 'holiday', dates: ['2026-03-23'] })];
     const slots = evaluator.findFreeSlots(ranges, '2026-03-22', {
       dayStart: '08:00',
       dayEnd: '18:00',

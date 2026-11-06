@@ -1,4 +1,4 @@
-import type { DateRange } from '@daywatch/cal';
+import { isFreeRange, type DateRange } from '@daywatch/cal';
 import ICAL from 'ical.js';
 
 import { DEFAULT_PRODID } from './constants.js';
@@ -217,11 +217,11 @@ function buildEvent(range: DateRange): InstanceType<typeof ICAL.Component> | nul
   }
 
   const metadata = range.metadata;
-  if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
-    if (metadata.transparent === true) {
-      component.addPropertyWithValue('transp', 'TRANSPARENT');
-    }
+  if (isFreeRange(range)) {
+    component.addPropertyWithValue('transp', 'TRANSPARENT');
+  }
 
+  if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
     if (
       metadata.status === 'tentative' ||
       metadata.status === 'confirmed' ||
